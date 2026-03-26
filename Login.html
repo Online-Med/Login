@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    body, html { height: 100%; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .login-container { height: 100vh; display: flex; }
+    .login-form-side { flex: 1; display: flex; align-items: center; justify-content: center; background: white; }
+    .login-image-side { flex: 1.2; background: url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1000&q=80') center/cover; }
+    .form-box { width: 100%; max-width: 400px; padding: 20px; text-align: center; }
+    .btn-entrar { background-color: #0089a5; color: white; border: none; padding: 12px; border-radius: 5px; }
+    .btn-entrar:hover { background-color: #006d84; color: white; }
+    #erro { color: red; display: none; margin-top: 15px; font-weight: 500; }
+    .loader { display: none; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-form-side">
+    <div class="form-box">
+      <h2 style="font-weight: bold; color: #333;">Online-Med</h2>
+      <p class="text-muted">Saúde Consultórios <span class="badge bg-info">V 1.2.2026</span></p>
+      
+      <div class="mt-4">
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="bi bi-person"></i></span>
+          <input type="text" id="email" class="form-control" placeholder="E-mail">
+        </div>
+        
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="bi bi-lock"></i></span>
+          <input type="password" id="senha" class="form-control" placeholder="Senha">
+        </div>
+        
+        <div class="text-end mb-3">
+          <a href="#" class="text-decoration-none small" style="color: #0089a5;">Esqueceu sua senha?</a>
+        </div>
+        
+        <button class="btn btn-entrar w-100" id="btnAcao" onclick="fazerLogin()">Entrar</button>
+        
+        <div id="erro"></div>
+        <div class="loader spinner-border text-info" role="status"></div>
+      </div>
+      
+      <div class="mt-5 text-muted small">
+        <i class="bi bi-shield-check"></i> Protegido por Online-Med
+      </div>
+    </div>
+  </div>
+
+  <div class="login-image-side d-none d-md-block"></div>
+</div>
+
+<script>
+
+function fazerLogin() {
+  const email = document.getElementById('email').value;
+  const senha = document.getElementById('senha').value;
+  const btn = document.getElementById('btnAcao');
+  const erroDiv = document.getElementById('erro');
+  const loader = document.querySelector('.loader');
+  
+  if (!email || !senha) {
+    erroDiv.innerText = "Preencha todos os campos.";
+    erroDiv.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  erroDiv.style.display = 'none';
+  loader.style.display = 'inline-block';
+
+  // Chama o servidor apenas UMA vez
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.sucesso) {
+        // Redireciona usando a URL que o servidor já nos enviou
+        window.top.location.href = res.url + "?v=Dashboard";
+      } else {
+        loader.style.display = 'none';
+        btn.disabled = false;
+        erroDiv.innerText = res.mensagem;
+        erroDiv.style.display = 'block';
+      }
+    })
+    .withFailureHandler(err => {
+      loader.style.display = 'none';
+      btn.disabled = false;
+      erroDiv.innerText = "Erro de conexão severo.";
+      erroDiv.style.display = 'block';
+    })
+    .autenticarUsuario(email, senha);
+}
+
+
+
+
+
+</script>
+
+</body>
+</html>
