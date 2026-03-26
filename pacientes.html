@@ -1,0 +1,166 @@
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
+        <li class="breadcrumb-item active">PACIENTES</li>
+      </ol>
+    </nav>
+    <button class="btn btn-info text-white btn-sm" onclick="carregarConteudo('cadastro_pacientes')">
+      <i class="bi bi-plus-lg"></i> Novo
+    </button>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0" style="font-size: 0.85rem;">
+        <thead class="table-light">
+          <tr>
+            <th width="80">Ações</th>
+            <th>Nome ou Código</th>
+            <th>CPF</th>
+            <th>Celular</th>
+            <th>Data Nascimento</th>
+          </tr>
+          <tr class="bg-light">
+            <td></td>
+            <td>
+              <input type="text" id="f_nome" class="form-control form-control-sm" 
+                     placeholder="Filtrar Nome... + Enter" 
+                     onkeyup="if(event.key==='Enter') carregarPacientes(0)">
+            </td>
+            <td>
+              <input type="text" id="f_cpf" class="form-control form-control-sm" 
+                     placeholder="CPF + Enter" 
+                     onkeyup="if(event.key==='Enter') carregarPacientes(0)">
+            </td>
+            <td>
+              <input type="text" id="f_celular" class="form-control form-control-sm" 
+                     placeholder="Celular + Enter" 
+                     onkeyup="if(event.key==='Enter') carregarPacientes(0)">
+            </td>
+            <td><input type="text" class="form-control form-control-sm" disabled></td>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaPacientes">
+          <tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando lista...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+      <small id="infoPaginacao" class="text-muted"></small>
+      <div id="controlesPaginacao"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  function carregarPacientes(pagina) {
+    paginaAtualPacientes = pagina;
+    const corpo = document.getElementById('corpoTabelaPacientes');
+    if (!corpo) return;
+
+    corpo.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border text-info"></div></td></tr>';
+
+    const filtros = {
+      nome: document.getElementById('f_nome')?.value || "",
+      documento: document.getElementById('f_cpf')?.value || "",
+      celular: document.getElementById('f_celular')?.value || ""
+    };
+
+    google.script.run.withSuccessHandler(res => {
+      if (res.sucesso) {
+        renderizarTabelaPacientes(res.dados);
+        renderizarPaginacaoPacientes(res);
+      }
+    }).listarPacientes(pagina, filtros);
+  }
+
+  function formatarDataBR(dataIso) {
+    if (!dataIso || dataIso === "NULL" || dataIso === "-") return "-";
+    const soData = dataIso.split('T')[0];
+    const partes = soData.split('-');
+    if (partes.length !== 3) return dataIso;
+    return partes[2] + '/' + partes[1] + '/' + partes[0];
+  }
+
+  function renderizarTabelaPacientes(lista) {
+    const corpo = document.getElementById('corpoTabelaPacientes');
+    if (!corpo) return;
+
+    if (lista.length === 0) {
+      corpo.innerHTML = '<tr><td colspan="5" class="text-center p-4">Nenhum paciente encontrado.</td></tr>';
+      return;
+    }
+
+    corpo.innerHTML = lista.map(p => {
+      return '<tr>' +
+        '<td><button class="btn btn-outline-info btn-sm" onclick="abrirEdicaoPaciente(' + p.pcod + ')" title="Editar"><i class="bi bi-pencil-square"></i></button></td>' +
+        '<td><span class="fw-bold">' + p.pcod + ' - ' + (p.Nome || "") + '</span></td>' +
+        '<td>' + (p.Documento || "-") + '</td>' +
+        '<td>' + (p.Celular || p.Telefone || "-") + '</td>' +
+        '<td>' + formatarDataBR(p.Data_Nascimento || p["DATA NASC#"] || "-") + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderizarPaginacaoPacientes(res) {
+    const info = document.getElementById('infoPaginacao');
+    if (info) info.innerText = "Total: " + res.total.toLocaleString('pt-BR') + " registros";
+    const ctrl = document.getElementById('controlesPaginacao');
+    if (ctrl) {
+      ctrl.innerHTML = 
+        '<button class="btn btn-sm btn-light border me-1" ' + (paginaAtualPacientes === 0 ? 'disabled' : '') + ' onclick="carregarPacientes(' + (paginaAtualPacientes - 1) + ')">Anterior</button>' +
+        '<button class="btn btn-sm btn-light border" ' + (paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : '') + ' onclick="carregarPacientes(' + (paginaAtualPacientes + 1) + ')">Próximo</button>';
+    }
+  }
+
+  function abrirEdicaoPaciente(pcod) {
+    document.getElementById('titulo-topo').innerText = "EDITAR PACIENTE: " + pcod;
+    carregarConteudo('cadastro_pacientes');
+
+    google.script.run.withSuccessHandler(res => {
+      if (!res.sucesso || !res.paciente) return;
+      const paciente = res.paciente;
+
+      let tentativas = 0;
+      const verificarIntervalo = setInterval(() => {
+        const form = document.getElementById('formCadastro');
+        tentativas++;
+
+        if (form) {
+          clearInterval(verificarIntervalo);
+          const breadActive = document.querySelector('.breadcrumb-item.active');
+          if (breadActive) breadActive.innerText = "EDIÇÃO DE CADASTRO";
+
+          // Preenche todos os campos EXCETO o convênio
+          Object.keys(paciente).forEach(key => {
+            let buscaKey = key;
+            if (key === 'UF') buscaKey = 'Estado';
+
+            // Pula o convênio — será tratado pelo carregarConvenios()
+            if (buscaKey === 'Convenio') return;
+
+            const campo = form.querySelector('[name="' + buscaKey + '"]');
+            if (campo) {
+              let valor = paciente[key];
+              if (campo.type === 'date' && valor) {
+                valor = valor.split('T')[0];
+              }
+              campo.value = valor;
+            }
+          });
+
+          // Carrega a lista de convênios e já pré-seleciona o do paciente
+          carregarConvenios(paciente.Convenio);
+        }
+
+        if (tentativas > 25) clearInterval(verificarIntervalo);
+      }, 200);
+    }).buscarPacientePorPcod(pcod);
+  }
+
+  // DISPARO AUTOMÁTICO
+  carregarPacientes(0);
+</script>
