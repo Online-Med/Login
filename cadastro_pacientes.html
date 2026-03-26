@@ -1,0 +1,214 @@
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
+        <li class="breadcrumb-item"><a style="cursor:pointer; color:#0d6efd; text-decoration:underline;" onclick="cancelarCadastro()">PACIENTES</a></li>
+        <li class="breadcrumb-item active">NOVO CADASTRO</li>
+      </ol>
+    </nav>
+    <div>
+      <button class="btn btn-secondary btn-sm me-2" onclick="cancelarCadastro()">Cancelar</button>
+      <button class="btn btn-info text-white btn-sm" onclick="salvarNovoPaciente()">
+        <i class="bi bi-check-lg"></i> Salvar Registro
+      </button>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <form id="formCadastro">
+        <h6 class="text-info border-bottom pb-2 mb-3">Identificação</h6>
+        <div class="row g-2 mb-4">
+          <div class="col-md-2 text-center">
+            <div class="border rounded bg-light d-flex align-items-center justify-content-center" style="height: 120px;">
+              <i class="bi bi-camera fs-1 text-muted"></i>
+            </div>
+            <small class="text-muted">Foto do Paciente</small>
+          </div>
+          <div class="col-md-10">
+            <div class="row g-2">
+              <div class="col-md-2">
+                <label class="small fw-bold">PCOD</label>
+                <input type="text" class="form-control form-control-sm bg-light" name="pcod" placeholder="Auto" readonly>
+              </div>
+              <div class="col-md-10">
+                <label class="small fw-bold">Nome Completo *</label>
+                <input type="text" class="form-control form-control-sm" name="Nome" required>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="small fw-bold">Responsável (se houver)</label>
+                <input type="text" class="form-control form-control-sm" name="Responsavel" placeholder="Nome do responsável legal">
+              </div>
+              <div class="col-md-6">
+                <label class="small fw-bold">Indicação</label>
+                <input type="text" class="form-control form-control-sm" name="indicacao" placeholder="Quem indicou?">
+              </div>
+
+              <div class="col-md-4">
+                <label class="small fw-bold">Sexo</label>
+                <select class="form-select form-select-sm" name="Sexo">
+                  <option value="Masculino">Masculino</option>
+                  <option value="Feminino">Feminino</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="small fw-bold">Data Nascimento</label>
+                <input type="date" class="form-control form-control-sm" name="Data_Nascimento">
+              </div>
+              <div class="col-md-4">
+                <label class="small fw-bold">Estado Civil</label>
+                <select class="form-select form-select-sm" name="Estado_Civil">
+                  <option>Solteiro(a)</option><option>Casado(a)</option>
+                  <option>Divorciado(a)</option><option>Viuvo(a)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="text-info border-bottom pb-2 mb-3">Documentação e Contato</h6>
+        <div class="row g-2 mb-4">
+          <div class="col-md-3"><label class="small fw-bold">CPF</label><input type="text" class="form-control form-control-sm" name="Documento" id="cpf"></div>
+          <div class="col-md-3"><label class="small fw-bold">RG</label><input type="text" class="form-control form-control-sm" name="rg"></div>
+          <div class="col-md-3"><label class="small fw-bold">Telefone</label><input type="text" class="form-control form-control-sm" name="Telefone"></div>
+          <div class="col-md-3"><label class="small fw-bold">Celular</label><input type="text" class="form-control form-control-sm" name="Celular"></div>
+          <div class="col-md-6"><label class="small fw-bold">E-mail</label><input type="email" class="form-control form-control-sm" name="Email"></div>
+          <div class="col-md-6"><label class="small fw-bold">Convênio</label><select class="form-select form-select-sm" name="Convenio" id="comboConvenios"><option>Carregando...</option></select></div>
+        </div>
+
+        <h6 class="text-info border-bottom pb-2 mb-3">Endereço</h6>
+        <div class="row g-2 mb-2">
+          <div class="col-md-3 col-lg-2">
+            <label class="small fw-bold">CEP</label>
+            <input type="text" class="form-control form-control-sm" name="CEP" onblur="buscarEndereco(this.value)">
+          </div>
+          <div class="col-md-9 col-lg-10">
+            <label class="small fw-bold">Endereço (Rua)</label>
+            <input type="text" class="form-control form-control-sm" name="Endereco" id="rua">
+          </div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-md-3 col-lg-2">
+            <label class="small fw-bold">Número</label>
+            <input type="text" class="form-control form-control-sm" name="Numero">
+          </div>
+          <div class="col-md-5 col-lg-6">
+            <label class="small fw-bold">Complemento</label>
+            <input type="text" class="form-control form-control-sm" name="Complemento">
+          </div>
+          <div class="col-md-4 col-lg-4">
+            <label class="small fw-bold">Bairro</label>
+            <input type="text" class="form-control form-control-sm" name="Bairro" id="bairro">
+          </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-md-10 col-lg-10">
+            <label class="small fw-bold">Cidade</label>
+            <input type="text" class="form-control form-control-sm" name="Cidade" id="cidade">
+          </div>
+          <div class="col-md-2 col-lg-2">
+            <label class="small fw-bold">Estado</label>
+            <input type="text" class="form-control form-control-sm" name="Estado" id="uf">
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function buscarEndereco(cep) {
+    const limpo = cep.replace(/\D/g, '');
+    if (limpo.length !== 8) return;
+    fetch('https://viacep.com.br/ws/' + limpo + '/json/').then(r => r.json()).then(d => {
+      if (!d.erro) {
+        document.getElementById('rua').value = d.logradouro;
+        document.getElementById('bairro').value = d.bairro;
+        document.getElementById('cidade').value = d.localidade;
+        document.getElementById('uf').value = d.uf;
+      }
+    });
+  }
+
+  function carregarConvenios(valorAtual) {
+    google.script.run.withSuccessHandler(lista => {
+      const combo = document.getElementById('comboConvenios');
+      if (!combo) return;
+      combo.innerHTML = '<option value="">Selecione...</option>';
+      if (lista && lista.length > 0) {
+        lista.forEach(c => {
+          combo.innerHTML += '<option value="' + c.CONVENIO + '">' + c.CONVENIO + '</option>';
+        });
+      } else {
+        combo.innerHTML += '<option value="PARTICULAR">PARTICULAR</option>';
+      }
+      if (valorAtual) combo.value = valorAtual;
+    }).obterConvenios();
+  }
+
+  function salvarNovoPaciente() {
+    const form = document.getElementById('formCadastro');
+    if (!form) return;
+    const formData = new FormData(form);
+    const dados = Object.fromEntries(formData);
+    
+    if (dados.Estado) {
+      dados.UF = dados.Estado;
+      delete dados.Estado;
+    }
+
+    if (!dados.Nome || dados.Nome.trim() === "") {
+      Swal.fire('Atenção', 'O nome do paciente é obrigatório.', 'warning');
+      return;
+    }
+
+    Swal.fire({ 
+      title: 'Salvando...', 
+      text: 'Atualizando registro ' + dados.pcod,
+      allowOutsideClick: false, 
+      didOpen: () => Swal.showLoading() 
+    });
+    
+    google.script.run
+      .withSuccessHandler(res => {
+        if(res.sucesso) {
+          Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success');
+          carregarConteudo('pacientes'); 
+        } else {
+          Swal.fire('Erro no Banco', res.mensagem, 'error');
+        }
+      })
+      .withFailureHandler(err => {
+        Swal.fire('Erro de Conexão', err.toString(), 'error');
+      })
+      .inserirPaciente(dados);
+  }
+
+  window.cancelarCadastro = function() {
+    const campoPcod = document.getElementsByName('pcod')[0];
+    const pcod = campoPcod ? campoPcod.value : "";
+    const tituloAtual = document.getElementById('titulo-topo').innerText;
+
+    if (tituloAtual.toUpperCase().includes("EDITAR")) {
+      carregarConteudo('pacientes');
+      return;
+    }
+
+    if (pcod && pcod !== "" && pcod !== "Auto") {
+      google.script.run
+        .withSuccessHandler(() => {
+          carregarConteudo('pacientes'); 
+        })
+        .excluirRegistroReservado(pcod);
+    } else {
+      carregarConteudo('pacientes');
+    }
+  };
+
+  carregarConvenios();
+</script>
