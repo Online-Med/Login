@@ -3,8 +3,8 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = "sb_publishable_vYQjncMfOtRRrySBsI7new_gJN2frSG";
 
   try {
-    // Busca os dados - note que usei as aspas para garantir que o Supabase entenda as maiúsculas
-    const url = `${SUPABASE_URL}/rest/v1/menu?select=ORDEM,pagina,Descricao,icone&order=ORDEM.asc`;
+    // Note que agora as colunas batem com o seu print: Ordem, pagina, descricao, icone
+    const url = `${SUPABASE_URL}/rest/v1/menu?select=Ordem,pagina,descricao,icone&order=Ordem.asc`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -16,12 +16,17 @@ export default async function handler(req, res) {
 
     const rawData = await response.json();
 
-    // Padronizamos para minúsculo aqui para o Dashboard não dar erro
+    // Se houver erro na resposta do Supabase, logamos para depurar
+    if (!Array.isArray(rawData)) {
+      return res.status(500).json({ erro: "Dados inválidos do banco", detalhes: rawData });
+    }
+
+    // Padronizamos para o que o seu Dashboard.html espera (tudo minúsculo)
     const dadosFormatados = rawData.map(item => ({
-      ordem: item.ORDEM,
-      pagina: item.pagina,
-      descricao: item.Descricao,
-      icone: item.icone || 'bi-folder2' // Ícone padrão se estiver vazio
+      ordem: item.Ordem,      // Pega de 'Ordem' (conforme seu print)
+      pagina: item.pagina,    // Pega de 'pagina'
+      descricao: item.descricao, // Pega de 'descricao'
+      icone: item.icone || 'bi-folder2'
     }));
 
     return res.status(200).json(dadosFormatados);
