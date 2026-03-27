@@ -1,3 +1,0 @@
-export default function handler(req, res) {
-  res.status(200).json({ status: "API de Pacientes Ativa!", mensagem: "Agora podemos subir o código completo." });
-}
