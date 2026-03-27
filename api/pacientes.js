@@ -12,7 +12,12 @@ export default async function handler(req, res) {
   try {
     // --- LISTAR PACIENTES (GET) ---
     if (method === 'GET') {
-      const { pcod, nome, documento, celular } = query;
+      const { pcod, nome, documento, celular, pagina } = query;
+      
+      // Configuração de Paginação (10 itens por página)
+      const itensPorPagina = 10;
+      const de = (parseInt(pagina) || 0) * itensPorPagina;
+      const ate = de + (itensPorPagina - 1);
 
       // Se buscar por um PCOD específico (para edição)
       if (pcod) {
@@ -21,21 +26,32 @@ export default async function handler(req, res) {
         return res.status(200).json({ sucesso: true, paciente: d[0] });
       }
 
-      // Lógica de Filtros para a Lista
-      let urlFiltro = `${SUPABASE_URL}/rest/v1/pacientes?select=*&order=pcod.desc&limit=50`;
+      // Montagem da URL com Filtros
+      let urlFiltro = `${SUPABASE_URL}/rest/v1/pacientes?select=*&order=pcod.desc`;
       if (nome) urlFiltro += `&Nome=ilike.*${nome}*`;
       if (documento) urlFiltro += `&Documento=ilike.*${documento}*`;
       if (celular) urlFiltro += `&Celular=ilike.*${celular}*`;
 
-      const r = await fetch(urlFiltro, { headers });
+      // Chamada ao Supabase solicitando o Range (fatiamento) e o Count (total)
+      const r = await fetch(urlFiltro, { 
+        headers: { 
+          ...headers, 
+          'Range': `${de}-${ate}`,
+          'Prefer': 'count=exact' // Força o Supabase a contar o total de registros
+        } 
+      });
+      
       const d = await r.json();
+      
+      // Extrai o total de registros do cabeçalho "Content-Range" (ex: 0-9/1456)
+      const contentRange = r.headers.get('content-range');
+      const totalRegistros = contentRange ? parseInt(contentRange.split('/')[1]) : d.length;
 
-      // O front-end espera 'sucesso', 'dados' e 'total'
       return res.status(200).json({ 
         sucesso: true, 
         dados: d, 
-        total: d.length,
-        paginas: 1 
+        total: totalRegistros,
+        paginas: Math.ceil(totalRegistros / itensPorPagina)
       });
     }
 
