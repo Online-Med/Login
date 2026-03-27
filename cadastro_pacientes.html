@@ -178,56 +178,55 @@
     }
   }
 
-  async function salvarNovoPaciente() {
+async function salvarNovoPaciente() {
   const form = document.getElementById('formCadastro');
   const formData = new FormData(form);
-  const dados = Object.fromEntries(formData);
-  
-  // 1. Pega o PCOD do campo (mesmo que esteja disabled)
-  const pcodInput = document.getElementById('f_pcod')?.value;
-  
-  if (!pcodInput) {
+  const pcodReal = document.getElementById('f_pcod')?.value;
+
+  if (!pcodReal) {
     Swal.fire('Erro', 'Código do paciente não encontrado.', 'error');
     return;
   }
 
-  // 2. Transforma o PCOD em número (Evita o erro 400 do Supabase)
-  const pcodNumerico = parseInt(pcodInput);
+  // 1. Criamos o objeto de dados
+  let dados = Object.fromEntries(formData);
 
-  // 3. Validação de nome
-  if (!dados.Nome || dados.Nome.trim() === "" || dados.Nome.includes("RESERVADO")) {
-    Swal.fire('Atenção', 'Digite o nome completo do paciente.', 'warning');
+  // 2. LIMPEZA CRÍTICA: Removemos campos que o Supabase pode rejeitar
+  delete dados.pcod; // O pcod vai na URL, não no body
+  
+  // 3. Removemos qualquer campo que esteja vazio (evita erro de tipo no banco)
+  Object.keys(dados).forEach(key => {
+    if (dados[key] === "" || dados[key] === null) {
+      delete dados[key];
+    }
+  });
+
+  if (!dados.Nome || dados.Nome.includes("RESERVADO")) {
+    Swal.fire('Atenção', 'Preencha o nome completo do paciente.', 'warning');
     return;
   }
 
-  Swal.fire({ 
-    title: 'Salvando...', 
-    allowOutsideClick: false, 
-    didOpen: () => Swal.showLoading() 
-  });
+  Swal.fire({ title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
   try {
-    // 4. Limpeza: removemos o pcod do corpo para não conflitar com a URL do PATCH
-    delete dados.pcod; 
-
-    const resp = await fetch(`/api/pacientes?pcod=${pcodNumerico}`, {
+    const resp = await fetch(`/api/pacientes?pcod=${pcodReal}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados) // Envia apenas os dados que mudaram
+      body: JSON.stringify(dados)
     });
-    
+
     const res = await resp.json();
 
     if (res.sucesso) {
-      Swal.fire('Sucesso!', 'Paciente atualizado com sucesso!', 'success').then(() => {
+      Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success').then(() => {
         carregarConteudo('pacientes.html');
       });
     } else {
-      // Aqui o Swal vai te mostrar EXATAMENTE o erro que o Supabase devolveu
-      Swal.fire('Erro no Banco', res.erro || "Verifique os campos preenchidos.", 'error');
+      // Se der erro, mostramos o erro real que veio da API
+      Swal.fire('Erro no Banco', res.erro || "Verifique os dados digitados.", 'error');
     }
   } catch (err) {
-    Swal.fire('Erro de Conexão', 'Não foi possível falar com a API.', 'error');
+    Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
   }
 }
 
