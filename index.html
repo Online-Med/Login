@@ -75,43 +75,37 @@ async function fazerLogin() {
 
   // Estado de carregamento
   btn.disabled = true;
-  erroDiv.style.display = 'none';
-  loader.style.display = 'inline-block';
+  if (erroDiv) erroDiv.style.display = 'none';
+  if (loader) loader.style.display = 'inline-block';
 
   try {
-    // Chamada para a nossa API na Vercel
+    // Chamada única para a API
     const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email, senha: senha })
     });
 
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json' // ESSA LINHA É OBRIGATÓRIA
-      },
-      body: JSON.stringify({ email: email, senha: senha })
-    });
+    // Extrai o JSON da resposta
+    const dados = await response.json();
 
-    if (response.ok && res.sucesso) {
-      // SALVA SESSÃO NO NAVEGADOR
-      localStorage.setItem('onlineMed_usuario', res.usuario);
+    if (response.ok && dados.sucesso) {
+      // SALVA SESSÃO NO NAVEGADOR (LocalStorage)
+      localStorage.setItem('onlineMed_usuario', dados.usuario);
       localStorage.setItem('onlineMed_email', email);
       localStorage.setItem('onlineMed_token', btoa(email + ":" + new Date().getTime()));
 
       // REDIRECIONA PARA O DASHBOARD
-      // Na Vercel, basta chamar o nome do arquivo .html
       window.location.href = "dashboard.html";
       
     } else {
-      exibirErro(res.mensagem || "Usuário ou senha inválidos.");
+      exibirErro(dados.mensagem || "Usuário ou senha inválidos.");
     }
   } catch (err) {
     exibirErro("Erro ao conectar com o servidor da clínica.");
     console.error(err);
   } finally {
-    loader.style.display = 'none';
+    if (loader) loader.style.display = 'none';
     btn.disabled = false;
   }
 }
