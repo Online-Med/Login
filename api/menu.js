@@ -3,8 +3,8 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = "sb_publishable_vYQjncMfOtRRrySBsI7new_gJN2frSG";
 
   try {
-    // Buscamos as colunas exatamente como aparecem no seu print da tabela
-    const url = `${SUPABASE_URL}/rest/v1/menu?select=Ordem,pagina,descricao,icone&order=Ordem.asc`;
+    // Pegamos tudo (*) para evitar erro de "coluna não encontrada"
+    const url = `${SUPABASE_URL}/rest/v1/menu?select=*`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -16,26 +16,27 @@ export default async function handler(req, res) {
 
     const rawData = await response.json();
 
-    // Se o Supabase retornar um erro (ex: coluna não encontrada), ele vem num objeto 'error'
-    if (rawData.error || !Array.isArray(rawData)) {
-      return res.status(500).json({ 
-        sucesso: false, 
-        mensagem: "Erro no banco de dados", 
-        detalhes: rawData.message || rawData 
-      });
+    if (!Array.isArray(rawData)) {
+      return res.status(500).json({ erro: "Erro ao acessar o banco", detalhes: rawData });
     }
 
-    // Padronização: Transformamos 'Ordem' em 'ordem' para o Dashboard não quebrar
-    const menuFinal = rawData.map(item => ({
-      ordem: item.Ordem,           // Mapeia de 'Ordem' (banco) para 'ordem' (frontend)
-      pagina: item.pagina,
-      descricao: item.descricao,
-      icone: item.icone || 'bi-folder2'
-    }));
+    // Aqui está a mágica: o código tenta ler 'Ordem' ou 'ordem' (minúsculo)
+    // O que ele encontrar primeiro, ele usa.
+    const menuTratado = rawData.map(item => {
+      return {
+        ordem: item.ordem || item.Ordem || item.ORDEM,
+        descricao: item.descricao || item.Descricao || item.Descrição,
+        pagina: item.pagina || item.Pagina,
+        icone: item.icone || 'bi-folder2'
+      };
+    });
 
-    return res.status(200).json(menuFinal);
+    // Ordena os itens pela coluna ordem
+    menuTratado.sort((a, b) => String(a.ordem).localeCompare(String(b.ordem), undefined, {numeric: true}));
+
+    return res.status(200).json(menuTratado);
 
   } catch (error) {
-    return res.status(500).json({ sucesso: false, mensagem: error.message });
+    return res.status(500).json({ erro: error.message });
   }
 }
