@@ -123,17 +123,21 @@
     `).join('');
   }
 
-  function renderizarPaginacaoPacientes(res) {
-    const info = document.getElementById('infoPaginacao');
-    if (info) info.innerText = `Total: ${res.total.toLocaleString('pt-BR')} registros`;
-    const ctrl = document.getElementById('controlesPaginacao');
-    if (ctrl) {
-      ctrl.innerHTML = `
-        <button class="btn btn-sm btn-light border me-1" ${paginaAtualPacientes === 0 ? 'disabled' : ''} onclick="carregarPacientes(${paginaAtualPacientes - 1})">Anterior</button>
-        <button class="btn btn-sm btn-light border" ${paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : ''} onclick="carregarPacientes(${paginaAtualPacientes + 1})">Próximo</button>
-      `;
-    }
+function renderizarPaginacaoPacientes(res) {
+  const info = document.getElementById('infoPaginacao');
+  if (info) info.innerText = `Total: ${res.total} registros | Página ${paginaAtualPacientes + 1} de ${res.paginas}`;
+  
+  const ctrl = document.getElementById('controlesPaginacao');
+  if (ctrl) {
+    ctrl.innerHTML = `
+      <button class="btn btn-sm btn-light border me-1" ${paginaAtualPacientes === 0 ? 'disabled' : ''} 
+        onclick="carregarPacientes(${paginaAtualPacientes - 1})">Anterior</button>
+      
+      <button class="btn btn-sm btn-light border" ${paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : ''} 
+        onclick="carregarPacientes(${paginaAtualPacientes + 1})">Próximo</button>
+    `;
   }
+}
 
 async function abrirEdicaoPaciente(pcod) {
     // 1. Muda o título para sabermos que é edição
