@@ -178,58 +178,61 @@
     }
   }
 
-async function salvarNovoPaciente() {
-    const form = document.getElementById('formCadastro');
-    
-    // Captura os dados do formulário
-    const formData = new FormData(form);
-    const dados = Object.fromEntries(formData);
-    
-    // CORREÇÃO CRÍTICA: Se o campo pcod estiver disabled, o FormData não pega.
-    // Pegamos manualmente o valor do campo para garantir.
-    const pcodReal = document.getElementById('f_pcod')?.value;
-    
-    if (!pcodReal) {
-      Swal.fire('Erro', 'Código do paciente (PCOD) não encontrado.', 'error');
-      return;
-    }
-
-    if (!dados.Nome || dados.Nome.trim() === "" || dados.Nome === "RESERVADO - AGUARDANDO DADOS") {
-      Swal.fire('Atenção', 'Por favor, insira o nome real do paciente.', 'warning');
-      return;
-    }
-
-    Swal.fire({ 
-      title: 'Salvando...', 
-      text: 'Atualizando registro ' + pcodReal,
-      allowOutsideClick: false, 
-      didOpen: () => Swal.showLoading() 
-    });
-
-    try {
-      // Usamos pcodReal na URL e garantimos que ele vá no corpo também
-      dados.pcod = pcodReal;
-
-      const resp = await fetch(`/api/pacientes?pcod=${pcodReal}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados)
-      });
-      
-      const res = await resp.json();
-
-      if (res.sucesso) {
-        Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success').then(() => {
-            carregarConteudo('pacientes.html'); 
-        });
-      } else {
-        Swal.fire('Erro no Banco', res.erro || "Não foi possível atualizar o registro.", 'error');
-      }
-    } catch (err) {
-      Swal.fire('Erro de Conexão', err.toString(), 'error');
-    }
+  async function salvarNovoPaciente() {
+  const form = document.getElementById('formCadastro');
+  const formData = new FormData(form);
+  const dados = Object.fromEntries(formData);
+  
+  // 1. Pega o PCOD do campo (mesmo que esteja disabled)
+  const pcodInput = document.getElementById('f_pcod')?.value;
+  
+  if (!pcodInput) {
+    Swal.fire('Erro', 'Código do paciente não encontrado.', 'error');
+    return;
   }
 
+  // 2. Transforma o PCOD em número (Evita o erro 400 do Supabase)
+  const pcodNumerico = parseInt(pcodInput);
+
+  // 3. Validação de nome
+  if (!dados.Nome || dados.Nome.trim() === "" || dados.Nome.includes("RESERVADO")) {
+    Swal.fire('Atenção', 'Digite o nome completo do paciente.', 'warning');
+    return;
+  }
+
+  Swal.fire({ 
+    title: 'Salvando...', 
+    allowOutsideClick: false, 
+    didOpen: () => Swal.showLoading() 
+  });
+
+  try {
+    // 4. Limpeza: removemos o pcod do corpo para não conflitar com a URL do PATCH
+    delete dados.pcod; 
+
+    const resp = await fetch(`/api/pacientes?pcod=${pcodNumerico}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados) // Envia apenas os dados que mudaram
+    });
+    
+    const res = await resp.json();
+
+    if (res.sucesso) {
+      Swal.fire('Sucesso!', 'Paciente atualizado com sucesso!', 'success').then(() => {
+        carregarConteudo('pacientes.html');
+      });
+    } else {
+      // Aqui o Swal vai te mostrar EXATAMENTE o erro que o Supabase devolveu
+      Swal.fire('Erro no Banco', res.erro || "Verifique os campos preenchidos.", 'error');
+    }
+  } catch (err) {
+    Swal.fire('Erro de Conexão', 'Não foi possível falar com a API.', 'error');
+  }
+}
+
+
+  
 async function cancelarCadastro() {
   const pcod = document.getElementById('f_pcod').value;
   const nome = document.getElementsByName('Nome')[0].value;
