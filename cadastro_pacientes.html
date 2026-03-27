@@ -214,18 +214,21 @@
     }
   }
 
-  async function cancelarCadastro() {
-    const pcod = document.getElementById('f_pcod').value;
+async function cancelarCadastro() {
+  const pcod = document.getElementById('f_pcod').value;
+  const nome = document.getElementsByName('Nome')[0].value;
 
-    // Se houver um número reservado, exclui antes de sair
-    if (pcod && !isNaN(pcod)) {
-      try {
-        await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-        console.log("Reserva " + pcod + " limpa.");
-      } catch (err) {
-        console.error("Erro ao excluir reserva:", err);
-      }
+  // SÓ exclui se for um registro novo que ainda está com o nome de reserva
+  if (pcod && nome === "RESERVADO - AGUARDANDO DADOS") {
+    try {
+      await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
+      console.log("Reserva temporária removida.");
+    } catch (err) {
+      console.error("Erro ao remover reserva:", err);
     }
-    carregarConteudo('pacientes.html');
   }
+  
+  // Se for uma edição de paciente real, o 'nome' será diferente e ele apenas fecha a tela
+  carregarConteudo('pacientes.html');
+}
 </script>
