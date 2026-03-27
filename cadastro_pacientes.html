@@ -178,36 +178,52 @@
     }
   }
 
-  async function salvarNovoPaciente() {
+async function salvarNovoPaciente() {
     const form = document.getElementById('formCadastro');
+    
+    // Captura os dados do formulário
     const formData = new FormData(form);
     const dados = Object.fromEntries(formData);
     
-    if (!dados.Nome || dados.Nome.trim() === "") {
-      Swal.fire('Atenção', 'O nome do paciente é obrigatório.', 'warning');
+    // CORREÇÃO CRÍTICA: Se o campo pcod estiver disabled, o FormData não pega.
+    // Pegamos manualmente o valor do campo para garantir.
+    const pcodReal = document.getElementById('f_pcod')?.value;
+    
+    if (!pcodReal) {
+      Swal.fire('Erro', 'Código do paciente (PCOD) não encontrado.', 'error');
+      return;
+    }
+
+    if (!dados.Nome || dados.Nome.trim() === "" || dados.Nome === "RESERVADO - AGUARDANDO DADOS") {
+      Swal.fire('Atenção', 'Por favor, insira o nome real do paciente.', 'warning');
       return;
     }
 
     Swal.fire({ 
       title: 'Salvando...', 
-      text: 'Atualizando registro ' + dados.pcod,
+      text: 'Atualizando registro ' + pcodReal,
       allowOutsideClick: false, 
       didOpen: () => Swal.showLoading() 
     });
 
     try {
-      const resp = await fetch(`/api/pacientes?pcod=${dados.pcod}`, {
+      // Usamos pcodReal na URL e garantimos que ele vá no corpo também
+      dados.pcod = pcodReal;
+
+      const resp = await fetch(`/api/pacientes?pcod=${pcodReal}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dados)
       });
+      
       const res = await resp.json();
 
       if (res.sucesso) {
-        Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success');
-        carregarConteudo('pacientes.html'); 
+        Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success').then(() => {
+            carregarConteudo('pacientes.html'); 
+        });
       } else {
-        Swal.fire('Erro no Banco', res.mensagem || "Erro desconhecido", 'error');
+        Swal.fire('Erro no Banco', res.erro || "Não foi possível atualizar o registro.", 'error');
       }
     } catch (err) {
       Swal.fire('Erro de Conexão', err.toString(), 'error');
