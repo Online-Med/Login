@@ -10,50 +10,68 @@ export default async function handler(req, res) {
   };
 
   try {
-    // --- BUSCAR/LISTAR ---
+    // --- LISTAR PACIENTES (GET) ---
     if (method === 'GET') {
-      const { pcod } = query;
+      const { pcod, nome, documento, celular } = query;
+
+      // Se buscar por um PCOD específico (para edição)
       if (pcod) {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?select=*&pcod=eq.${pcod}`, { headers });
         const d = await r.json();
         return res.status(200).json({ sucesso: true, paciente: d[0] });
       }
-      // Logica de listagem (simplificada para o exemplo)
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?select=*&order=pcod.desc&limit=10`, { headers });
+
+      // Lógica de Filtros para a Lista
+      let urlFiltro = `${SUPABASE_URL}/rest/v1/pacientes?select=*&order=pcod.desc&limit=50`;
+      if (nome) urlFiltro += `&Nome=ilike.*${nome}*`;
+      if (documento) urlFiltro += `&Documento=ilike.*${documento}*`;
+      if (celular) urlFiltro += `&Celular=ilike.*${celular}*`;
+
+      const r = await fetch(urlFiltro, { headers });
       const d = await r.json();
-      return res.status(200).json({ sucesso: true, dados: d });
+
+      // O front-end espera 'sucesso', 'dados' e 'total'
+      return res.status(200).json({ 
+        sucesso: true, 
+        dados: d, 
+        total: d.length,
+        paginas: 1 
+      });
     }
 
-    // --- RESERVAR (POST) ---
+    // --- RESERVAR NOVO (POST) ---
     if (method === 'POST') {
-      // 1. Busca o maior PCOD
       const rMax = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?select=pcod&order=pcod.desc&limit=1`, { headers });
       const ultimo = await rMax.json();
       const novoPcod = (ultimo.length > 0) ? (parseInt(ultimo[0].pcod) + 1) : 1;
 
-      // 2. Cria a reserva
       const reserva = { 
         pcod: novoPcod, 
         Nome: "RESERVADO - AGUARDANDO DADOS",
         Data_Cadastro: new Date().toISOString() 
       };
-      await fetch(`${SUPABASE_URL}/rest/v1/pacientes`, { method: 'POST', headers, body: JSON.stringify(reserva) });
+      
+      await fetch(`${SUPABASE_URL}/rest/v1/pacientes`, { 
+        method: 'POST', 
+        headers, 
+        body: JSON.stringify(reserva) 
+      });
       
       return res.status(200).json({ sucesso: true, pcod: novoPcod });
     }
 
-    // --- SALVAR DADOS (PATCH) ---
+    // --- SALVAR/ATUALIZAR (PATCH) ---
     if (method === 'PATCH') {
       const { pcod } = query;
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify(req.body)
       });
-      if (r.ok) return res.status(200).json({ sucesso: true });
+      return res.status(200).json({ sucesso: true });
     }
 
-    // --- EXCLUIR RESERVA (DELETE) ---
+    // --- EXCLUIR (DELETE) ---
     if (method === 'DELETE') {
       const { pcod } = query;
       await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, { method: 'DELETE', headers });
