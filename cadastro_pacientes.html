@@ -3,7 +3,7 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-0">
         <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
-        <li class="breadcrumb-item"><a style="cursor:pointer; color:#0d6efd; text-decoration:underline;" onclick="cancelarCadastro()">PACIENTES</a></li>
+        <li class="breadcrumb-item"><a style="cursor:pointer; color:#0d6efd; text-decoration:underline;" onclick="cancelarCadastro()">pacientes.html</a></li>
         <li class="breadcrumb-item active">NOVO CADASTRO</li>
       </ol>
     </nav>
@@ -189,7 +189,7 @@
       .inserirPaciente(dados);
   }
 
-  window.cancelarCadastro = function() {
+  window. = function() {
     const campoPcod = document.getElementsByName('pcod')[0];
     const pcod = campoPcod ? campoPcod.value : "";
     const tituloAtual = document.getElementById('titulo-topo').innerText;
