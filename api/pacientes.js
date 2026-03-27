@@ -3,72 +3,64 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = "sb_publishable_vYQjncMfOtRRrySBsI7new_gJN2frSG";
   const { method, query } = req;
 
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json'
+  };
+
   try {
-    // --- BUSCA/LISTAGEM ---
+    // --- BUSCAR/LISTAR ---
     if (method === 'GET') {
-      const pcod = query.pcod;
-      
-      // Se tiver pcod, busca um paciente específico (Edição)
+      const { pcod } = query;
       if (pcod) {
-        const url = `${SUPABASE_URL}/rest/v1/pacientes?select=*&pcod=eq.${pcod}&limit=1`;
-        const response = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
-        const dados = await response.json();
-        return res.status(200).json({ sucesso: true, paciente: dados[0] });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?select=*&pcod=eq.${pcod}`, { headers });
+        const d = await r.json();
+        return res.status(200).json({ sucesso: true, paciente: d[0] });
       }
-
-      // Listagem geral com paginação
-      const pagina = parseInt(query.pagina) || 0;
-      const itensPorPagina = 10;
-      const de = pagina * itensPorPagina;
-      const ate = de + itensPorPagina - 1;
-
-      let url = `${SUPABASE_URL}/rest/v1/pacientes?select=pcod,Nome,Documento,Celular,Telefone,Data_Nascimento&order=pcod.desc`;
-
-      // Filtros simples
-      if (query.nome) url += `&Nome=ilike.*${query.nome}*`;
-      if (query.documento) url += `&Documento=ilike.*${query.documento}*`;
-
-      const response = await fetch(url, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Range': `${de}-${ate}`,
-          'Prefer': 'count=exact'
-        }
-      });
-
-      const dados = await response.json();
-      const range = response.headers.get("content-range") || "0-0/0";
-      const total = parseInt(range.split("/")[1]) || 0;
-
-      return res.status(200).json({
-        sucesso: true,
-        dados: dados,
-        total: total,
-        paginas: Math.ceil(total / itensPorPagina)
-      });
+      // Logica de listagem (simplificada para o exemplo)
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?select=*&order=pcod.desc&limit=10`, { headers });
+      const d = await r.json();
+      return res.status(200).json({ sucesso: true, dados: d });
     }
 
-    // --- ATUALIZAÇÃO (PATCH) ---
+    // --- RESERVAR (POST) ---
+    if (method === 'POST') {
+      // 1. Busca o maior PCOD
+      const rMax = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?select=pcod&order=pcod.desc&limit=1`, { headers });
+      const ultimo = await rMax.json();
+      const novoPcod = (ultimo.length > 0) ? (parseInt(ultimo[0].pcod) + 1) : 1;
+
+      // 2. Cria a reserva
+      const reserva = { 
+        pcod: novoPcod, 
+        Nome: "RESERVADO - AGUARDANDO DADOS",
+        Data_Cadastro: new Date().toISOString() 
+      };
+      await fetch(`${SUPABASE_URL}/rest/v1/pacientes`, { method: 'POST', headers, body: JSON.stringify(reserva) });
+      
+      return res.status(200).json({ sucesso: true, pcod: novoPcod });
+    }
+
+    // --- SALVAR DADOS (PATCH) ---
     if (method === 'PATCH') {
       const { pcod } = query;
-      const url = `${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`;
-      
-      const response = await fetch(url, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, {
         method: 'PATCH',
-        headers: { 
-          'apikey': SUPABASE_KEY, 
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json' 
-        },
+        headers,
         body: JSON.stringify(req.body)
       });
+      if (r.ok) return res.status(200).json({ sucesso: true });
+    }
 
-      if (response.ok) return res.status(200).json({ sucesso: true });
-      return res.status(response.status).json({ sucesso: false, erro: "Erro ao atualizar banco" });
+    // --- EXCLUIR RESERVA (DELETE) ---
+    if (method === 'DELETE') {
+      const { pcod } = query;
+      await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, { method: 'DELETE', headers });
+      return res.status(200).json({ sucesso: true });
     }
 
   } catch (error) {
-    return res.status(500).json({ sucesso: false, mensagem: error.message });
+    return res.status(500).json({ sucesso: false, erro: error.message });
   }
 }
