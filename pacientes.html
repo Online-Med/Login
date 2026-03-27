@@ -54,35 +54,43 @@
   </div>
 </div>
 
-<script>
 
-  function carregarPacientes(pagina) {
+
+
+<script>
+  let paginaAtualPacientes = 0;
+
+  async function carregarPacientes(pagina) {
     paginaAtualPacientes = pagina;
     const corpo = document.getElementById('corpoTabelaPacientes');
     if (!corpo) return;
 
     corpo.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border text-info"></div></td></tr>';
 
-    const filtros = {
-      nome: document.getElementById('f_nome')?.value || "",
-      documento: document.getElementById('f_cpf')?.value || "",
-      celular: document.getElementById('f_celular')?.value || ""
-    };
+    const nome = document.getElementById('f_nome')?.value || "";
+    const cpf = document.getElementById('f_cpf')?.value || "";
+    const celular = document.getElementById('f_celular')?.value || "";
 
-    google.script.run.withSuccessHandler(res => {
+    try {
+      // Chamada para a nova API na Vercel
+      const url = `/api/pacientes?pagina=${pagina}&nome=${nome}&documento=${cpf}&celular=${celular}`;
+      const resp = await fetch(url);
+      const res = await resp.json();
+
       if (res.sucesso) {
         renderizarTabelaPacientes(res.dados);
         renderizarPaginacaoPacientes(res);
       }
-    }).listarPacientes(pagina, filtros);
+    } catch (err) {
+      corpo.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao conectar com a API.</td></tr>';
+    }
   }
 
   function formatarDataBR(dataIso) {
     if (!dataIso || dataIso === "NULL" || dataIso === "-") return "-";
     const soData = dataIso.split('T')[0];
     const partes = soData.split('-');
-    if (partes.length !== 3) return dataIso;
-    return partes[2] + '/' + partes[1] + '/' + partes[0];
+    return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : dataIso;
   }
 
   function renderizarTabelaPacientes(lista) {
@@ -94,73 +102,56 @@
       return;
     }
 
-    corpo.innerHTML = lista.map(p => {
-      return '<tr>' +
-        '<td><button class="btn btn-outline-info btn-sm" onclick="abrirEdicaoPaciente(' + p.pcod + ')" title="Editar"><i class="bi bi-pencil-square"></i></button></td>' +
-        '<td><span class="fw-bold">' + p.pcod + ' - ' + (p.Nome || "") + '</span></td>' +
-        '<td>' + (p.Documento || "-") + '</td>' +
-        '<td>' + (p.Celular || p.Telefone || "-") + '</td>' +
-        '<td>' + formatarDataBR(p.Data_Nascimento || p["DATA NASC#"] || "-") + '</td>' +
-      '</tr>';
-    }).join('');
+    corpo.innerHTML = lista.map(p => `
+      <tr>
+        <td><button class="btn btn-outline-info btn-sm" onclick="abrirEdicaoPaciente(${p.pcod})" title="Editar"><i class="bi bi-pencil-square"></i></button></td>
+        <td><span class="fw-bold">${p.pcod} - ${p.Nome || ""}</span></td>
+        <td>${p.Documento || "-"}</td>
+        <td>${p.Celular || p.Telefone || "-"}</td>
+        <td>${formatarDataBR(p.Data_Nascimento || p["DATA NASC#"] || "-")}</td>
+      </tr>
+    `).join('');
   }
 
   function renderizarPaginacaoPacientes(res) {
     const info = document.getElementById('infoPaginacao');
-    if (info) info.innerText = "Total: " + res.total.toLocaleString('pt-BR') + " registros";
+    if (info) info.innerText = `Total: ${res.total.toLocaleString('pt-BR')} registros`;
     const ctrl = document.getElementById('controlesPaginacao');
     if (ctrl) {
-      ctrl.innerHTML = 
-        '<button class="btn btn-sm btn-light border me-1" ' + (paginaAtualPacientes === 0 ? 'disabled' : '') + ' onclick="carregarPacientes(' + (paginaAtualPacientes - 1) + ')">Anterior</button>' +
-        '<button class="btn btn-sm btn-light border" ' + (paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : '') + ' onclick="carregarPacientes(' + (paginaAtualPacientes + 1) + ')">Próximo</button>';
+      ctrl.innerHTML = `
+        <button class="btn btn-sm btn-light border me-1" ${paginaAtualPacientes === 0 ? 'disabled' : ''} onclick="carregarPacientes(${paginaAtualPacientes - 1})">Anterior</button>
+        <button class="btn btn-sm btn-light border" ${paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : ''} onclick="carregarPacientes(${paginaAtualPacientes + 1})">Próximo</button>
+      `;
     }
   }
 
-  function abrirEdicaoPaciente(pcod) {
+  async function abrirEdicaoPaciente(pcod) {
     document.getElementById('titulo-topo').innerText = "EDITAR PACIENTE: " + pcod;
-    carregarConteudo('cadastro_pacientes');
+    carregarConteudo('cadastro_pacientes.html'); // Adicionei .html para garantir na Vercel
 
-    google.script.run.withSuccessHandler(res => {
+    try {
+      const resp = await fetch(`/api/pacientes?pcod=${pcod}`);
+      const res = await resp.json();
+      
       if (!res.sucesso || !res.paciente) return;
       const paciente = res.paciente;
 
-      let tentativas = 0;
-      const verificarIntervalo = setInterval(() => {
+      // Espera o formulário carregar na tela
+      setTimeout(() => {
         const form = document.getElementById('formCadastro');
-        tentativas++;
-
         if (form) {
-          clearInterval(verificarIntervalo);
-          const breadActive = document.querySelector('.breadcrumb-item.active');
-          if (breadActive) breadActive.innerText = "EDIÇÃO DE CADASTRO";
-
-          // Preenche todos os campos EXCETO o convênio
           Object.keys(paciente).forEach(key => {
-            let buscaKey = key;
-            if (key === 'UF') buscaKey = 'Estado';
-
-            // Pula o convênio — será tratado pelo carregarConvenios()
-            if (buscaKey === 'Convenio') return;
-
-            const campo = form.querySelector('[name="' + buscaKey + '"]');
+            const campo = form.querySelector(`[name="${key === 'UF' ? 'Estado' : key}"]`);
             if (campo) {
-              let valor = paciente[key];
-              if (campo.type === 'date' && valor) {
-                valor = valor.split('T')[0];
-              }
-              campo.value = valor;
+              campo.value = (campo.type === 'date' && paciente[key]) ? paciente[key].split('T')[0] : paciente[key];
             }
           });
-
-          // Carrega a lista de convênios e já pré-seleciona o do paciente
-          carregarConvenios(paciente.Convenio);
         }
-
-        if (tentativas > 25) clearInterval(verificarIntervalo);
-      }, 200);
-    }).buscarPacientePorPcod(pcod);
+      }, 500);
+    } catch (err) {
+      console.error("Erro ao carregar paciente:", err);
+    }
   }
 
-  // DISPARO AUTOMÁTICO
   carregarPacientes(0);
 </script>
