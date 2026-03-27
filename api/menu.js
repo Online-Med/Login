@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = "sb_publishable_vYQjncMfOtRRrySBsI7new_gJN2frSG";
 
   try {
-    // Note que agora as colunas batem com o seu print: Ordem, pagina, descricao, icone
+    // Note que agora as colunas batem com o seu último print: Ordem, pagina, descricao, icone
     const url = `${SUPABASE_URL}/rest/v1/menu?select=Ordem,pagina,descricao,icone&order=Ordem.asc`;
 
     const response = await fetch(url, {
@@ -16,21 +16,23 @@ export default async function handler(req, res) {
 
     const rawData = await response.json();
 
-    // Se houver erro na resposta do Supabase, logamos para depurar
-    if (!Array.isArray(rawData)) {
-      return res.status(500).json({ erro: "Dados inválidos do banco", detalhes: rawData });
+    // Verificação de segurança: se o banco retornar erro ou não for uma lista
+    if (rawData.error || !Array.isArray(rawData)) {
+      console.error("Erro do Supabase:", rawData);
+      return res.status(500).json({ erro: "Erro ao ler tabela menu", detalhes: rawData });
     }
 
-    // Padronizamos para o que o seu Dashboard.html espera (tudo minúsculo)
+    // Padronizamos para o Dashboard.html
     const dadosFormatados = rawData.map(item => ({
-      ordem: item.Ordem,      // Pega de 'Ordem' (conforme seu print)
-      pagina: item.pagina,    // Pega de 'pagina'
-      descricao: item.descricao, // Pega de 'descricao'
+      ordem: item.Ordem,      
+      pagina: item.pagina,    
+      descricao: item.descricao, 
       icone: item.icone || 'bi-folder2'
     }));
 
     return res.status(200).json(dadosFormatados);
   } catch (error) {
+    console.error("Erro interno na API:", error.message);
     return res.status(500).json({ erro: error.message });
   }
 }
