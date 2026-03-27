@@ -30,7 +30,7 @@
             <div class="row g-2">
               <div class="col-md-2">
                 <label class="small fw-bold">PCOD</label>
-                <input type="text" class="form-control form-control-sm bg-light" name="pcod" placeholder="Auto" readonly>
+                <input type="text" class="form-control form-control-sm bg-light" name="pcod" id="f_pcod" placeholder="Carregando..." readonly>
               </div>
               <div class="col-md-10">
                 <label class="small fw-bold">Nome Completo *</label>
@@ -122,6 +122,25 @@
 </div>
 
 <script>
+  // Ao iniciar a tela, reserva um PCOD e carrega convênios
+  (async function inicializarCadastro() {
+    await carregarConvenios();
+    
+    // Se não for edição (pcod vazio), reserva um novo
+    const inputPcod = document.getElementById('f_pcod');
+    if (inputPcod && (inputPcod.value === "" || inputPcod.value === "Auto")) {
+      try {
+        const resp = await fetch('/api/pacientes', { method: 'POST' });
+        const data = await resp.json();
+        if (data.sucesso) {
+          inputPcod.value = data.pcod;
+        }
+      } catch (err) {
+        console.error("Erro ao reservar PCOD:", err);
+      }
+    }
+  })();
+
   function buscarEndereco(cep) {
     const limpo = cep.replace(/\D/g, '');
     if (limpo.length !== 8) return;
@@ -135,33 +154,35 @@
     });
   }
 
-  function carregarConvenios(valorAtual) {
-    google.script.run.withSuccessHandler(lista => {
+  async function carregarConvenios(valorAtual) {
+    try {
+      const resp = await fetch('/api/convenios');
+      const lista = await resp.json();
       const combo = document.getElementById('comboConvenios');
       if (!combo) return;
+
       combo.innerHTML = '<option value="">Selecione...</option>';
       if (lista && lista.length > 0) {
         lista.forEach(c => {
-          combo.innerHTML += '<option value="' + c.CONVENIO + '">' + c.CONVENIO + '</option>';
+          const opt = document.createElement('option');
+          opt.value = c.CONVENIO;
+          opt.textContent = c.CONVENIO;
+          combo.appendChild(opt);
         });
       } else {
         combo.innerHTML += '<option value="PARTICULAR">PARTICULAR</option>';
       }
       if (valorAtual) combo.value = valorAtual;
-    }).obterConvenios();
+    } catch (err) {
+      console.error("Erro ao carregar convênios:", err);
+    }
   }
 
-  function salvarNovoPaciente() {
+  async function salvarNovoPaciente() {
     const form = document.getElementById('formCadastro');
-    if (!form) return;
     const formData = new FormData(form);
     const dados = Object.fromEntries(formData);
     
-    if (dados.Estado) {
-      dados.UF = dados.Estado;
-      delete dados.Estado;
-    }
-
     if (!dados.Nome || dados.Nome.trim() === "") {
       Swal.fire('Atenção', 'O nome do paciente é obrigatório.', 'warning');
       return;
@@ -173,42 +194,38 @@
       allowOutsideClick: false, 
       didOpen: () => Swal.showLoading() 
     });
-    
-    google.script.run
-      .withSuccessHandler(res => {
-        if(res.sucesso) {
-          Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success');
-          carregarConteudo('pacientes'); 
-        } else {
-          Swal.fire('Erro no Banco', res.mensagem, 'error');
-        }
-      })
-      .withFailureHandler(err => {
-        Swal.fire('Erro de Conexão', err.toString(), 'error');
-      })
-      .inserirPaciente(dados);
+
+    try {
+      const resp = await fetch(`/api/pacientes?pcod=${dados.pcod}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+      });
+      const res = await resp.json();
+
+      if (res.sucesso) {
+        Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success');
+        carregarConteudo('pacientes.html'); 
+      } else {
+        Swal.fire('Erro no Banco', res.mensagem || "Erro desconhecido", 'error');
+      }
+    } catch (err) {
+      Swal.fire('Erro de Conexão', err.toString(), 'error');
+    }
   }
 
-  window. = function() {
-    const campoPcod = document.getElementsByName('pcod')[0];
-    const pcod = campoPcod ? campoPcod.value : "";
-    const tituloAtual = document.getElementById('titulo-topo').innerText;
+  async function cancelarCadastro() {
+    const pcod = document.getElementById('f_pcod').value;
 
-    if (tituloAtual.toUpperCase().includes("EDITAR")) {
-      carregarConteudo('pacientes');
-      return;
+    // Se houver um número reservado, exclui antes de sair
+    if (pcod && !isNaN(pcod)) {
+      try {
+        await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
+        console.log("Reserva " + pcod + " limpa.");
+      } catch (err) {
+        console.error("Erro ao excluir reserva:", err);
+      }
     }
-
-    if (pcod && pcod !== "" && pcod !== "Auto") {
-      google.script.run
-        .withSuccessHandler(() => {
-          carregarConteudo('pacientes'); 
-        })
-        .excluirRegistroReservado(pcod);
-    } else {
-      carregarConteudo('pacientes');
-    }
-  };
-
-  carregarConvenios();
+    carregarConteudo('pacientes.html');
+  }
 </script>
