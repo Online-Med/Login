@@ -1,62 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <base target="_top">
-
-  <!-- SweetAlert2 -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online-Med | Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
-  <!--
-    Bootstrap JS Bundle (inclui Popper).
-    OBRIGATÓRIO aqui no Dashboard para que os sub-pages (agenda, etc.)
-    tenham acesso ao objeto `bootstrap` quando forem injetados via
-    carregarConteudo().
-  -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <style>
     body { background-color: #f4f7f6; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
     :root { --sidebar-width: 260px; --sidebar-collapsed: 70px; }
-
-    .sidebar { width: var(--sidebar-width); background: #2c3e50; color: white; display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; }
+    .sidebar { width: var(--sidebar-width); background: #2c3e50; color: white; display: flex; flex-direction: column; transition: all 0.3s ease; position: relative; z-index: 1000; }
     .sidebar.minimizada { width: var(--sidebar-collapsed); }
-    .sidebar-header { padding: 20px; text-align: center; background: rgba(0,0,0,0.2); position: relative; white-space: nowrap; overflow: hidden; }
-    .btn-toggle-menu { position: absolute; right: 10px; top: 20px; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; z-index: 10; transition: 0.3s; }
-    .menu-container { flex-grow: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; justify-content: space-between; }
-
-    .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; transition: all 0.3s ease; }
+    .sidebar-header { padding: 20px; text-align: center; background: rgba(0,0,0,0.2); white-space: nowrap; overflow: hidden; }
+    .btn-toggle-menu { position: absolute; right: 10px; top: 20px; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+    .menu-container { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; justify-content: space-between; }
+    .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
     .header-bar { background: white; padding: 15px 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
     .content-area { padding: 30px; overflow-y: auto; flex-grow: 1; }
-
-    .nav-item { padding: 12px 20px; color: #bdc3c7; text-decoration: none; display: flex; align-items: center; transition: 0.3s; cursor: pointer; justify-content: space-between; white-space: nowrap; }
+    .nav-item { padding: 12px 20px; color: #bdc3c7; text-decoration: none; display: flex; align-items: center; transition: 0.3s; cursor: pointer; justify-content: space-between; }
     .nav-item:hover { background: #34495e; color: white; }
     .minimizada .nav-item span, .minimizada .sidebar-header h4, .minimizada .sidebar-header small, .minimizada .chevron { display: none; }
-    .minimizada .nav-item { justify-content: center; padding: 15px 0; }
-
     .submenu { display: none; background: #1a252f; }
-    .nivel-2 { padding: 10px 20px 10px 45px; font-size: 0.9em; color: #95a5a6; display: flex; align-items: center; cursor: pointer; }
+    .nivel-2 { padding: 10px 20px 10px 45px; font-size: 0.9em; color: #95a5a6; cursor: pointer; }
     .nivel-2:hover { color: #3498db; background: #243342; }
-    .chevron { transition: transform 0.3s; font-size: 0.8em; }
-    .aberto .chevron { transform: rotate(180deg); }
     .aberto + .submenu { display: block; }
-
     .welcome-card { background: white; border-radius: 10px; padding: 50px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     .btn-sair { border-top: 1px solid rgba(255,255,255,0.1); color: #e74c3c !important; }
   </style>
 </head>
 <body>
 
-  <!-- ── SIDEBAR ── -->
   <div class="sidebar" id="sidebar">
     <button class="btn-toggle-menu" onclick="toggleMenu()"><i class="bi bi-list"></i></button>
     <div class="sidebar-header">
-      <h4 class="mb-0" style="cursor:pointer" onclick="irParaHome()">Online-Med</h4>
+      <h4 class="mb-0" style="cursor:pointer" onclick="location.reload()">Online-Med</h4>
       <small class="text-info">Gestão de Consultórios</small>
     </div>
     <div class="menu-container">
@@ -69,7 +49,6 @@
     </div>
   </div>
 
-  <!-- ── CONTEÚDO PRINCIPAL ── -->
   <div class="main-content">
     <div class="header-bar">
       <h5 id="titulo-topo" class="m-0 text-secondary">VISÃO GERAL</h5>
@@ -85,33 +64,28 @@
   </div>
 
 <script>
-  // ── Salva o HTML da home para poder voltar ──────────────────────
-  const CONTEUDO_HOME = document.getElementById('corpo-paginas').innerHTML;
-
-  // ── Inicialização ──────────────────────────────────────────────
   window.onload = function() {
-    google.script.run
-      .withSuccessHandler(function(sessao) {
-        if (sessao && sessao.usuario) {
-          document.getElementById('user-display').innerHTML =
-            '<i class="bi bi-person-circle me-2"></i> ' + sessao.usuario;
-        }
-      })
-      .verificarSessaoAtiva();
-
-    google.script.run
-      .withSuccessHandler(function(dados) { renderizarMenu(dados); })
-      .buscarMenuDinamico();
+    verificarSessao();
+    carregarMenu();
   };
 
-  // ── Menu lateral ───────────────────────────────────────────────
-  function toggleMenu() {
-    document.getElementById('sidebar').classList.toggle('minimizada');
+  function verificarSessao() {
+    const usuario = localStorage.getItem('onlineMed_usuario');
+    if (!usuario) {
+      window.location.href = 'index.html'; // Volta para o login se não houver sessão
+      return;
+    }
+    document.getElementById('user-display').innerHTML = '<i class="bi bi-person-circle me-2"></i> ' + usuario;
   }
 
-  function irParaHome() {
-    document.getElementById('titulo-topo').innerText = 'VISÃO GERAL';
-    document.getElementById('corpo-paginas').innerHTML = CONTEUDO_HOME;
+  async function carregarMenu() {
+    try {
+      const resp = await fetch('/api/menu');
+      const dados = await resp.json();
+      renderizarMenu(dados);
+    } catch (err) {
+      console.error("Erro ao carregar menu:", err);
+    }
   }
 
   function renderizarMenu(dados) {
@@ -121,30 +95,24 @@
       return;
     }
     let html = '';
-    const pais = dados.filter(function(item) {
-      return !String(item.ordem).includes('.');
-    });
-    pais.forEach(function(pai) {
-      const filhos = dados.filter(function(item) {
-        return String(item.ordem).startsWith(pai.ordem + '.');
-      });
+    const pais = dados.filter(item => !String(item.ordem).includes('.'));
+    
+    pais.forEach(pai => {
+      const filhos = dados.filter(item => String(item.ordem).startsWith(pai.ordem + '.'));
       const temFilhos = filhos.length > 0;
-      const acaoPai = temFilhos
-        ? 'onclick="toggleSubmenu(this)"'
-        : 'onclick="carregarConteudo(\'' + pai.pagina + '\')"';
+      const acaoPai = temFilhos ? `onclick="toggleSubmenu(this)"` : `onclick="carregarConteudo('${pai.pagina}')"`;
 
-      html += '<div class="menu-grupo">' +
-        '<div class="nav-item" ' + acaoPai + '>' +
-          '<div><i class="bi bi-folder2 me-2 text-info"></i><span>' + pai.descricao + '</span></div>' +
-          (temFilhos ? '<i class="bi bi-chevron-down chevron"></i>' : '') +
-        '</div>';
+      html += `
+        <div class="menu-grupo">
+          <div class="nav-item" ${acaoPai}>
+            <div><i class="bi bi-folder2 me-2 text-info"></i><span>${pai.descricao}</span></div>
+            ${temFilhos ? '<i class="bi bi-chevron-down chevron"></i>' : ''}
+          </div>`;
 
       if (temFilhos) {
         html += '<div class="submenu">';
-        filhos.forEach(function(f) {
-          html += '<div class="nivel-2" onclick="carregarConteudo(\'' + f.pagina + '\')">' +
-            '<i class="bi bi-dot me-1"></i> ' + f.descricao +
-          '</div>';
+        filhos.forEach(f => {
+          html += `<div class="nivel-2" onclick="carregarConteudo('${f.pagina}')"><i class="bi bi-dot me-1"></i> ${f.descricao}</div>`;
         });
         html += '</div>';
       }
@@ -154,72 +122,44 @@
   }
 
   function toggleSubmenu(elemento) {
-    if (document.getElementById('sidebar').classList.contains('minimizada')) toggleMenu();
     elemento.classList.toggle('aberto');
   }
 
-  // ── Carregamento de páginas ────────────────────────────────────
-  function carregarConteudo(pagina) {
-    const principal = document.getElementById('corpo-paginas');
-    principal.innerHTML =
-      '<div class="text-center mt-5">' +
-      '<div class="spinner-border text-info"></div><br>Carregando...</div>';
-
-    google.script.run
-      .withSuccessHandler(function(html) {
-        // Injeta o HTML
-        principal.innerHTML = html;
-
-        // Re-executa os <script> da página injetada
-        // (o browser não executa scripts inseridos via innerHTML)
-        Array.from(principal.getElementsByTagName('script')).forEach(function(s) {
-          var novo = document.createElement('script');
-          novo.text = s.innerHTML;
-          document.body.appendChild(novo);
-          document.body.removeChild(novo);
-        });
-
-        // ── Gatilhos por página ──────────────────────────────────
-        if (pagina === 'pacientes') {
-          document.getElementById('titulo-topo').innerText = 'PACIENTES';
-          if (typeof carregarPacientes === 'function') carregarPacientes(0);
-        }
-
-        if (pagina === 'agenda') {
-          document.getElementById('titulo-topo').innerText = 'AGENDA MÉDICA';
-          if (typeof inicializarPaginaAgenda === 'function') inicializarPaginaAgenda();
-        }
-
-        if (pagina === 'cadastro_pacientes') {
-          if (!document.getElementById('titulo-topo').innerText.includes('EDITAR')) {
-            document.getElementById('titulo-topo').innerText = 'NOVO CADASTRO';
-            google.script.run
-              .withSuccessHandler(function(num) {
-                const campos = document.getElementsByName('pcod');
-                if (campos.length > 0) campos[0].value = num;
-              })
-              .reservarProximoPcod();
-          }
-        }
-      })
-      .withFailureHandler(function(err) {
-        principal.innerHTML =
-          '<div class="alert alert-danger m-4">Erro ao carregar página: ' + err + '</div>';
-      })
-      .obterHtmlArquivo(pagina);
+  function toggleMenu() {
+    document.getElementById('sidebar').classList.toggle('minimizada');
   }
 
-  // ── Logout ─────────────────────────────────────────────────────
+  async function carregarConteudo(pagina) {
+    if (!pagina) return;
+    const principal = document.getElementById('corpo-paginas');
+    principal.innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-info"></div><br>Carregando...</div>';
+
+    try {
+      const resp = await fetch(pagina); // Vercel serve arquivos .html diretamente
+      if (!resp.ok) throw new Error("Página não encontrada");
+      const html = await resp.text();
+      
+      principal.innerHTML = html;
+
+      // Executa scripts da página carregada
+      Array.from(principal.getElementsByTagName('script')).forEach(s => {
+        const novo = document.createElement('script');
+        novo.text = s.innerHTML;
+        document.body.appendChild(novo).parentNode.removeChild(novo);
+      });
+
+      // Ajustes de título conforme a página
+      const titulos = { 'pacientes.html': 'PACIENTES', 'agenda.html': 'AGENDA MÉDICA' };
+      document.getElementById('titulo-topo').innerText = titulos[pagina] || 'CONSULTÓRIO';
+
+    } catch (err) {
+      principal.innerHTML = `<div class="alert alert-danger m-4">Erro ao carregar: ${err.message}</div>`;
+    }
+  }
+
   function fazerLogout() {
-    google.script.run
-      .withSuccessHandler(function() {
-        google.script.run
-          .withSuccessHandler(function(url) {
-            window.top.location.href = url + '?v=Login';
-          })
-          .getScriptUrl();
-      })
-      .encerrarSessao();
+    localStorage.clear();
+    window.location.href = 'index.html';
   }
 </script>
 </body>
