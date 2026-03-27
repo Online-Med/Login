@@ -135,33 +135,52 @@
     }
   }
 
-  async function abrirEdicaoPaciente(pcod) {
-    document.getElementById('titulo-topo').innerText = "EDITAR PACIENTE: " + pcod;
-    carregarConteudo('cadastro_pacientes.html'); // Adicionei .html para garantir na Vercel
+async function abrirEdicaoPaciente(pcod) {
+    // 1. Muda o título para sabermos que é edição
+    const titulo = document.getElementById('titulo-topo');
+    if (titulo) titulo.innerText = "EDITAR PACIENTE: " + pcod;
+
+    // 2. Carrega a tela de cadastro
+    await carregarConteudo('cadastro_pacientes.html');
 
     try {
+      // 3. Busca os dados do paciente na API
       const resp = await fetch(`/api/pacientes?pcod=${pcod}`);
       const res = await resp.json();
       
       if (!res.sucesso || !res.paciente) return;
       const paciente = res.paciente;
 
-      // Espera o formulário carregar na tela
+      // 4. Pequeno intervalo para o navegador renderizar o formulário novo
       setTimeout(() => {
         const form = document.getElementById('formCadastro');
-        if (form) {
-          Object.keys(paciente).forEach(key => {
-            const campo = form.querySelector(`[name="${key === 'UF' ? 'Estado' : key}"]`);
-            if (campo) {
-              campo.value = (campo.type === 'date' && paciente[key]) ? paciente[key].split('T')[0] : paciente[key];
+        if (!form) return;
+
+        // Preenche cada campo do formulário com os dados do banco
+        Object.keys(paciente).forEach(key => {
+          const nomeCampo = (key === 'UF') ? 'Estado' : key;
+          const campo = form.querySelector(`[name="${nomeCampo}"]`);
+          
+          if (campo) {
+            if (campo.type === 'date' && paciente[key]) {
+              campo.value = paciente[key].split('T')[0];
+            } else {
+              campo.value = paciente[key] || "";
             }
-          });
+          }
+        });
+        
+        // Se houver função de carregar convênios na outra página, ela será disparada lá
+        if (typeof carregarConvenios === 'function') {
+          carregarConvenios(paciente.Convenio);
         }
-      }, 500);
+      }, 300); // 300ms é o tempo ideal para o DOM estar pronto
     } catch (err) {
       console.error("Erro ao carregar paciente:", err);
+      Swal.fire('Erro', 'Não foi possível carregar os dados do paciente.', 'error');
     }
   }
+  
 
   carregarPacientes(0);
 </script>
