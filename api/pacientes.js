@@ -79,14 +79,23 @@ export default async function handler(req, res) {
     // --- SALVAR/ATUALIZAR (PATCH) ---
     if (method === 'PATCH') {
       const { pcod } = query;
-      await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, {
+      // Adicionamos 'Prefer': 'return=representation' para confirmar se gravou
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`, {
         method: 'PATCH',
-        headers,
+        headers: { ...headers, 'Prefer': 'return=representation' },
         body: JSON.stringify(req.body)
       });
-      return res.status(200).json({ sucesso: true });
+      
+      const d = await r.json();
+      
+      if (r.ok && d.length > 0) {
+        return res.status(200).json({ sucesso: true });
+      } else {
+        return res.status(400).json({ sucesso: false, erro: "Não foi possível atualizar os dados." });
+      }
     }
 
+    
     // --- EXCLUIR (DELETE) ---
     if (method === 'DELETE') {
       const { pcod } = query;
