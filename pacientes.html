@@ -58,6 +58,16 @@
 
 
 <script>
+
+
+  // Proteção para não declarar a variável duas vezes ao alternar menus
+  if (typeof paginaAtualPacientes === 'undefined') {
+    window.paginaAtualPacientes = 0;
+  } else {
+    paginaAtualPacientes = 0; // Reseta para a primeira página ao voltar
+  }
+
+  
   let paginaAtualPacientes = 0;
 
   async function carregarPacientes(pagina) {
