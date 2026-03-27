@@ -1,0 +1,78 @@
+export default async function handler(req, res) {
+  const SUPABASE_URL = "https://pijymmyhtjvgfnpazjww.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_vYQjncMfOtRRrySBsI7new_gJN2frSG";
+  const { method, query } = req;
+
+  try {
+    // --- LISTAR PACIENTES (GET) ---
+    if (method === 'GET') {
+      const pcod = query.pcod;
+      
+      // Busca específica por PCOD (Edição)
+      if (pcod) {
+        const url = `${SUPABASE_URL}/rest/v1/pacientes?select=*&pcod=eq.${pcod}&limit=1`;
+        const response = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+        const dados = await response.json();
+        return res.status(200).json({ sucesso: true, paciente: dados[0] });
+      }
+
+      // Listagem Geral com Filtros e Paginação
+      const pagina = parseInt(query.pagina) || 0;
+      const itensPorPagina = 10;
+      const de = pagina * itensPorPagina;
+      const ate = de + itensPorPagina - 1;
+
+      let url = `${SUPABASE_URL}/rest/v1/pacientes?select=pcod,Nome,Documento,Celular,Telefone,Data_Nascimento&order=pcod.desc`;
+
+      if (query.nome) {
+        const ehNumero = !isNaN(query.nome);
+        url += ehNumero ? `&pcod=eq.${query.nome}` : `&Nome=ilike.*${query.nome}*`;
+      }
+      if (query.documento) {
+        url += `&Documento=ilike.*${query.documento}*`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Range': `${de}-${ate}`,
+          'Prefer': 'count=exact'
+        }
+      });
+
+      const dados = await response.json();
+      const range = response.headers.get("content-range") || "0-0/0";
+      const total = parseInt(range.split("/")[1]) || 0;
+
+      return res.status(200).json({
+        sucesso: true,
+        dados: dados,
+        total: total,
+        paginas: Math.ceil(total / itensPorPagina)
+      });
+    }
+
+    // --- SALVAR/ATUALIZAR (PATCH) ---
+    if (method === 'PATCH') {
+      const { pcod } = query;
+      const url = `${SUPABASE_URL}/rest/v1/pacientes?pcod=eq.${pcod}`;
+      
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: { 
+          'apikey': SUPABASE_KEY, 
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(req.body)
+      });
+
+      if (response.ok) return res.status(200).json({ sucesso: true });
+      throw new Error("Erro ao atualizar banco");
+    }
+
+  } catch (error) {
+    return res.status(500).json({ sucesso: false, mensagem: error.message });
+  }
+}
