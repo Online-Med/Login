@@ -6,9 +6,14 @@
         <li class="breadcrumb-item active">PACIENTES</li>
       </ol>
     </nav>
-    <button class="btn btn-info text-white btn-sm" onclick="carregarConteudo('cadastro_pacientes.html')">
-      <i class="bi bi-plus-lg"></i> Novo
-    </button>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-sm" onclick="carregarPacientes(paginaAtualPacientes)" title="Atualizar Lista">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+      <button class="btn btn-info text-white btn-sm" onclick="carregarConteudo('cadastro_pacientes.html')">
+        <i class="bi bi-plus-lg"></i> Novo
+      </button>
+    </div>
   </div>
 
   <div class="card shadow-sm">
