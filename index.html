@@ -1,19 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online-Med | Login</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <style>
-    body, html { height: 100%; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body, html { height: 100%; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
     .login-container { height: 100vh; display: flex; }
     .login-form-side { flex: 1; display: flex; align-items: center; justify-content: center; background: white; }
     .login-image-side { flex: 1.2; background: url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1000&q=80') center/cover; }
     .form-box { width: 100%; max-width: 400px; padding: 20px; text-align: center; }
-    .btn-entrar { background-color: #0089a5; color: white; border: none; padding: 12px; border-radius: 5px; }
+    .btn-entrar { background-color: #0089a5; color: white; border: none; padding: 12px; border-radius: 5px; transition: 0.3s; }
     .btn-entrar:hover { background-color: #006d84; color: white; }
-    #erro { color: red; display: none; margin-top: 15px; font-weight: 500; }
-    .loader { display: none; margin-top: 10px; }
+    #erro { color: #dc3545; display: none; margin-top: 15px; font-weight: 500; font-size: 0.9rem; }
+    .loader { display: none; margin-top: 10px; width: 1.5rem; height: 1.5rem; }
+    .input-group-text { background-color: #f8f9fa; border-right: none; }
+    .form-control { border-left: none; }
+    .form-control:focus { border-color: #dee2e6; box-shadow: none; }
   </style>
 </head>
 <body>
@@ -27,7 +32,7 @@
       <div class="mt-4">
         <div class="input-group mb-3">
           <span class="input-group-text"><i class="bi bi-person"></i></span>
-          <input type="text" id="email" class="form-control" placeholder="E-mail">
+          <input type="email" id="email" class="form-control" placeholder="E-mail">
         </div>
         
         <div class="input-group mb-3">
@@ -55,50 +60,66 @@
 </div>
 
 <script>
-
-function fazerLogin() {
+async function fazerLogin() {
   const email = document.getElementById('email').value;
   const senha = document.getElementById('senha').value;
   const btn = document.getElementById('btnAcao');
   const erroDiv = document.getElementById('erro');
   const loader = document.querySelector('.loader');
   
+  // Validação simples
   if (!email || !senha) {
-    erroDiv.innerText = "Preencha todos os campos.";
-    erroDiv.style.display = 'block';
+    exibirErro("Preencha todos os campos.");
     return;
   }
 
+  // Estado de carregamento
   btn.disabled = true;
   erroDiv.style.display = 'none';
   loader.style.display = 'inline-block';
 
-  // Chama o servidor apenas UMA vez
-  google.script.run
-    .withSuccessHandler(res => {
-      if (res.sucesso) {
-        // Redireciona usando a URL que o servidor já nos enviou
-        window.top.location.href = res.url + "?v=Dashboard";
-      } else {
-        loader.style.display = 'none';
-        btn.disabled = false;
-        erroDiv.innerText = res.mensagem;
-        erroDiv.style.display = 'block';
-      }
-    })
-    .withFailureHandler(err => {
-      loader.style.display = 'none';
-      btn.disabled = false;
-      erroDiv.innerText = "Erro de conexão severo.";
-      erroDiv.style.display = 'block';
-    })
-    .autenticarUsuario(email, senha);
+  try {
+    // Chamada para a nossa API na Vercel
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, senha: senha })
+    });
+
+    const res = await response.json();
+
+    if (response.ok && res.sucesso) {
+      // SALVA SESSÃO NO NAVEGADOR
+      localStorage.setItem('onlineMed_usuario', res.usuario);
+      localStorage.setItem('onlineMed_email', email);
+      localStorage.setItem('onlineMed_token', btoa(email + ":" + new Date().getTime()));
+
+      // REDIRECIONA PARA O DASHBOARD
+      // Na Vercel, basta chamar o nome do arquivo .html
+      window.location.href = "dashboard.html";
+      
+    } else {
+      exibirErro(res.mensagem || "Usuário ou senha inválidos.");
+    }
+  } catch (err) {
+    exibirErro("Erro ao conectar com o servidor da clínica.");
+    console.error(err);
+  } finally {
+    loader.style.display = 'none';
+    btn.disabled = false;
+  }
 }
 
+function exibirErro(msg) {
+  const erroDiv = document.getElementById('erro');
+  erroDiv.innerText = msg;
+  erroDiv.style.display = 'block';
+}
 
-
-
-
+// Permite dar 'Enter' para logar
+document.addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') fazerLogin();
+});
 </script>
 
 </body>
