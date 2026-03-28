@@ -10,7 +10,7 @@
       <button class="btn btn-outline-secondary btn-sm" onclick="carregarPacientes(paginaAtualPacientes)" title="Atualizar Lista">
         <i class="bi bi-arrow-clockwise"></i>
       </button>
-      <button class="btn btn-info text-white btn-sm" onclick="carregarConteudo('cadastro_pacientes.html')">
+      <button class="btn btn-info text-white btn-sm" onclick="abrirNovoPaciente()">
         <i class="bi bi-plus-lg"></i> Novo
       </button>
     </div>
@@ -59,21 +59,21 @@
   </div>
 </div>
 
-
-
-
 <script>
-
-
-  // Proteção para não declarar a variável duas vezes ao alternar menus
+  // Proteção para a variável de página
   if (typeof paginaAtualPacientes === 'undefined') {
     window.paginaAtualPacientes = 0;
   } else {
-    paginaAtualPacientes = 0; // Reseta para a primeira página ao voltar
+    paginaAtualPacientes = 0;
   }
 
-  
-  //let paginaAtualPacientes = 0;
+  // NOVA FUNÇÃO: Garante que o sistema saiba que é um NOVO cadastro
+  function abrirNovoPaciente() {
+    window.ehEdicao = false; 
+    const titulo = document.getElementById('titulo-topo');
+    if (titulo) titulo.innerText = "NOVO CADASTRO DE PACIENTE";
+    carregarConteudo('cadastro_pacientes.html');
+  }
 
   async function carregarPacientes(pagina) {
     paginaAtualPacientes = pagina;
@@ -87,7 +87,6 @@
     const celular = document.getElementById('f_celular')?.value || "";
 
     try {
-      // Chamada para a nova API na Vercel
       const url = `/api/pacientes?pagina=${pagina}&nome=${nome}&documento=${cpf}&celular=${celular}`;
       const resp = await fetch(url);
       const res = await resp.json();
@@ -119,7 +118,11 @@
 
     corpo.innerHTML = lista.map(p => `
       <tr>
-        <td><button class="btn btn-outline-info btn-sm" onclick="abrirEdicaoPaciente(${p.pcod})" title="Editar"><i class="bi bi-pencil-square"></i></button></td>
+        <td>
+          <button class="btn btn-outline-info btn-sm" onclick="abrirEdicaoPaciente(${p.pcod})" title="Editar">
+            <i class="bi bi-pencil-square"></i>
+          </button>
+        </td>
         <td><span class="fw-bold">${p.pcod} - ${p.Nome || ""}</span></td>
         <td>${p.Documento || "-"}</td>
         <td>${p.Celular || p.Telefone || "-"}</td>
@@ -128,52 +131,45 @@
     `).join('');
   }
 
-function renderizarPaginacaoPacientes(res) {
-  const info = document.getElementById('infoPaginacao');
-  if (info) info.innerText = `Total: ${res.total} registros | Página ${paginaAtualPacientes + 1} de ${res.paginas}`;
-  
-  const ctrl = document.getElementById('controlesPaginacao');
-  if (ctrl) {
-    ctrl.innerHTML = `
-      <button class="btn btn-sm btn-light border me-1" ${paginaAtualPacientes === 0 ? 'disabled' : ''} 
-        onclick="carregarPacientes(${paginaAtualPacientes - 1})">Anterior</button>
-      
-      <button class="btn btn-sm btn-light border" ${paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : ''} 
-        onclick="carregarPacientes(${paginaAtualPacientes + 1})">Próximo</button>
-    `;
+  function renderizarPaginacaoPacientes(res) {
+    const info = document.getElementById('infoPaginacao');
+    if (info) info.innerText = `Total: ${res.total} registros | Página ${paginaAtualPacientes + 1} de ${res.paginas}`;
+    
+    const ctrl = document.getElementById('controlesPaginacao');
+    if (ctrl) {
+      ctrl.innerHTML = `
+        <button class="btn btn-sm btn-light border me-1" ${paginaAtualPacientes === 0 ? 'disabled' : ''} 
+          onclick="carregarPacientes(${paginaAtualPacientes - 1})">Anterior</button>
+        <button class="btn btn-sm btn-light border" ${paginaAtualPacientes + 1 >= res.paginas ? 'disabled' : ''} 
+          onclick="carregarPacientes(${paginaAtualPacientes + 1})">Próximo</button>
+      `;
+    }
   }
-}
 
-async function abrirEdicaoPaciente(pcod) {
-    // A LINHA MAIS IMPORTANTE: Avisa o sistema que NÃO é para criar novo e nem apagar ao cancelar
+  async function abrirEdicaoPaciente(pcod) {
+    // Seta como EDIÇÃO para travar o DELETE no cancelar
     window.ehEdicao = true; 
 
     const titulo = document.getElementById('titulo-topo');
     if (titulo) titulo.innerText = "EDITAR PACIENTE: " + pcod;
 
-    // 1. Carrega a casca da página
     await carregarConteudo('cadastro_pacientes.html');
 
     try {
-      // 2. Busca os dados reais no banco
       const resp = await fetch(`/api/pacientes?pcod=${pcod}`);
       const res = await resp.json();
       
       if (!res.sucesso || !res.paciente) return;
       const paciente = res.paciente;
 
-      // 3. O setTimeout é obrigatório para dar tempo do HTML "aparecer" na tela
       setTimeout(() => {
         const form = document.getElementById('formCadastro');
         if (!form) return;
 
-        // Preenche o campo PCOD (essencial para o botão Salvar saber quem atualizar)
         const f_pcod = document.getElementById('f_pcod');
         if (f_pcod) f_pcod.value = pcod;
 
-        // Preenche o restante dos campos automaticamente
         Object.keys(paciente).forEach(key => {
-          // Ajuste: O banco usa 'UF', o formulário usa 'Estado'
           const nomeCampo = (key === 'UF') ? 'Estado' : key;
           const campo = form.querySelector(`[name="${nomeCampo}"]`);
           
@@ -185,13 +181,13 @@ async function abrirEdicaoPaciente(pcod) {
             }
           }
         });
-      }, 300); 
+      }, 350); // Tempo seguro para o DOM carregar
     } catch (err) {
       console.error("Erro ao carregar paciente:", err);
       Swal.fire('Erro', 'Falha ao carregar dados.', 'error');
     }
-}
-  
+  }
 
+  // Carrega a lista ao entrar
   carregarPacientes(0);
 </script>
