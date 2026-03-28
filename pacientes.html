@@ -145,28 +145,35 @@ function renderizarPaginacaoPacientes(res) {
 }
 
 async function abrirEdicaoPaciente(pcod) {
-    // 1. Muda o título para sabermos que é edição
+    // A LINHA MAIS IMPORTANTE: Avisa o sistema que NÃO é para criar novo e nem apagar ao cancelar
+    window.ehEdicao = true; 
+
     const titulo = document.getElementById('titulo-topo');
     if (titulo) titulo.innerText = "EDITAR PACIENTE: " + pcod;
 
-    // 2. Carrega a tela de cadastro
+    // 1. Carrega a casca da página
     await carregarConteudo('cadastro_pacientes.html');
 
     try {
-      // 3. Busca os dados do paciente na API
+      // 2. Busca os dados reais no banco
       const resp = await fetch(`/api/pacientes?pcod=${pcod}`);
       const res = await resp.json();
       
       if (!res.sucesso || !res.paciente) return;
       const paciente = res.paciente;
 
-      // 4. Pequeno intervalo para o navegador renderizar o formulário novo
+      // 3. O setTimeout é obrigatório para dar tempo do HTML "aparecer" na tela
       setTimeout(() => {
         const form = document.getElementById('formCadastro');
         if (!form) return;
 
-        // Preenche cada campo do formulário com os dados do banco
+        // Preenche o campo PCOD (essencial para o botão Salvar saber quem atualizar)
+        const f_pcod = document.getElementById('f_pcod');
+        if (f_pcod) f_pcod.value = pcod;
+
+        // Preenche o restante dos campos automaticamente
         Object.keys(paciente).forEach(key => {
+          // Ajuste: O banco usa 'UF', o formulário usa 'Estado'
           const nomeCampo = (key === 'UF') ? 'Estado' : key;
           const campo = form.querySelector(`[name="${nomeCampo}"]`);
           
@@ -178,17 +185,12 @@ async function abrirEdicaoPaciente(pcod) {
             }
           }
         });
-        
-        // Se houver função de carregar convênios na outra página, ela será disparada lá
-        if (typeof carregarConvenios === 'function') {
-          carregarConvenios(paciente.Convenio);
-        }
-      }, 300); // 300ms é o tempo ideal para o DOM estar pronto
+      }, 300); 
     } catch (err) {
       console.error("Erro ao carregar paciente:", err);
-      Swal.fire('Erro', 'Não foi possível carregar os dados do paciente.', 'error');
+      Swal.fire('Erro', 'Falha ao carregar dados.', 'error');
     }
-  }
+}
   
 
   carregarPacientes(0);
