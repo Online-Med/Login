@@ -102,12 +102,15 @@
       const temFilhos = filhos.length > 0;
       const acaoPai = temFilhos ? `onclick="toggleSubmenu(this)"` : `onclick="carregarConteudo('${pai.pagina}')"`;
 
-      html += `
-        <div class="menu-grupo">
-          <div class="nav-item" ${acaoPai}>
-            <div><i class="bi bi-folder2 me-2 text-info"></i><span>${pai.descricao}</span></div>
-            ${temFilhos ? '<i class="bi bi-chevron-down chevron"></i>' : ''}
-          </div>`;
+html += `
+  <div class="menu-grupo">
+    <div class="nav-item" ${acaoPai}>
+      <div>
+        <i class="bi ${pai.icone || 'bi-folder2'} me-2 text-info"></i>
+        <span>${pai.descricao}</span>
+      </div>
+      ${temFilhos ? '<i class="bi bi-chevron-down chevron"></i>' : ''}
+    </div>`;
 
       if (temFilhos) {
         html += '<div class="submenu">';
@@ -157,6 +160,9 @@
     }
   }
 
+
+
+  
   function fazerLogout() {
     localStorage.clear();
     window.location.href = 'index.html';
