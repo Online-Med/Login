@@ -121,139 +121,116 @@
   </div>
 </div>
 
+
 <script>
-  // Ao iniciar a tela, reserva um PCOD e carrega convênios
+  // Variável para controlar se é uma edição
+  let ehEdicao = false;
+
   (async function inicializarCadastro() {
     await carregarConvenios();
     
-    // Se não for edição (pcod vazio), reserva um novo
     const inputPcod = document.getElementById('f_pcod');
-    if (inputPcod && (inputPcod.value === "" || inputPcod.value === "Auto")) {
-      try {
-        const resp = await fetch('/api/pacientes', { method: 'POST' });
-        const data = await resp.json();
-        if (data.sucesso) {
-          inputPcod.value = data.pcod;
+    
+    // Pequena pausa de 100ms para dar tempo ao sistema principal 
+    // de preencher o PCOD caso seja uma EDIÇÃO
+    setTimeout(async () => {
+      // Se após 100ms o campo continuar vazio ou com "Carregando...", aí sim é um NOVO
+      if (inputPcod && (inputPcod.value === "" || inputPcod.value === "Carregando...")) {
+        ehEdicao = false;
+        try {
+          const resp = await fetch('/api/pacientes', { method: 'POST' });
+          const data = await resp.json();
+          if (data.sucesso) {
+            inputPcod.value = data.pcod;
+          }
+        } catch (err) {
+          console.error("Erro ao reservar PCOD:", err);
         }
-      } catch (err) {
-        console.error("Erro ao reservar PCOD:", err);
+      } else {
+        // Se já tinha valor, é uma edição, não fazemos o POST
+        ehEdicao = true;
+        console.log("Modo Edição detectado para o PCOD:", inputPcod.value);
       }
-    }
+    }, 100);
   })();
 
-  function buscarEndereco(cep) {
-    const limpo = cep.replace(/\D/g, '');
-    if (limpo.length !== 8) return;
-    fetch('https://viacep.com.br/ws/' + limpo + '/json/').then(r => r.json()).then(d => {
-      if (!d.erro) {
-        document.getElementById('rua').value = d.logradouro;
-        document.getElementById('bairro').value = d.bairro;
-        document.getElementById('cidade').value = d.localidade;
-        document.getElementById('uf').value = d.uf;
+  // ... (mantenha as funções buscarEndereco e carregarConvenios iguais) ...
+
+  async function salvarNovoPaciente() {
+    const form = document.getElementById('formCadastro');
+    const pcodReal = document.getElementById('f_pcod')?.value;
+
+    if (!pcodReal || pcodReal === "Carregando...") {
+      Swal.fire('Erro', 'Aguarde o carregamento do código do paciente.', 'error');
+      return;
+    }
+
+    const formData = new FormData(form);
+    let dadosRaw = Object.fromEntries(formData);
+
+    // TRADUÇÃO DE CAMPOS (Ajustado para incluir todos os campos do seu banco)
+    let dadosParaSalvar = {
+      Nome: dadosRaw.Nome,
+      Sexo: dadosRaw.Sexo,
+      Estado_Civil: dadosRaw.Estado_Civil,
+      Telefone: dadosRaw.Telefone,
+      Email: dadosRaw.Email,
+      CEP: dadosRaw.CEP,
+      Endereco: dadosRaw.Endereco,
+      Numero: dadosRaw.Numero,
+      Bairro: dadosRaw.Bairro,
+      Cidade: dadosRaw.Cidade,
+      UF: dadosRaw.Estado,
+      Documento: dadosRaw.Documento, // CPF
+      rg: dadosRaw.rg,
+      Celular: dadosRaw.Celular,
+      Convenio: dadosRaw.Convenio,
+      indicacao: dadosRaw.indicacao,
+      Responsavel: dadosRaw.Responsavel,
+      Data_Nascimento: dadosRaw.Data_Nascimento
+    };
+
+    // Limpeza de campos vazios
+    Object.keys(dadosParaSalvar).forEach(key => {
+      if (dadosParaSalvar[key] === undefined || dadosParaSalvar[key] === "") {
+        delete dadosParaSalvar[key];
       }
     });
-  }
 
-  async function carregarConvenios(valorAtual) {
+    Swal.fire({ title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
     try {
-      const resp = await fetch('/api/convenios');
-      const lista = await resp.json();
-      const combo = document.getElementById('comboConvenios');
-      if (!combo) return;
+      const resp = await fetch(`/api/pacientes?pcod=${pcodReal}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosParaSalvar)
+      });
 
-      combo.innerHTML = '<option value="">Selecione...</option>';
-      if (lista && lista.length > 0) {
-        lista.forEach(c => {
-          const opt = document.createElement('option');
-          opt.value = c.CONVENIO;
-          opt.textContent = c.CONVENIO;
-          combo.appendChild(opt);
+      const res = await resp.json();
+
+      if (res.sucesso) {
+        Swal.fire('Sucesso!', 'Dados gravados com sucesso!', 'success').then(() => {
+          carregarConteudo('pacientes.html');
         });
       } else {
-        combo.innerHTML += '<option value="PARTICULAR">PARTICULAR</option>';
+        Swal.fire('Erro', res.erro || "Erro ao atualizar banco.", 'error');
       }
-      if (valorAtual) combo.value = valorAtual;
     } catch (err) {
-      console.error("Erro ao carregar convênios:", err);
+      Swal.fire('Erro', 'Falha na comunicação.', 'error');
     }
   }
 
-async function salvarNovoPaciente() {
-  const form = document.getElementById('formCadastro');
-  const pcodReal = document.getElementById('f_pcod')?.value;
-
-  if (!pcodReal) {
-    Swal.fire('Erro', 'Código do paciente não encontrado.', 'error');
-    return;
-  }
-
-  const formData = new FormData(form);
-  let dadosRaw = Object.fromEntries(formData);
-
-  // --- TRADUÇÃO DE CAMPOS (De HTML para Banco de Dados) ---
-  let dadosParaSalvar = {
-    Nome: dadosRaw.Nome,
-    Sexo: dadosRaw.Sexo,
-    Estado_Civil: dadosRaw.Estado_Civil,
-    Telefone: dadosRaw.Telefone,
-    Email: dadosRaw.Email,
-    CEP: dadosRaw.CEP,
-    Endereco: dadosRaw.Endereco,
-    Numero: dadosRaw.Numero,
-    Bairro: dadosRaw.Bairro,
-    Cidade: dadosRaw.Cidade,
-    UF: dadosRaw.Estado // Traduz 'Estado' do formulário para 'UF' do banco
-  };
-
-  // Limpeza de campos vazios para não corromper o banco
-  Object.keys(dadosParaSalvar).forEach(key => {
-    if (dadosParaSalvar[key] === undefined || dadosParaSalvar[key] === "") {
-      delete dadosParaSalvar[key];
+  async function cancelarCadastro() {
+    const pcod = document.getElementById('f_pcod').value;
+    
+    // SÓ excluímos se NÃO for edição e for um registro novo (RESERVADO)
+    if (!ehEdicao && pcod) {
+      try {
+        await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
+      } catch (err) {
+        console.error("Erro ao remover reserva:", err);
+      }
     }
-  });
-
-  Swal.fire({ title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-  try {
-    const resp = await fetch(`/api/pacientes?pcod=${pcodReal}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dadosParaSalvar)
-    });
-
-    const res = await resp.json();
-
-    if (res.sucesso) {
-      Swal.fire('Sucesso!', 'Paciente salvo com sucesso!', 'success').then(() => {
-        carregarConteudo('pacientes.html');
-      });
-    } else {
-      console.error("Erro detalhado:", res.erro);
-      Swal.fire('Erro no Banco', "Verifique se os nomes das colunas estão corretos.", 'error');
-    }
-  } catch (err) {
-    Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
+    carregarConteudo('pacientes.html');
   }
-}
-
-  
-
-  
-async function cancelarCadastro() {
-  const pcod = document.getElementById('f_pcod').value;
-  const nome = document.getElementsByName('Nome')[0].value;
-
-  // SÓ exclui se for um registro novo que ainda está com o nome de reserva
-  if (pcod && nome === "RESERVADO - AGUARDANDO DADOS") {
-    try {
-      await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-      console.log("Reserva temporária removida.");
-    } catch (err) {
-      console.error("Erro ao remover reserva:", err);
-    }
-  }
-  
-  // Se for uma edição de paciente real, o 'nome' será diferente e ele apenas fecha a tela
-  carregarConteudo('pacientes.html');
-}
 </script>
