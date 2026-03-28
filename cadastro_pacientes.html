@@ -206,37 +206,27 @@
   }
 
 async function cancelarCadastro() {
-    // 1. Busca o PCOD
     const pcod = document.getElementById('f_pcod')?.value;
     
-    // 2. Busca o Nome de forma mais garantida (pelo ID ou pelo Name)
-    const campoNome = document.getElementsByName('Nome')[0];
-    const nome = campoNome ? campoNome.value : "";
+    // Pega o valor do campo Nome (usando querySelector para ser certeiro)
+    const campoNome = document.querySelector('input[name="Nome"]');
+    const nomeAtual = campoNome ? campoNome.value : "";
 
-    console.log("Tentando cancelar...");
-    console.log("PCOD:", pcod);
-    console.log("Nome atual no campo:", nome);
-    console.log("Status ehEdicao:", window.ehEdicao);
-
-    // SÓ apaga se: 
-    // - NÃO for edição (ehEdicao === false)
-    // - O nome contiver "RESERVADO"
-    // - O pcod for válido e não for o texto de aguarde
-    if (window.ehEdicao === false && pcod && pcod !== "Aguarde..." && nome.includes("RESERVADO")) {
-        console.log("Condições aceitas. Apagando rascunho...");
+    // A REGRA: Se o nome for EXATAMENTE o texto de reserva, deleta.
+    if (pcod && nomeAtual === "RESERVADO - AGUARDANDO DADOS") {
+        console.log("Detectado rascunho. Apagando pcod:", pcod);
         try {
-            const resp = await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-            const res = await resp.json();
-            if(res.sucesso) console.log("Registro deletado com sucesso.");
-        } catch (e) { 
-            console.error("Erro ao deletar:", e); 
+            // Chamada para deletar
+            await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error("Erro ao deletar rascunho:", e);
         }
     } else {
-        console.log("Cancelamento sem exclusão (Edição ou Registro já alterado).");
+        console.log("Paciente real ou edição. Apenas saindo...");
     }
-    
-    // SEMPRE reseta a bandeira e volta
-    window.ehEdicao = false; 
+
+    // Em qualquer um dos casos, volta para a lista
+    window.ehEdicao = false; // Reset de segurança
     carregarConteudo('pacientes.html');
 }
   
