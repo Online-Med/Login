@@ -205,18 +205,39 @@
     } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
   }
 
-  async function cancelarCadastro() {
-    const pcod = document.getElementById('f_pcod').value;
-    const nome = document.getElementsByName('Nome')[0]?.value || "";
+async function cancelarCadastro() {
+    // 1. Busca o PCOD
+    const pcod = document.getElementById('f_pcod')?.value;
+    
+    // 2. Busca o Nome de forma mais garantida (pelo ID ou pelo Name)
+    const campoNome = document.getElementsByName('Nome')[0];
+    const nome = campoNome ? campoNome.value : "";
 
-    // SÓ apaga se for NOVO (não edição) e ainda estiver "RESERVADO"
-    if (window.ehEdicao === false && pcod && nome.includes("RESERVADO")) {
-      try {
-        await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-      } catch (e) { console.error(e); }
+    console.log("Tentando cancelar...");
+    console.log("PCOD:", pcod);
+    console.log("Nome atual no campo:", nome);
+    console.log("Status ehEdicao:", window.ehEdicao);
+
+    // SÓ apaga se: 
+    // - NÃO for edição (ehEdicao === false)
+    // - O nome contiver "RESERVADO"
+    // - O pcod for válido e não for o texto de aguarde
+    if (window.ehEdicao === false && pcod && pcod !== "Aguarde..." && nome.includes("RESERVADO")) {
+        console.log("Condições aceitas. Apagando rascunho...");
+        try {
+            const resp = await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
+            const res = await resp.json();
+            if(res.sucesso) console.log("Registro deletado com sucesso.");
+        } catch (e) { 
+            console.error("Erro ao deletar:", e); 
+        }
+    } else {
+        console.log("Cancelamento sem exclusão (Edição ou Registro já alterado).");
     }
     
-    window.ehEdicao = false; // Reset da bandeira
+    // SEMPRE reseta a bandeira e volta
+    window.ehEdicao = false; 
     carregarConteudo('pacientes.html');
-  }
+}
+  
 </script>
