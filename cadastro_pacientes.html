@@ -220,17 +220,26 @@
     }
   }
 
-  async function cancelarCadastro() {
-    const pcod = document.getElementById('f_pcod').value;
-    
-    // SÓ excluímos se NÃO for edição e for um registro novo (RESERVADO)
-    if (!ehEdicao && pcod) {
-      try {
-        await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-      } catch (err) {
-        console.error("Erro ao remover reserva:", err);
-      }
+async function cancelarCadastro() {
+  const pcod = document.getElementById('f_pcod').value;
+  const nomeInput = document.getElementsByName('Nome')[0]?.value || "";
+
+  // SÓ excluímos se:
+  // 1. NÃO for uma edição (ehEdicao === false)
+  // 2. O PCOD existir
+  // 3. O nome ainda for o de reserva
+  if (!ehEdicao && pcod && pcod !== "Carregando..." && nomeInput.includes("RESERVADO")) {
+    try {
+      console.log("Removendo reserva temporária do PCOD:", pcod);
+      await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error("Erro ao remover reserva:", err);
     }
-    carregarConteudo('pacientes.html');
+  } else {
+    console.log("Cancelamento de edição: Nenhum registro foi excluído.");
   }
+  
+  // Volta para a lista de pacientes
+  carregarConteudo('pacientes.html');
+}
 </script>
