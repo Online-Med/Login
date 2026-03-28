@@ -4,7 +4,7 @@
       <ol class="breadcrumb mb-0">
         <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
         <li class="breadcrumb-item"><a style="cursor:pointer; color:#0d6efd; text-decoration:underline;" onclick="cancelarCadastro()">pacientes</a></li>
-        <li class="breadcrumb-item active">NOVO CADASTRO</li>
+        <li class="breadcrumb-item active">CADASTRO</li>
       </ol>
     </nav>
     <div>
@@ -121,12 +121,10 @@
   </div>
 </div>
 
-
 <script>
-  // 1. DECLARAÇÕES PRIMEIRO (Para evitar o erro "is not defined")
-  let ehEdicao = false;
+  // Usamos var para permitir a reinicialização se a página for carregada via Ajax
+  var ehEdicao = false;
 
-  // Função para buscar endereço
   function buscarEndereco(cep) {
     const limpo = cep.replace(/\D/g, '');
     if (limpo.length !== 8) return;
@@ -142,14 +140,12 @@
       });
   }
 
-  // Função para carregar os convênios
   async function carregarConvenios(valorAtual) {
     try {
       const resp = await fetch('/api/convenios');
       const lista = await resp.json();
       const combo = document.getElementById('comboConvenios');
       if (!combo) return;
-
       combo.innerHTML = '<option value="">Selecione...</option>';
       if (lista && lista.length > 0) {
         lista.forEach(c => {
@@ -158,51 +154,36 @@
           opt.textContent = c.CONVENIO;
           combo.appendChild(opt);
         });
-      } else {
-        combo.innerHTML += '<option value="PARTICULAR">PARTICULAR</option>';
       }
       if (valorAtual) combo.value = valorAtual;
-    } catch (err) {
-      console.error("Erro ao carregar convênios:", err);
-    }
+    } catch (err) { console.error(err); }
   }
 
-  // 2. INICIALIZAÇÃO (Agora que carregarConvenios já existe na memória)
+  // Inicialização
   (async function inicializarCadastro() {
-    // Carrega convênios primeiro
     await carregarConvenios();
-    
     const inputPcod = document.getElementById('f_pcod');
     
-    // Pequena pausa para garantir que o sistema principal preencheu o campo se for edição
+    // Pequeno atraso para detectar se o dashboard já preencheu o PCOD (caso de edição)
     setTimeout(async () => {
       if (inputPcod && (inputPcod.value === "" || inputPcod.value === "Carregando...")) {
-        ehEdicao = false;
+        ehEdicao = false; 
         try {
           const resp = await fetch('/api/pacientes', { method: 'POST' });
           const data = await resp.json();
-          if (data.sucesso) {
-            inputPcod.value = data.pcod;
-          }
-        } catch (err) {
-          console.error("Erro ao reservar PCOD:", err);
-        }
+          if (data.sucesso) { inputPcod.value = data.pcod; }
+        } catch (err) { console.error("Erro reserva:", err); }
       } else {
         ehEdicao = true;
-        console.log("Modo Edição para PCOD:", inputPcod.value);
+        console.log("Modo edição ativado para PCOD:", inputPcod.value);
       }
-    }, 150);
+    }, 200);
   })();
 
-  // 3. FUNÇÕES DE AÇÃO (Salvar e Cancelar)
   async function salvarNovoPaciente() {
     const form = document.getElementById('formCadastro');
     const pcodReal = document.getElementById('f_pcod')?.value;
-
-    if (!pcodReal || pcodReal === "Carregando...") {
-      Swal.fire('Aguarde', 'O código do paciente ainda não foi gerado.', 'warning');
-      return;
-    }
+    if (!pcodReal || pcodReal === "Carregando...") return;
 
     const formData = new FormData(form);
     let dadosRaw = Object.fromEntries(formData);
@@ -228,12 +209,9 @@
       Data_Nascimento: dadosRaw.Data_Nascimento
     };
 
-    // Remove campos vazios
-    Object.keys(dadosParaSalvar).forEach(key => {
-      if (!dadosParaSalvar[key]) delete dadosParaSalvar[key];
-    });
+    Object.keys(dadosParaSalvar).forEach(key => { if (!dadosParaSalvar[key]) delete dadosParaSalvar[key]; });
 
-    Swal.fire({ title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Salvando...', didOpen: () => Swal.showLoading() });
 
     try {
       const resp = await fetch(`/api/pacientes?pcod=${pcodReal}`, {
@@ -244,25 +222,19 @@
       const res = await resp.json();
       if (res.sucesso) {
         Swal.fire('Sucesso!', 'Paciente salvo!', 'success').then(() => carregarConteudo('pacientes.html'));
-      } else {
-        Swal.fire('Erro', res.erro || 'Erro ao gravar.', 'error');
       }
-    } catch (err) {
-      Swal.fire('Erro', 'Falha na conexão.', 'error');
-    }
+    } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
   }
 
   async function cancelarCadastro() {
     const pcod = document.getElementById('f_pcod').value;
     const nome = document.getElementsByName('Nome')[0]?.value || "";
 
-    // SÓ exclui se NÃO for edição E o nome for o padrão de reserva
-    if (!ehEdicao && pcod && pcod !== "Carregando..." && nome.includes("RESERVADO")) {
+    // SÓ apaga se ehEdicao for FALSE E o nome ainda for de reserva
+    if (ehEdicao === false && pcod && pcod !== "Carregando..." && nome.includes("RESERVADO")) {
       try {
         await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-      } catch (err) {
-        console.error("Erro ao limpar reserva:", err);
-      }
+      } catch (err) { console.error(err); }
     }
     carregarConteudo('pacientes.html');
   }
