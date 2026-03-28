@@ -421,7 +421,20 @@ function abrirModal(id) {
   var el=document.getElementById(id);
   if(!el) return;
   if(el.parentNode!==document.body) document.body.appendChild(el);
-  bootstrap.Modal.getOrCreateInstance(el).show();
+
+  // FIX aria-hidden: Bootstrap seta aria-hidden no modal antes de abri-lo.
+  // Se algum botão ainda tiver foco nesse momento, o browser reclama.
+  // Solução: tira o foco agora, e recoloca no 1º campo após o modal abrir.
+  if(document.activeElement && typeof document.activeElement.blur==='function') {
+    document.activeElement.blur();
+  }
+  var m = bootstrap.Modal.getOrCreateInstance(el);
+  el.addEventListener('shown.bs.modal', function _focusPrimeiro() {
+    el.removeEventListener('shown.bs.modal', _focusPrimeiro);
+    var f = el.querySelector('input:not([type="hidden"]):not([readonly]), select, textarea');
+    if(f) f.focus();
+  });
+  m.show();
 }
 function fecharModal(id) {
   var el=document.getElementById(id); if(!el) return;
@@ -790,8 +803,10 @@ function _atualizarContadores() {
   document.getElementById('agCntTotal').textContent    = tot;
 }
 function _atualizarEspera() {
+  // "Na Espera" = só quem AINDA NÃO foi chamado (AGUARDANDO).
+  // Quem já está EM_ATENDIMENTO saiu da fila de espera.
   var lista=AG.dados.filter(function(a){
-    return (a.status==='AGUARDANDO'||a.status==='EM_ATENDIMENTO')&&a.hora_chegada&&!a.is_bloqueado;
+    return a.status==='AGUARDANDO' && a.hora_chegada && !a.is_bloqueado;
   }).sort(function(a,b){ return new Date(a.hora_chegada)-new Date(b.hora_chegada); });
   var el=document.getElementById('agListaEspera');
   if(!lista.length){ el.innerHTML='<p class="text-muted small text-center mb-0">Nenhum aguardando</p>'; return; }
