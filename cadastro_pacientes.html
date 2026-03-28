@@ -180,7 +180,6 @@
 
 async function salvarNovoPaciente() {
   const form = document.getElementById('formCadastro');
-  const formData = new FormData(form);
   const pcodReal = document.getElementById('f_pcod')?.value;
 
   if (!pcodReal) {
@@ -188,15 +187,23 @@ async function salvarNovoPaciente() {
     return;
   }
 
-  // 1. Criamos o objeto de dados
+  // 1. Captura os dados do formulário
+  const formData = new FormData(form);
   let dados = Object.fromEntries(formData);
 
-  // 2. LIMPEZA CRÍTICA: Removemos campos que o Supabase pode rejeitar
-  delete dados.pcod; // O pcod vai na URL, não no body
+  // 2. LIMPEZA DE SEGURANÇA (O segredo para evitar o erro 400)
+  // Removemos o pcod do corpo (ele já vai na URL)
+  delete dados.pcod; 
   
-  // 3. Removemos qualquer campo que esteja vazio (evita erro de tipo no banco)
+  // Removemos campos que costumam dar erro se o nome não bater 100% com o banco
+  // Se você tem certeza dos nomes no banco, pode comentar as linhas abaixo
+  delete dados.EstadoCivil; 
+  delete dados.Indicacao;
+  delete dados.Responsavel;
+
+  // 3. Remove campos vazios (Supabase odeia strings vazias em colunas de data/numero)
   Object.keys(dados).forEach(key => {
-    if (dados[key] === "" || dados[key] === null) {
+    if (dados[key] === "" || dados[key] === null || dados[key] === undefined) {
       delete dados[key];
     }
   });
@@ -222,14 +229,16 @@ async function salvarNovoPaciente() {
         carregarConteudo('pacientes.html');
       });
     } else {
-      // Se der erro, mostramos o erro real que veio da API
-      Swal.fire('Erro no Banco', res.erro || "Verifique os dados digitados.", 'error');
+      // Aqui vamos exibir o erro detalhado que o Supabase retornar
+      console.error("Erro Supabase:", res.erro);
+      Swal.fire('Erro no Banco', res.erro || "Verifique se os nomes dos campos no HTML batem com o Banco de Dados.", 'error');
     }
   } catch (err) {
     Swal.fire('Erro', 'Falha na comunicação com o servidor.', 'error');
   }
 }
 
+  
 
   
 async function cancelarCadastro() {
