@@ -78,7 +78,24 @@
 /* Badges especiais */
 .b1v  { background:#fff3cd; color:#664d03; font-size:.64rem; font-weight:700; }
 .bonl { background:#cfe2ff; color:#084298; font-size:.64rem; }
-.bpre { background:#e2e3e5; color:#41464b; font-size:.64rem; }
+.bpre { background:#d1e7dd; color:#0a3622; font-size:.64rem; font-weight:600; }
+
+/* Botões de ação no card */
+.ag-actions { display:flex; align-items:center; gap:3px; margin-top:5px; flex-wrap:wrap; }
+.btn-act { font-size:.7rem !important; padding:3px 8px !important; border-radius:4px !important; line-height:1.4 !important; }
+.btn-purple { background:#6f42c1; border-color:#6f42c1; }
+.btn-purple:hover { background:#5a32a3; border-color:#5a32a3; }
+
+/* Sidebar – Em Atendimento */
+.atend-item {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:5px 0; border-bottom:1px solid #f0f0f0; font-size:.8rem;
+}
+.atend-item:last-child { border-bottom:none; }
+
+/* Card cursor */
+.ag-card { cursor:default; }
+.ag-card .card-grip { cursor:grab; color:#adb5bd; flex-shrink:0; }
 
 /* Dropdown busca */
 #agDropdownBusca {
@@ -179,6 +196,15 @@
             <div><div class="num text-primary" id="agCntTotal">0</div><div class="lbl">Total</div></div>
             <i class="bi bi-calendar2-check-fill text-primary fs-4"></i>
           </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 mb-3" id="cardEmAtendimento">
+        <div class="card-header bg-white fw-bold small py-2">
+          <i class="bi bi-play-circle-fill text-primary"></i> Em Atendimento
+        </div>
+        <div class="card-body p-2" id="agListaAtendimento" style="max-height:200px;overflow-y:auto">
+          <p class="text-muted small text-center mb-0">Nenhum em atendimento</p>
         </div>
       </div>
 
@@ -379,6 +405,88 @@
 </div>
 
 
+<!-- Modal Editar / Remarcar -->
+<div class="modal fade" id="agModalEditar" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#6f42c1,#5a32a3)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-pencil-square"></i> Editar Agendamento — <strong id="agEditNomeHeader"></strong>
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="agEditId">
+        <div class="row g-3">
+          <!-- Data e Hora -->
+          <div class="col-md-6">
+            <label class="form-label small fw-bold"><i class="bi bi-calendar3 text-primary"></i> Data</label>
+            <input type="date" class="form-control form-control-sm" id="agEditData" onchange="agEditAtualizarHoras()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold"><i class="bi bi-clock text-primary"></i> Horário</label>
+            <select class="form-select form-select-sm" id="agEditHora"></select>
+          </div>
+          <!-- Paciente -->
+          <div class="col-12">
+            <label class="form-label small fw-bold">Paciente <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="agEditNome" placeholder="Nome do paciente">
+          </div>
+          <!-- Tipo + Modalidade -->
+          <div class="col-md-5">
+            <label class="form-label small fw-bold">Tipo</label>
+            <select class="form-select form-select-sm" id="agEditTipo">
+              <option value="CONSULTA">Consulta</option>
+              <option value="RETORNO">Retorno</option>
+              <option value="PROCEDIMENTO">Procedimento</option>
+            </select>
+          </div>
+          <div class="col-md-7">
+            <label class="form-label small fw-bold">Modalidade</label>
+            <div class="d-flex gap-3 mt-1">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="agEditMod" id="agEditModP" value="PRESENCIAL" checked>
+                <label class="form-check-label small" for="agEditModP">
+                  <i class="bi bi-person-fill text-success"></i> Presencial
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="agEditMod" id="agEditModO" value="ONLINE">
+                <label class="form-check-label small" for="agEditModO">
+                  <i class="bi bi-camera-video text-primary"></i> Online
+                </label>
+              </div>
+            </div>
+          </div>
+          <!-- WhatsApp + Convênio -->
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">
+              <i class="bi bi-whatsapp text-success"></i> WhatsApp / Celular
+            </label>
+            <input type="tel" class="form-control form-control-sm" id="agEditTel" placeholder="(00) 00000-0000">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Convênio</label>
+            <input type="text" class="form-control form-control-sm" id="agEditConvenio" placeholder="Particular, Unimed...">
+          </div>
+          <!-- Obs -->
+          <div class="col-12">
+            <label class="form-label small fw-bold">Observações</label>
+            <textarea class="form-control form-control-sm" id="agEditObs" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-purple text-white btn-sm" onclick="agConfirmarEditar()">
+          <i class="bi bi-check-circle"></i> Salvar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ═══ SCRIPT ═══════════════════════════════════════════════════ -->
 <script>
 (function() {
@@ -398,7 +506,7 @@ const DIAS_MAP = { DOM:0, SEG:1, TER:2, QUA:3, QUI:4, SEX:5, SAB:6 };
 
 // ── FIX MODAL: move modais para document.body ─────────────────────
 // Sem isso ficam presos no overflow do #corpo-paginas
-['agModalAg','agModalBlq','agModalEnc'].forEach(function(id) {
+['agModalAg','agModalBlq','agModalEnc','agModalEditar'].forEach(function(id) {
   var el = document.getElementById(id);
   if (el && el.parentNode !== document.body) document.body.appendChild(el);
 });
@@ -572,6 +680,7 @@ async function _carregarDados() {
   _preencherSlots();
   _atualizarContadores();
   _atualizarEspera();
+  _atualizarAtendimento();
 }
 
 function _preencherSlots() {
@@ -613,95 +722,106 @@ function _preencherSlots() {
 function _renderCard(ag) {
   var st = ag.status||'AGUARDANDO';
   var corMap = {AGUARDANDO:'warning',EM_ATENDIMENTO:'primary',ATENDIDO:'success',FALTA:'danger',CANCELADO:'secondary'};
-  var stLbl  = {AGUARDANDO:'⏳ Aguardando',EM_ATENDIMENTO:'▶ Atendendo',ATENDIDO:'✓ Atendido',FALTA:'✗ Faltou',CANCELADO:'— Cancelado'};
+  var stLbl  = {AGUARDANDO:'Aguardando',EM_ATENDIMENTO:'Atendendo',ATENDIDO:'Atendido',FALTA:'Faltou',CANCELADO:'Cancelado'};
+  var stIco  = {AGUARDANDO:'bi-hourglass-split',EM_ATENDIMENTO:'bi-play-fill',ATENDIDO:'bi-check-circle-fill',FALTA:'bi-x-circle',CANCELADO:'bi-slash-circle'};
 
   // Timer de espera
   var espPill='';
   if(ag.hora_chegada&&(st==='AGUARDANDO'||st==='EM_ATENDIMENTO')) {
     var min=minEsp(ag.hora_chegada);
-    espPill='<span class="tpill'+(min>30?' longo':'')+'" data-chegada="'+ag.hora_chegada+'">'
+    espPill=' <span class="tpill'+(min>30?' longo':'')+'" data-chegada="'+ag.hora_chegada+'">'
       +'<i class="bi bi-clock"></i> '+fmtEsp(ag.hora_chegada)+'</span>';
   }
 
   // Botão WhatsApp
-  var btnWpp='';
   var tel=(ag.telefone_whatsapp||'').replace(/\D/g,'');
+  var btnWpp='';
   if(tel) {
-    var msg=encodeURIComponent(
-      'Olá '+esc(ag.paciente_nome||'')+', sua consulta está agendada para '
-      +brDate(ag.data_agenda)+' às '+ag.hora_agenda
-      +'. Por favor, confirme seu comparecimento. Obrigado!'
-    );
+    var msg=encodeURIComponent('Olá '+esc(ag.paciente_nome||'')+', sua consulta está agendada para '+brDate(ag.data_agenda)+' às '+ag.hora_agenda+'. Por favor, confirme seu comparecimento. Obrigado!');
     btnWpp='<a href="https://wa.me/55'+tel+'?text='+msg+'" target="_blank" '
-      +'class="btn btn-success btn-sm p-1 me-1" onclick="event.stopPropagation()" title="Enviar confirmação">'
+      +'class="btn btn-success btn-act" onclick="event.stopPropagation()" title="Enviar confirmação WhatsApp">'
       +'<i class="bi bi-whatsapp"></i></a>';
   } else {
-    btnWpp='<button class="btn btn-outline-secondary btn-sm p-1 me-1" '
+    btnWpp='<button class="btn btn-outline-secondary btn-act" '
       +'onclick="event.stopPropagation();alert(\'Celular não cadastrado para este paciente.\')" '
-      +'title="Sem celular">'
-      +'<i class="bi bi-whatsapp text-muted"></i></button>';
+      +'title="Sem celular"><i class="bi bi-whatsapp text-muted"></i></button>';
   }
 
-  // Badges
+  // Badges de modalidade e extras
   var badges='';
   if(ag.is_encaixe)        badges+='<span class="badge bg-primary ms-1" style="font-size:.6rem">ENC</span>';
   if(ag.primeira_consulta) badges+='<span class="badge b1v ms-1"><i class="bi bi-star-fill"></i> 1ª VEZ</span>';
   if(ag.modalidade==='ONLINE') badges+='<span class="badge bonl ms-1"><i class="bi bi-camera-video"></i> Online</span>';
-  else                         badges+='<span class="badge bpre ms-1"><i class="bi bi-building"></i> Pres.</span>';
+  else                         badges+='<span class="badge bpre ms-1"><i class="bi bi-person-fill"></i> Pres.</span>';
 
   var horaAten = ag.hora_atendido
     ? '<div style="font-size:.65rem;color:#6c757d"><i class="bi bi-check2-all text-success"></i> Encerrado às '
       +new Date(ag.hora_atendido).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</div>' : '';
 
+  // Botões de ação baseados no status atual
+  var btnStatus='';
+  if(!ag.hora_chegada) {
+    btnStatus+='<button class="btn btn-outline-info btn-act" '
+      +'onclick="event.stopPropagation();window._AG.acao(\'chegada\','+ag.id+')" title="Registrar Chegada">'
+      +'<i class="bi bi-door-open"></i> Chegada</button>';
+  }
+  if(st!=='EM_ATENDIMENTO'&&st!=='ATENDIDO'&&st!=='CANCELADO'&&st!=='FALTA') {
+    btnStatus+='<button class="btn btn-outline-primary btn-act" '
+      +'onclick="event.stopPropagation();window._AG.acao(\'status\','+ag.id+',\'EM_ATENDIMENTO\')" title="Iniciar Atendimento">'
+      +'<i class="bi bi-play-fill"></i> Atender</button>';
+  }
+  if(st==='EM_ATENDIMENTO') {
+    btnStatus+='<button class="btn btn-success btn-act" '
+      +'onclick="event.stopPropagation();window._AG.acao(\'atendido\','+ag.id+')" title="Concluir Atendimento">'
+      +'<i class="bi bi-check-circle-fill"></i> Concluir</button>';
+  }
+
+  // Dropdown para ações secundárias
+  var ddItems='';
+  ddItems+='<li><a class="dropdown-item" onclick="window._AG.abrirEditar(event,'+ag.id+')">'
+    +'<i class="bi bi-pencil text-purple" style="color:#6f42c1"></i> Editar / Remarcar</a></li>';
+  ddItems+='<li><hr class="dropdown-divider my-1"></li>';
+  if(st!=='AGUARDANDO')
+    ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'AGUARDANDO\')">'
+      +'<i class="bi bi-arrow-counterclockwise text-warning"></i> Voltar p/ Aguardando</a></li>';
+  if(st!=='FALTA')
+    ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'FALTA\')">'
+      +'<i class="bi bi-x-circle text-danger"></i> Registrar Falta</a></li>';
+  if(st!=='CANCELADO')
+    ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'CANCELADO\')">'
+      +'<i class="bi bi-slash-circle text-secondary"></i> Cancelar</a></li>';
+  ddItems+='<li><hr class="dropdown-divider my-1"></li>';
+  ddItems+='<li><a class="dropdown-item text-danger" onclick="window._AG.acao(\'excluir\','+ag.id+')">'
+    +'<i class="bi bi-trash"></i> Excluir</a></li>';
+
+  var dropdown='<div class="dropdown">'
+    +'<button class="btn btn-outline-secondary btn-act" data-bs-toggle="dropdown" '
+      +'onclick="event.stopPropagation()"><i class="bi bi-three-dots-vertical"></i></button>'
+    +'<ul class="dropdown-menu dropdown-menu-end" style="font-size:.8rem;min-width:180px">'+ddItems+'</ul>'
+    +'</div>';
+
   return '<div class="ag-card s-'+st+(ag.is_encaixe?' encaixe':'')+'" draggable="true" '
+    +'ondblclick="window._AG.abrirEditar(event,'+ag.id+')" '
     +'ondragstart="window._AG.onDragStart(event,'+ag.id+')" ondragend="window._AG.onDragEnd(event)">'
-    // grip
-    +'<span style="color:#adb5bd;flex-shrink:0"><i class="bi bi-grip-vertical"></i></span>'
-    // corpo
+    +'<span class="card-grip"><i class="bi bi-grip-vertical"></i></span>'
     +'<div class="flex-grow-1 overflow-hidden">'
+      // Linha 1: nome + badges
       +'<div class="d-flex align-items-center flex-wrap gap-1">'
-        +'<span class="fw-bold text-truncate" style="max-width:160px">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
+        +'<span class="fw-bold" style="font-size:.85rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
         +badges
       +'</div>'
-      +'<div class="d-flex flex-wrap gap-1 mt-1">'
-        +'<span class="badge bg-'+corMap[st]+' text-'+(corMap[st]==='warning'?'dark':'white')+'" style="font-size:.65rem">'+stLbl[st]+'</span>'
-        +(ag.tipo?'<span class="badge bg-secondary" style="font-size:.65rem">'+esc(ag.tipo)+'</span>':'')
-        +(ag.convenio?'<span class="badge bg-light text-dark border" style="font-size:.65rem">'+esc(ag.convenio)+'</span>':'')
+      // Linha 2: status + tipo + convênio + timer
+      +'<div class="d-flex flex-wrap align-items-center gap-1 mt-1">'
+        +'<span class="badge bg-'+corMap[st]+' text-'+(corMap[st]==='warning'?'dark':'white')+'" style="font-size:.65rem">'
+          +'<i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
+        +(ag.tipo?'<span class="badge bg-secondary" style="font-size:.63rem">'+esc(ag.tipo)+'</span>':'')
+        +(ag.convenio?'<span class="badge bg-light text-dark border" style="font-size:.63rem">'+esc(ag.convenio)+'</span>':'')
+        +espPill
       +'</div>'
-      +(espPill?'<div class="mt-1">'+espPill+'</div>':'')
       +horaAten
-    +'</div>'
-    // ações
-    +'<div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">'
-      +btnWpp
-      +'<div class="dropdown">'
-        +'<button class="btn btn-outline-secondary btn-sm p-1" data-bs-toggle="dropdown" '
-          +'onclick="event.stopPropagation()" style="line-height:1">'
-          +'<i class="bi bi-three-dots-vertical"></i></button>'
-        +'<ul class="dropdown-menu dropdown-menu-end" style="font-size:.8rem;min-width:165px">'
-          +(!ag.hora_chegada
-            ?'<li><a class="dropdown-item" onclick="window._AG.acao(\'chegada\','+ag.id+')">'
-              +'<i class="bi bi-door-open text-info"></i> Registrar Chegada</a></li>':'')
-          +(st!=='EM_ATENDIMENTO'
-            ?'<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'EM_ATENDIMENTO\')">'
-              +'<i class="bi bi-person-fill text-primary"></i> Em Atendimento</a></li>':'')
-          +(st!=='ATENDIDO'
-            ?'<li><a class="dropdown-item" onclick="window._AG.acao(\'atendido\','+ag.id+')">'
-              +'<i class="bi bi-check-circle text-success"></i> Marcar Atendido</a></li>':'')
-          +(st!=='AGUARDANDO'
-            ?'<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'AGUARDANDO\')">'
-              +'<i class="bi bi-arrow-counterclockwise text-warning"></i> Aguardando</a></li>':'')
-          +'<li><hr class="dropdown-divider my-1"></li>'
-          +(st!=='FALTA'
-            ?'<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'FALTA\')">'
-              +'<i class="bi bi-x-circle text-danger"></i> Faltou</a></li>':'')
-          +(st!=='CANCELADO'
-            ?'<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'CANCELADO\')">'
-              +'<i class="bi bi-slash-circle text-secondary"></i> Cancelar</a></li>':'')
-          +'<li><hr class="dropdown-divider my-1"></li>'
-          +'<li><a class="dropdown-item text-danger" onclick="window._AG.acao(\'excluir\','+ag.id+')">'
-            +'<i class="bi bi-trash"></i> Excluir</a></li>'
-        +'</ul>'
+      // Linha 3: botões de ação
+      +'<div class="ag-actions">'
+        +btnWpp+btnStatus+dropdown
       +'</div>'
     +'</div>'
     +'</div>';
@@ -776,7 +896,7 @@ AG.acao = async function(tipo, id, extra) {
   }
 
   var r=await api({id:id},'PATCH',body);
-  if(r.sucesso){ Object.assign(ag,campos); _preencherSlots(); _atualizarContadores(); _atualizarEspera(); }
+  if(r.sucesso){ Object.assign(ag,campos); _preencherSlots(); _atualizarContadores(); _atualizarEspera(); _atualizarAtendimento(); }
   else alert('Erro: '+r.erro);
 };
 
@@ -802,6 +922,26 @@ function _atualizarContadores() {
   document.getElementById('agCntFaltas').textContent   = falt;
   document.getElementById('agCntTotal').textContent    = tot;
 }
+function _atualizarAtendimento() {
+  var lista = AG.dados.filter(function(a){
+    return a.status==='EM_ATENDIMENTO' && !a.is_bloqueado;
+  }).sort(function(a,b){ return new Date(a.hora_chegada||a.hora_agenda) - new Date(b.hora_chegada||b.hora_agenda); });
+
+  var el = document.getElementById('agListaAtendimento');
+  if(!lista.length) {
+    el.innerHTML='<p class="text-muted small text-center mb-0">Nenhum em atendimento</p>';
+    return;
+  }
+  el.innerHTML = lista.map(function(a) {
+    return '<div class="atend-item">'
+      +'<div><div class="fw-bold">'+esc(a.paciente_nome||'')+'</div>'
+        +'<div class="text-muted" style="font-size:.7rem">'+a.hora_agenda
+          +(a.is_encaixe?' <span class="badge bg-primary" style="font-size:.58rem">ENC</span>':'')+'</div></div>'
+      +'<span class="badge bg-primary"><i class="bi bi-play-fill"></i> Atendendo</span>'
+      +'</div>';
+  }).join('');
+}
+
 function _atualizarEspera() {
   // "Na Espera" = só quem AINDA NÃO foi chamado (AGUARDANDO).
   // Quem já está EM_ATENDIMENTO saiu da fila de espera.
@@ -820,7 +960,95 @@ function _atualizarEspera() {
         +'<i class="bi bi-clock"></i> '+fmtEsp(a.hora_chegada)+'</span>'
       +'</div>';
   }).join('');
+  _atualizarAtendimento();
 }
+
+// ── Modal Editar / Remarcar ──────────────────────────────────────
+AG.abrirEditar = function(event, id) {
+  if(event) event.stopPropagation();
+  var ag = AG.dados.find(function(a){ return a.id==id; });
+  if(!ag) return;
+
+  document.getElementById('agEditId').value   = ag.id;
+  document.getElementById('agEditNome').value = ag.paciente_nome||'';
+  document.getElementById('agEditNomeHeader').textContent = ag.paciente_nome||'';
+  document.getElementById('agEditData').value = ag.data_agenda||document.getElementById('agData').value;
+  document.getElementById('agEditTipo').value = ag.tipo||'CONSULTA';
+  document.getElementById('agEditTel').value  = ag.telefone_whatsapp||'';
+  document.getElementById('agEditConvenio').value = ag.convenio||'';
+  document.getElementById('agEditObs').value  = ag.observacao||'';
+
+  // Modalidade
+  var modP = document.getElementById('agEditModP');
+  var modO = document.getElementById('agEditModO');
+  if(ag.modalidade==='ONLINE') modO.checked=true; else modP.checked=true;
+
+  // Popula horários disponíveis para a data atual
+  _agEditPopularHoras(ag.data_agenda||document.getElementById('agData').value, ag.hora_agenda);
+
+  if(typeof abrirModal === 'function') abrirModal('agModalEditar');
+  else bootstrap.Modal.getOrCreateInstance(document.getElementById('agModalEditar')).show();
+};
+window.agEditAtualizarHoras = function() {
+  var data = document.getElementById('agEditData').value;
+  _agEditPopularHoras(data, null);
+};
+
+function _agEditPopularHoras(data, horaAtual) {
+  var sel = document.getElementById('agEditHora');
+  sel.innerHTML='';
+  var cfgIni=pm(AG.cfg.inicio), cfgFim=pm(AG.cfg.fim), inv=AG.cfg.intervalo;
+  for(var m=cfgIni; m<=cfgFim; m+=inv) {
+    var h=fh(m);
+    var opt=document.createElement('option');
+    opt.value=h; opt.textContent=h;
+    if(h===horaAtual) opt.selected=true;
+    sel.appendChild(opt);
+  }
+}
+
+async function agConfirmarEditar() {
+  var id   = document.getElementById('agEditId').value;
+  var ag   = AG.dados.find(function(a){ return a.id==id; });
+  if(!ag) return;
+
+  var nome = document.getElementById('agEditNome').value.trim();
+  if(!nome) { alert('Informe o nome do paciente.'); return; }
+
+  var novaData = document.getElementById('agEditData').value;
+  var novaHora = document.getElementById('agEditHora').value;
+  var mudouDataHora = (novaData !== ag.data_agenda || novaHora !== ag.hora_agenda);
+
+  var body = {
+    paciente_nome:     nome,
+    tipo:              document.getElementById('agEditTipo').value,
+    modalidade:        document.querySelector('input[name="agEditMod"]:checked').value,
+    telefone_whatsapp: document.getElementById('agEditTel').value,
+    convenio:          document.getElementById('agEditConvenio').value,
+    observacao:        document.getElementById('agEditObs').value
+  };
+
+  if(mudouDataHora) {
+    body.data_agenda = novaData;
+    body.hora_agenda = novaHora;
+    if(!confirm('Remarcar "'+nome+'" para '+novaData.split('-').reverse().join('/')+' às '+novaHora+'?')) return;
+  }
+
+  var r = await api({id:id}, 'PATCH', body);
+  if(r.sucesso) {
+    Object.assign(ag, body);
+    fecharModal('agModalEditar');
+    // Se mudou a data, recarrega do servidor
+    if(mudouDataHora && novaData !== document.getElementById('agData').value) {
+      await _carregarDados();
+    } else {
+      _preencherSlots(); _atualizarContadores(); _atualizarEspera();
+    }
+  } else {
+    alert('Erro ao salvar: '+(r.erro||'Verifique se o horário não está ocupado.'));
+  }
+}
+window.agConfirmarEditar = agConfirmarEditar;
 
 // ── Modal Agendamento ────────────────────────────────────────────
 AG.abrirModalAg = function(hora) {
