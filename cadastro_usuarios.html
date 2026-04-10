@@ -1,0 +1,36 @@
+// No seu script dentro da cadastro_usuarios.html:
+
+async function salvarUsuario() {
+    const dados = {
+        nome: document.getElementById('u_nome').value,
+        email: document.getElementById('u_email').value,
+        perfil: document.getElementById('u_perfil').value,
+        especialidade: document.getElementById('u_especialidade').value,
+        tem_agenda: document.getElementById('u_agenda').checked ? 'SIM' : 'NÃO'
+    };
+
+    const id = document.getElementById('u_id').value;
+    const metodo = 'PATCH'; // Usamos PATCH para atualizar os dados da reserva ou do usuário existente
+
+    const res = await fetch(`/api/usuarios?id=${id}`, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados)
+    });
+
+    if (res.ok) {
+        alert("Usuário salvo com sucesso!");
+        carregarConteudo('usuarios.html');
+    }
+}
+
+async function cancelarUsuario() {
+    const id = document.getElementById('u_id').value;
+    const nome = document.getElementById('u_nome').value;
+
+    // Lógica de limpeza que funcionou nos pacientes:
+    if (!window.ehEdicaoUsuario && nome.includes("NOVO USUÁRIO")) {
+        await fetch(`/api/usuarios?id=${id}`, { method: 'DELETE' });
+    }
+    carregarConteudo('usuarios.html');
+}
