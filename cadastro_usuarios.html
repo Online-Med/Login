@@ -68,8 +68,11 @@ async function inicializarCadastroUsuario() {
     const campoId = document.getElementById('u_id');
     const campoNome = document.getElementById('u_nome');
 
+    // Adiciona o texto esmaecido (Placeholder)
+    campoNome.placeholder = "Inserir nome do usuário";
+
     if (window.ehEdicaoUsuario && window.idUsuarioEdicao) {
-        console.log("Modo EDIÇÃO detectado para o ID:", window.idUsuarioEdicao);
+        console.log("Modo EDIÇÃO para ID:", window.idUsuarioEdicao);
         try {
             const res = await fetch(`/api/usuarios?id=${window.idUsuarioEdicao}`);
             const json = await res.json();
@@ -84,20 +87,25 @@ async function inicializarCadastroUsuario() {
                 document.getElementById('u_agenda').checked = (u.tem_agenda === 'SIM');
             }
         } catch (e) {
-            console.error("Erro ao carregar dados do usuário:", e);
+            console.error("Erro ao carregar dados:", e);
         }
     } else {
-        console.log("Modo NOVO cadastro. Solicitando reserva ao servidor...");
+        console.log("Modo NOVO cadastro...");
         try {
             const res = await fetch('/api/usuarios', { method: 'POST' });
             const json = await res.json();
             
             if (json.sucesso) {
                 campoId.value = json.id_profissional;
-                campoNome.value = "NOVO USUÁRIO - AGUARDANDO DADOS";
+                
+                // DEIXA O CAMPO VAZIO NA TELA
+                campoNome.value = ""; 
+                
+                // Guarda o texto de reserva em uma variável oculta para o botão Cancelar funcionar
+                window.textoReservaSeguranca = "NOVO USUÁRIO - AGUARDANDO DADOS";
             }
         } catch (e) {
-            console.error("Erro ao gerar reserva de usuário:", e);
+            console.error("Erro ao gerar reserva:", e);
         }
     }
 }
