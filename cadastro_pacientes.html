@@ -205,28 +205,49 @@
     } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
   }
 
+
+
+  
 async function cancelarCadastro() {
+    // 1. Pega o PCOD que está no campo escondido
     const pcod = document.getElementById('f_pcod')?.value;
     
-    // Pega o valor do campo Nome (usando querySelector para ser certeiro)
-    const campoNome = document.querySelector('input[name="Nome"]');
-    const nomeAtual = campoNome ? campoNome.value : "";
+    // 2. Tenta encontrar o campo de nome de todas as formas possíveis
+    const campoNome = document.getElementById('f_nome') || 
+                      document.querySelector('input[name="Nome"]') ||
+                      document.getElementById('Nome');
 
-    // A REGRA: Se o nome for EXATAMENTE o texto de reserva, deleta.
-    if (pcod && nomeAtual === "RESERVADO - AGUARDANDO DADOS") {
-        console.log("Detectado rascunho. Apagando pcod:", pcod);
+    // 3. Lê o valor e limpa espaços
+    const valorNoCampo = campoNome ? campoNome.value.trim() : "";
+
+    console.log("--- TESTE DE CANCELAMENTO ---");
+    console.log("PCOD encontrado:", pcod);
+    console.log("Conteúdo do campo Nome:", valorNoCampo);
+
+    // 4. A COMPARAÇÃO (exatamente como está na sua tabela do Supabase)
+    const textoReserva = "RESERVADO - AGUARDANDO DADOS";
+
+    if (pcod && valorNoCampo === textoReserva) {
+        console.log("Confirmado: É um rascunho. Deletando do banco...");
         try {
-            // Chamada para deletar
-            await fetch(`/api/pacientes?pcod=${pcod}`, { method: 'DELETE' });
-        } catch (e) {
-            console.error("Erro ao deletar rascunho:", e);
+            const response = await fetch(`/api/pacientes?pcod=${pcod}`, { 
+                method: 'DELETE' 
+            });
+            
+            if (response.ok) {
+                console.log("Sucesso: Linha " + pcod + " removida.");
+            } else {
+                console.error("Servidor recusou o DELETE. Status:", response.status);
+            }
+        } catch (erro) {
+            console.error("Erro na comunicação com a API:", erro);
         }
     } else {
-        console.log("Paciente real ou edição. Apenas saindo...");
+        console.log("Ação: Apenas fechando a tela (Paciente real ou edição).");
     }
 
-    // Em qualquer um dos casos, volta para a lista
-    window.ehEdicao = false; // Reset de segurança
+    // 5. Independente do que aconteceu, volta para a lista
+    window.ehEdicao = false;
     carregarConteudo('pacientes.html');
 }
   
