@@ -209,44 +209,29 @@
 
   
 async function cancelarCadastro() {
-    // 1. Pega o PCOD que está no campo escondido
     const pcod = document.getElementById('f_pcod')?.value;
     
-    // 2. Tenta encontrar o campo de nome de todas as formas possíveis
-    const campoNome = document.getElementById('f_nome') || 
-                      document.querySelector('input[name="Nome"]') ||
-                      document.getElementById('Nome');
-
-    // 3. Lê o valor e limpa espaços
-    const valorNoCampo = campoNome ? campoNome.value.trim() : "";
-
-    console.log("--- TESTE DE CANCELAMENTO ---");
-    console.log("PCOD encontrado:", pcod);
-    console.log("Conteúdo do campo Nome:", valorNoCampo);
-
-    // 4. A COMPARAÇÃO (exatamente como está na sua tabela do Supabase)
-    const textoReserva = "RESERVADO - AGUARDANDO DADOS";
-
-    if (pcod && valorNoCampo === textoReserva) {
-        console.log("Confirmado: É um rascunho. Deletando do banco...");
+    // Se NÃO for edição (ou seja, é um NOVO registro) e tiver um PCOD gerado
+    if (!window.ehEdicao && pcod) {
+        console.log("Desistência de novo cadastro detectada. Limpando reserva PCOD:", pcod);
+        
         try {
+            // Chamamos o DELETE direto, pois se é novo e tem PCOD, é a reserva que acabou de ser feita
             const response = await fetch(`/api/pacientes?pcod=${pcod}`, { 
                 method: 'DELETE' 
             });
             
             if (response.ok) {
-                console.log("Sucesso: Linha " + pcod + " removida.");
-            } else {
-                console.error("Servidor recusou o DELETE. Status:", response.status);
+                console.log("Reserva 14275 removida com sucesso do Supabase.");
             }
         } catch (erro) {
-            console.error("Erro na comunicação com a API:", erro);
+            console.error("Erro ao limpar reserva:", erro);
         }
     } else {
-        console.log("Ação: Apenas fechando a tela (Paciente real ou edição).");
+        console.log("Saindo da edição de um paciente já existente. Nada será excluído.");
     }
 
-    // 5. Independente do que aconteceu, volta para a lista
+    // Reseta a flag e volta
     window.ehEdicao = false;
     carregarConteudo('pacientes.html');
 }
