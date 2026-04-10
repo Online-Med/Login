@@ -1,6 +1,110 @@
-// No seu script dentro da cadastro_usuarios.html:
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><i class="bi bi-house-door-fill me-1"></i>INÍCIO</li>
+            <li class="breadcrumb-item">configurações</li>
+            <li class="breadcrumb-item active">CADASTRO DE USUÁRIO</li>
+        </ol>
+    </nav>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-secondary" onclick="cancelarUsuario()">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-info text-white" onclick="salvarUsuario()">
+            <i class="bi bi-check-lg me-1"></i>Salvar Registro
+        </button>
+    </div>
+</div>
 
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0 text-info">Identificação e Acesso</h5>
+    </div>
+    <div class="card-body">
+        <form id="formUsuario">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">ID Profissional</label>
+                    <input type="text" class="form-control bg-light" id="u_id" readonly>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">Nome Completo *</label>
+                    <input type="text" class="form-control" id="u_nome" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">E-mail (Login) *</label>
+                    <input type="email" class="form-control" id="u_email" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Perfil de Acesso</label>
+                    <select class="form-select" id="u_perfil">
+                        <option value="ADMIN">Administrador</option>
+                        <option value="MEDICO">Médico</option>
+                        <option value="RECEPCAO">Recepção</option>
+                        <option value="OUTROS">Outros</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">Especialidade</label>
+                    <input type="text" class="form-control" id="u_especialidade" placeholder="Ex: Cardiologia">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold d-block">Possui Agenda?</label>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="u_agenda">
+                        <label class="form-check-label" for="u_agenda">Sim</label>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// 1. FUNÇÃO DE INICIALIZAÇÃO (Roda ao abrir a tela)
+async function inicializarCadastroUsuario() {
+    const campoId = document.getElementById('u_id');
+    const campoNome = document.getElementById('u_nome');
+
+    if (window.ehEdicaoUsuario && window.idUsuarioEdicao) {
+        console.log("Modo EDIÇÃO detectado para o ID:", window.idUsuarioEdicao);
+        try {
+            const res = await fetch(`/api/usuarios?id=${window.idUsuarioEdicao}`);
+            const json = await res.json();
+            
+            if (json.sucesso) {
+                const u = json.usuario;
+                campoId.value = u.id_profissional;
+                campoNome.value = u.nome;
+                document.getElementById('u_email').value = u.email;
+                document.getElementById('u_perfil').value = u.perfil;
+                document.getElementById('u_especialidade').value = u.especialidade || "";
+                document.getElementById('u_agenda').checked = (u.tem_agenda === 'SIM');
+            }
+        } catch (e) {
+            console.error("Erro ao carregar dados do usuário:", e);
+        }
+    } else {
+        console.log("Modo NOVO cadastro. Solicitando reserva ao servidor...");
+        try {
+            const res = await fetch('/api/usuarios', { method: 'POST' });
+            const json = await res.json();
+            
+            if (json.sucesso) {
+                campoId.value = json.id_profissional;
+                campoNome.value = "NOVO USUÁRIO - AGUARDANDO DADOS";
+            }
+        } catch (e) {
+            console.error("Erro ao gerar reserva de usuário:", e);
+        }
+    }
+}
+
+// 2. FUNÇÃO SALVAR
 async function salvarUsuario() {
+    const id = document.getElementById('u_id').value;
     const dados = {
         nome: document.getElementById('u_nome').value,
         email: document.getElementById('u_email').value,
@@ -9,28 +113,48 @@ async function salvarUsuario() {
         tem_agenda: document.getElementById('u_agenda').checked ? 'SIM' : 'NÃO'
     };
 
-    const id = document.getElementById('u_id').value;
-    const metodo = 'PATCH'; // Usamos PATCH para atualizar os dados da reserva ou do usuário existente
+    if (!dados.nome || !dados.email) {
+        alert("Por favor, preencha o Nome e o E-mail.");
+        return;
+    }
 
-    const res = await fetch(`/api/usuarios?id=${id}`, {
-        method: metodo,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados)
-    });
+    try {
+        const res = await fetch(`/api/usuarios?id=${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
 
-    if (res.ok) {
-        alert("Usuário salvo com sucesso!");
-        carregarConteudo('usuarios.html');
+        if (res.ok) {
+            alert("Dados gravados com sucesso!");
+            carregarConteudo('usuarios.html');
+        } else {
+            alert("Erro ao salvar no banco de dados.");
+        }
+    } catch (e) {
+        console.error("Erro no fetch de salvamento:", e);
     }
 }
 
+// 3. FUNÇÃO CANCELAR (Com limpeza de reserva)
 async function cancelarUsuario() {
     const id = document.getElementById('u_id').value;
-    const nome = document.getElementById('u_nome').value;
+    const nomeAtual = document.getElementById('u_nome').value;
 
-    // Lógica de limpeza que funcionou nos pacientes:
-    if (!window.ehEdicaoUsuario && nome.includes("NOVO USUÁRIO")) {
-        await fetch(`/api/usuarios?id=${id}`, { method: 'DELETE' });
+    // Se for um novo registro e o nome ainda for o de reserva, deleta a linha
+    if (!window.ehEdicaoUsuario && id && nomeAtual.includes("NOVO USUÁRIO")) {
+        console.log("Cancelando reserva vazia ID:", id);
+        try {
+            await fetch(`/api/usuarios?id=${id}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error("Erro ao deletar reserva:", e);
+        }
     }
+
+    window.ehEdicaoUsuario = false;
     carregarConteudo('usuarios.html');
 }
+
+// Disparar a inicialização assim que o script carregar
+inicializarCadastroUsuario();
+</script>
