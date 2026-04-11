@@ -767,13 +767,13 @@ function _renderCard(ag) {
   }
   if(st!=='EM_ATENDIMENTO'&&st!=='ATENDIDO'&&st!=='CANCELADO'&&st!=='FALTA') {
     btnStatus+='<button class="btn btn-outline-primary btn-act" '
-      +'onclick="event.stopPropagation();window._AG.acao(\'status\','+ag.id+',\'EM_ATENDIMENTO\')" title="Iniciar Atendimento">'
+      +'onclick="event.stopPropagation();window._AG.iniciarAtendimento('+ag.id+')" title="Iniciar Atendimento">'
       +'<i class="bi bi-play-fill"></i> Atender</button>';
   }
   if(st==='EM_ATENDIMENTO') {
     btnStatus+='<button class="btn btn-success btn-act" '
-      +'onclick="event.stopPropagation();window._AG.acao(\'atendido\','+ag.id+')" title="Concluir Atendimento">'
-      +'<i class="bi bi-check-circle-fill"></i> Concluir</button>';
+      +'onclick="event.stopPropagation();window._AG.iniciarAtendimento('+ag.id+')" title="Retomar Atendimento">'
+      +'<i class="bi bi-arrow-right-circle-fill"></i> Retomar</button>';
   }
 
   // Dropdown para ações secundárias
@@ -1221,6 +1221,64 @@ async function agConfirmarEnc() {
   else alert('Erro: '+(r.erro||''));
 }
 window.agConfirmarEnc = agConfirmarEnc;
+
+// ── Inicia ecossistema de atendimento ─────────────────────────────
+AG.iniciarAtendimento = function(id) {
+  var ag = AG.dados.find(function(a){ return a.id == id; });
+  if(!ag) return;
+
+  // Passa o contexto para a tela de atendimento via window
+  window._atendimentoAgendaId   = id;
+  window._atendimentoAgendaData = ag;
+
+  // Se ainda não está EM_ATENDIMENTO, atualiza status e hora_chegada na agenda
+  if(ag.status !== 'EM_ATENDIMENTO') {
+    var patch = { status: 'EM_ATENDIMENTO' };
+    if(!ag.hora_chegada) patch.hora_chegada = new Date().toISOString();
+    api({id: id}, 'PATCH', patch).then(function(r) {
+      if(r.sucesso) {
+        Object.assign(ag, patch);
+        _preencherSlots();
+        _atualizarContadores();
+        _atualizarEspera();
+        _atualizarAtendimento();
+      }
+    });
+  }
+
+  // Navega para a tela de atendimento.
+  // Tenta os padrões mais comuns de roteamento de dashboard:
+  if(typeof carregarConteudo === 'function') {
+    carregarConteudo('atendimento');
+  } else if(typeof window.carregarPagina === 'function') {
+    window.carregarPagina('atendimento');
+  } else if(typeof window.navegarPara === 'function') {
+    window.navegarPara('atendimento');
+  } else {
+    // Fallback: carrega via fetch no mesmo container que a agenda usa
+    var container = document.getElementById('corpo-paginas')
+                 || document.getElementById('conteudo-principal')
+                 || document.getElementById('app-content')
+                 || document.getElementById('main-content')
+                 || document.querySelector('[data-pagina]')
+                 || document.body;
+    fetch('atendimento.html')
+      .then(function(res){ return res.text(); })
+      .then(function(html){
+        container.innerHTML = html;
+        // Executa scripts embutidos no fragment carregado
+        container.querySelectorAll('script').forEach(function(s){
+          var ns = document.createElement('script');
+          ns.textContent = s.textContent;
+          document.body.appendChild(ns);
+        });
+      })
+      .catch(function(err){
+        console.error('[Agenda] Não foi possível carregar atendimento.html:', err);
+        alert('Não foi possível abrir a tela de atendimento.\nVerifique se atendimento.html está na mesma pasta.');
+      });
+  }
+};
 
 // ── Inicia ────────────────────────────────────────────────────────
 inicializarAgenda();
