@@ -902,6 +902,11 @@ AG.acao = async function(tipo, id, extra) {
 
 // ── Timers ───────────────────────────────────────────────────────
 function _atualizarTimers() {
+  // Guard: se os elementos da agenda não existem mais, para o timer
+  if(!document.getElementById('agListaEspera')) {
+    if(AG.timerInt) { clearInterval(AG.timerInt); AG.timerInt = null; }
+    return;
+  }
   document.querySelectorAll('.tpill[data-chegada]').forEach(function(el){
     var iso=el.getAttribute('data-chegada'), min=minEsp(iso);
     el.innerHTML='<i class="bi bi-clock"></i> '+fmtEsp(iso);
@@ -917,10 +922,10 @@ function _atualizarContadores() {
     if(a.status==='ATENDIDO') aten++;
     if(a.status==='FALTA'||a.status==='CANCELADO') falt++;
   });
-  document.getElementById('agCntEspera').textContent  = esp;
-  document.getElementById('agCntAtendido').textContent = aten;
-  document.getElementById('agCntFaltas').textContent   = falt;
-  document.getElementById('agCntTotal').textContent    = tot;
+  var e1=document.getElementById('agCntEspera');   if(e1) e1.textContent=esp;
+  var e2=document.getElementById('agCntAtendido'); if(e2) e2.textContent=aten;
+  var e3=document.getElementById('agCntFaltas');   if(e3) e3.textContent=falt;
+  var e4=document.getElementById('agCntTotal');    if(e4) e4.textContent=tot;
 }
 function _atualizarAtendimento() {
   var lista = AG.dados.filter(function(a){
@@ -928,6 +933,7 @@ function _atualizarAtendimento() {
   }).sort(function(a,b){ return new Date(a.hora_chegada||a.hora_agenda) - new Date(b.hora_chegada||b.hora_agenda); });
 
   var el = document.getElementById('agListaAtendimento');
+  if(!el) return;
   if(!lista.length) {
     el.innerHTML='<p class="text-muted small text-center mb-0">Nenhum em atendimento</p>';
     return;
@@ -949,6 +955,7 @@ function _atualizarEspera() {
     return a.status==='AGUARDANDO' && a.hora_chegada && !a.is_bloqueado;
   }).sort(function(a,b){ return new Date(a.hora_chegada)-new Date(b.hora_chegada); });
   var el=document.getElementById('agListaEspera');
+  if(!el) return;
   if(!lista.length){ el.innerHTML='<p class="text-muted small text-center mb-0">Nenhum aguardando</p>'; return; }
   el.innerHTML=lista.map(function(a){
     var min=minEsp(a.hora_chegada), cor=min>30?'danger':'warning';
@@ -1227,6 +1234,11 @@ AG.iniciarAtendimento = function(id) {
   var ag = AG.dados.find(function(a){ return a.id == id; });
   if(!ag) return;
 
+  // ── Para o timer da agenda ANTES de sair da página ──────────────
+  // Sem isso o setInterval continua disparando e tenta escrever
+  // em #agListaEspera que já não existe mais no DOM.
+  if(AG.timerInt) { clearInterval(AG.timerInt); AG.timerInt = null; }
+
   // Passa o contexto para a tela de atendimento via window
   window._atendimentoAgendaId   = id;
   window._atendimentoAgendaData = ag;
@@ -1235,38 +1247,29 @@ AG.iniciarAtendimento = function(id) {
   if(ag.status !== 'EM_ATENDIMENTO') {
     var patch = { status: 'EM_ATENDIMENTO' };
     if(!ag.hora_chegada) patch.hora_chegada = new Date().toISOString();
-    api({id: id}, 'PATCH', patch).then(function(r) {
-      if(r.sucesso) {
-        Object.assign(ag, patch);
-        _preencherSlots();
-        _atualizarContadores();
-        _atualizarEspera();
-        _atualizarAtendimento();
-      }
-    });
+    api({id: id}, 'PATCH', patch).catch(function(){});
   }
 
-  // Navega para a tela de atendimento.
-  // Tenta os padrões mais comuns de roteamento de dashboard:
+  // ── Navega para a tela de atendimento ───────────────────────────
+  // carregarConteudo() no seu dashboard faz fetch do caminho passado.
+  // Como o arquivo se chama atendimento.html, passamos 'atendimento.html'.
   if(typeof carregarConteudo === 'function') {
-    carregarConteudo('atendimento');
+    carregarConteudo('atendimento.html');
   } else if(typeof window.carregarPagina === 'function') {
-    window.carregarPagina('atendimento');
+    window.carregarPagina('atendimento.html');
   } else if(typeof window.navegarPara === 'function') {
-    window.navegarPara('atendimento');
+    window.navegarPara('atendimento.html');
   } else {
-    // Fallback: carrega via fetch no mesmo container que a agenda usa
+    // Fallback genérico
     var container = document.getElementById('corpo-paginas')
                  || document.getElementById('conteudo-principal')
                  || document.getElementById('app-content')
                  || document.getElementById('main-content')
-                 || document.querySelector('[data-pagina]')
                  || document.body;
     fetch('atendimento.html')
       .then(function(res){ return res.text(); })
       .then(function(html){
         container.innerHTML = html;
-        // Executa scripts embutidos no fragment carregado
         container.querySelectorAll('script').forEach(function(s){
           var ns = document.createElement('script');
           ns.textContent = s.textContent;
@@ -1274,8 +1277,8 @@ AG.iniciarAtendimento = function(id) {
         });
       })
       .catch(function(err){
-        console.error('[Agenda] Não foi possível carregar atendimento.html:', err);
-        alert('Não foi possível abrir a tela de atendimento.\nVerifique se atendimento.html está na mesma pasta.');
+        console.error('[Agenda] Erro ao carregar atendimento.html:', err);
+        alert('Não foi possível abrir a tela de atendimento.');
       });
   }
 };
