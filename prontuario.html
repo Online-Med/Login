@@ -165,7 +165,13 @@ var PRONT = {
 
 /* ── Voltar ── */
 window.prontVoltar = function() {
-  var ret = PRONT.retorno || window._prontuarioRetorno || 'agenda.html';
+  var ret = PRONT.retorno || window._prontuarioRetorno || null;
+  if(!ret) {
+    window._prontuarioPcod    = null;
+    window._prontuarioRetorno = null;
+    if(typeof carregarConteudo === 'function') carregarConteudo('agenda.html');
+    return;
+  }
   if(typeof carregarConteudo === 'function') carregarConteudo(ret);
   else window.history.back();
 };
@@ -394,11 +400,15 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 /* ── INICIALIZAÇÃO ── */
 async function inicializarProntuario() {
   PRONT.pcod    = window._prontuarioPcod    || null;
-  PRONT.retorno = window._prontuarioRetorno || 'agenda.html';
+  PRONT.retorno = window._prontuarioRetorno || null;
 
   // Label do botão Voltar
   var btnLabel = document.getElementById('prontBtnLabel');
-  if(btnLabel) btnLabel.textContent = PRONT.retorno === 'atendimento.html' ? 'Atendimento' : 'Agenda';
+  if(btnLabel) {
+    if(PRONT.retorno === 'atendimento.html') btnLabel.textContent = 'Atendimento';
+    else if(PRONT.retorno)                  btnLabel.textContent = 'Voltar';
+    else                                    btnLabel.textContent = 'Agenda';
+  }
 
   if(PRONT.pcod) {
     document.getElementById('prontBuscaInput').value = String(PRONT.pcod);
