@@ -3,13 +3,42 @@
 #atendWrap { animation: fadeIn .18s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
 
+/* ── Header ── */
 #atendHeader {
   background: linear-gradient(135deg,#6f42c1,#4361ee);
-  color:#fff; padding:10px 16px;
+  color:#fff; padding:8px 16px;
   display:flex; flex-wrap:wrap; gap:8px; align-items:center;
 }
 #atendHeader h5 { margin:0; font-size:.95rem; font-weight:700; }
+#atendTimer {
+  background:rgba(255,255,255,.18); border-radius:20px;
+  padding:2px 10px; font-size:.8rem; font-weight:700;
+}
 
+/* ── Painel do paciente ── */
+#atendPacPanel {
+  background:#fff; border-bottom:2px solid #e9ecef;
+  padding:10px 16px; display:flex; gap:14px; align-items:center;
+}
+#atendFoto {
+  width:64px; height:64px; border-radius:50%;
+  background:#e9ecef; display:flex; align-items:center; justify-content:center;
+  font-size:1.6rem; color:#6c757d; flex-shrink:0; overflow:hidden;
+}
+#atendFoto img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.pac-dado { font-size:.78rem; }
+.pac-dado strong { display:block; font-size:.88rem; color:#212529; }
+.pac-dado span { color:#6c757d; }
+.pac-pcod {
+  background:#6f42c1; color:#fff; border-radius:20px;
+  padding:2px 10px; font-size:.72rem; font-weight:700;
+}
+.pac-1v {
+  background:#fff3cd; color:#664d03; border-radius:20px;
+  padding:2px 8px; font-size:.7rem; font-weight:700;
+}
+
+/* ── Seções do formulário ── */
 .at-section {
   background:#fff; border-radius:8px; border:1px solid #e9ecef;
   margin-bottom:12px; overflow:hidden;
@@ -23,62 +52,76 @@
 }
 .at-section-body { padding:14px; }
 
-/* Vitais grid */
+/* Vitais */
 .vitais-grid {
   display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px;
 }
 .vital-item label { font-size:.74rem; font-weight:700; color:#6c757d; margin-bottom:3px; display:block; }
 
-/* Prescrição / Exames rows */
+/* Prescrição / Exames */
 .presc-row, .exam-row {
   display:flex; gap:6px; align-items:flex-start; margin-bottom:8px;
 }
-.presc-row:last-child, .exam-row:last-child { margin-bottom:0; }
 .btn-remove-row {
   flex-shrink:0; background:none; border:none; color:#dc3545;
   padding:4px 6px; cursor:pointer; font-size:.85rem; margin-top:2px;
 }
 .btn-remove-row:hover { background:#fff0f0; border-radius:4px; }
 
-/* Footer sticky */
+/* Footer */
 #atendFooter {
-  position:sticky; bottom:0;
-  background:#fff; border-top:1px solid #dee2e6;
+  position:sticky; bottom:0; background:#fff;
+  border-top:1px solid #dee2e6;
   padding:10px 16px; display:flex; gap:8px; justify-content:flex-end;
   z-index:10;
-}
-
-/* Badge status */
-.badge-status { font-size:.7rem; padding:3px 8px; border-radius:20px; }
-
-/* Cronômetro */
-#atendTimer {
-  background:rgba(255,255,255,.18); border-radius:20px;
-  padding:2px 10px; font-size:.8rem; font-weight:700;
 }
 </style>
 
 <div id="atendWrap">
 
-  <!-- ── HEADER ───────────────────────────────────────────────── -->
+  <!-- ── HEADER ─────────────────────────────────────────────────── -->
   <div id="atendHeader">
     <button class="btn btn-sm btn-outline-light" onclick="atendVoltar()">
       <i class="bi bi-arrow-left"></i> Agenda
     </button>
     <div>
       <h5 id="atendNomePac"><i class="bi bi-person-fill"></i> Carregando...</h5>
-      <div style="font-size:.75rem;opacity:.85">
-        <span id="atendInfo"></span>
-      </div>
+      <div style="font-size:.72rem;opacity:.85" id="atendSubtitulo"></div>
     </div>
     <div class="ms-auto d-flex align-items-center gap-3">
       <span id="atendTimer"><i class="bi bi-stopwatch"></i> 00:00</span>
-      <span id="atendStatusBadge" class="badge-status badge bg-primary">Em Atendimento</span>
+      <span class="badge bg-primary" style="font-size:.7rem">Em Atendimento</span>
     </div>
   </div>
 
-  <!-- ── BODY ────────────────────────────────────────────────── -->
-  <div class="container-fluid p-3" style="max-height:calc(100vh - 140px);overflow-y:auto">
+  <!-- ── PAINEL DO PACIENTE ─────────────────────────────────────── -->
+  <div id="atendPacPanel">
+    <div id="atendFoto"><i class="bi bi-person"></i></div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+        <strong id="panelNome" style="font-size:.95rem">—</strong>
+        <span class="pac-pcod" id="panelPcod">PCOD —</span>
+        <span class="pac-1v d-none" id="panelPrimeira"><i class="bi bi-star-fill"></i> 1ª Vez</span>
+      </div>
+      <div class="d-flex flex-wrap gap-3">
+        <div class="pac-dado"><span>Idade</span><strong id="panelIdade">—</strong></div>
+        <div class="pac-dado"><span>Nascimento</span><strong id="panelNasc">—</strong></div>
+        <div class="pac-dado"><span>CPF</span><strong id="panelCPF">—</strong></div>
+        <div class="pac-dado"><span>Celular</span><strong id="panelCel">—</strong></div>
+        <div class="pac-dado"><span>Convênio</span><strong id="panelConv">—</strong></div>
+        <div class="pac-dado"><span>Tipo / Modalidade</span><strong id="panelTipo">—</strong></div>
+      </div>
+    </div>
+    <div>
+      <button class="btn btn-outline-secondary btn-sm" style="font-size:.72rem"
+              onclick="atendVerProntuario()">
+        <i class="bi bi-journal-medical"></i> Prontuário
+      </button>
+    </div>
+  </div>
+
+  <!-- ── BODY ──────────────────────────────────────────────────── -->
+  <div class="container-fluid p-3" style="max-height:calc(100vh - 195px);overflow-y:auto">
     <div class="row g-3">
 
       <!-- COLUNA ESQUERDA -->
@@ -86,9 +129,7 @@
 
         <!-- Sinais Vitais -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-heart-pulse-fill text-danger"></i> Sinais Vitais
-          </div>
+          <div class="at-section-hd"><i class="bi bi-heart-pulse-fill text-danger"></i> Sinais Vitais</div>
           <div class="at-section-body">
             <div class="vitais-grid">
               <div class="vital-item">
@@ -100,7 +141,7 @@
                 <input type="number" class="form-control form-control-sm" id="vFC" placeholder="bpm" min="30" max="250">
               </div>
               <div class="vital-item">
-                <label><i class="bi bi-lungs-fill"></i> Freq. Respiratória</label>
+                <label><i class="bi bi-lungs-fill"></i> Freq. Resp.</label>
                 <input type="number" class="form-control form-control-sm" id="vFR" placeholder="irpm" min="8" max="60">
               </div>
               <div class="vital-item">
@@ -108,7 +149,7 @@
                 <input type="number" class="form-control form-control-sm" id="vTemp" placeholder="°C" min="34" max="42" step=".1">
               </div>
               <div class="vital-item">
-                <label><i class="bi bi-droplet-fill text-primary"></i> Saturação O₂</label>
+                <label><i class="bi bi-droplet-fill text-primary"></i> Sat. O₂</label>
                 <input type="number" class="form-control form-control-sm" id="vSat" placeholder="%" min="50" max="100">
               </div>
               <div class="vital-item">
@@ -121,7 +162,7 @@
               </div>
               <div class="vital-item">
                 <label><i class="bi bi-droplet-fill text-warning"></i> Glicemia</label>
-                <input type="number" class="form-control form-control-sm" id="vGlicemia" placeholder="mg/dL" min="20" max="600">
+                <input type="number" class="form-control form-control-sm" id="vGlicemia" placeholder="mg/dL">
               </div>
             </div>
           </div>
@@ -129,55 +170,48 @@
 
         <!-- Anamnese -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-chat-left-text-fill text-info"></i> Anamnese
-          </div>
+          <div class="at-section-hd"><i class="bi bi-chat-left-text-fill text-info"></i> Anamnese</div>
           <div class="at-section-body">
             <div class="mb-3">
               <label class="form-label small fw-bold">Queixa Principal <span class="text-danger">*</span></label>
-              <input type="text" class="form-control form-control-sm" id="atQueixa"
-                     placeholder="Motivo principal da consulta...">
+              <input type="text" class="form-control form-control-sm" id="atQueixa" placeholder="Motivo principal da consulta...">
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">História da Doença Atual (HDA)</label>
               <textarea class="form-control form-control-sm" id="atHDA" rows="4"
-                        placeholder="Início, evolução, fatores de melhora/piora, sintomas associados..."></textarea>
+                placeholder="Início, evolução, fatores de melhora/piora, sintomas associados..."></textarea>
             </div>
             <div>
               <label class="form-label small fw-bold">Antecedentes Pessoais / Familiares</label>
               <textarea class="form-control form-control-sm" id="atAntecedentes" rows="3"
-                        placeholder="Doenças preexistentes, cirurgias, alergias, medicações em uso, histórico familiar..."></textarea>
+                placeholder="Doenças preexistentes, cirurgias, alergias, medicações em uso, histórico familiar..."></textarea>
             </div>
           </div>
         </div>
 
         <!-- Exame Físico -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-clipboard2-pulse-fill text-success"></i> Exame Físico
-          </div>
+          <div class="at-section-hd"><i class="bi bi-clipboard2-pulse-fill text-success"></i> Exame Físico</div>
           <div class="at-section-body">
             <textarea class="form-control form-control-sm" id="atExameFisico" rows="5"
-                      placeholder="Inspeção geral, ausculta, palpação, percussão, neurológico, etc..."></textarea>
+              placeholder="Inspeção geral, ausculta, palpação, percussão, neurológico..."></textarea>
           </div>
         </div>
 
         <!-- Diagnóstico -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-journal-medical text-purple" style="color:#6f42c1"></i> Hipótese Diagnóstica
-          </div>
+          <div class="at-section-hd"><i class="bi bi-journal-medical" style="color:#6f42c1"></i> Hipótese Diagnóstica</div>
           <div class="at-section-body">
             <div class="row g-3">
               <div class="col-md-8">
                 <label class="form-label small fw-bold">Hipótese / Diagnóstico</label>
                 <textarea class="form-control form-control-sm" id="atDiagnostico" rows="3"
-                          placeholder="Hipótese diagnóstica principal e diferenciais..."></textarea>
+                  placeholder="Hipótese diagnóstica principal e diferenciais..."></textarea>
               </div>
               <div class="col-md-4">
                 <label class="form-label small fw-bold">CID-10</label>
                 <input type="text" class="form-control form-control-sm" id="atCID"
-                       placeholder="Ex: J00, K35.8..." style="text-transform:uppercase">
+                  placeholder="Ex: J00, K35.8..." style="text-transform:uppercase">
                 <div class="form-text small">Código do CID principal</div>
               </div>
             </div>
@@ -186,12 +220,10 @@
 
         <!-- Conduta -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-check2-square text-success"></i> Conduta / Plano Terapêutico
-          </div>
+          <div class="at-section-hd"><i class="bi bi-check2-square text-success"></i> Conduta / Plano Terapêutico</div>
           <div class="at-section-body">
             <textarea class="form-control form-control-sm" id="atConduta" rows="4"
-                      placeholder="Orientações, encaminhamentos, retorno, repouso, dieta, procedimentos..."></textarea>
+              placeholder="Orientações, encaminhamentos, retorno, repouso, dieta, procedimentos..."></textarea>
           </div>
         </div>
 
@@ -216,7 +248,7 @@
           </div>
         </div>
 
-        <!-- Solicitação de Exames -->
+        <!-- Exames -->
         <div class="at-section">
           <div class="at-section-hd">
             <i class="bi bi-file-earmark-medical text-warning"></i> Solicitação de Exames
@@ -232,24 +264,19 @@
           </div>
         </div>
 
-        <!-- Observações internas -->
+        <!-- Obs internas -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-sticky-fill text-secondary"></i> Observações Internas
-          </div>
+          <div class="at-section-hd"><i class="bi bi-sticky-fill text-secondary"></i> Observações Internas</div>
           <div class="at-section-body">
             <textarea class="form-control form-control-sm" id="atObs" rows="4"
-                      placeholder="Notas internas, observações para próxima consulta..."></textarea>
+              placeholder="Notas internas, observações para próxima consulta..."></textarea>
           </div>
         </div>
 
-        <!-- Resumo do agendamento -->
+        <!-- Resumo agenda -->
         <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-calendar-check text-info"></i> Dados do Agendamento
-          </div>
-          <div class="at-section-body" id="atResumoDados" style="font-size:.82rem">
-          </div>
+          <div class="at-section-hd"><i class="bi bi-calendar-check text-info"></i> Dados do Agendamento</div>
+          <div class="at-section-body" id="atResumoDados" style="font-size:.82rem"></div>
         </div>
 
       </div><!-- /col-lg-4 -->
@@ -257,7 +284,7 @@
     </div><!-- /row -->
   </div><!-- /container -->
 
-  <!-- ── FOOTER ───────────────────────────────────────────────── -->
+  <!-- ── FOOTER ─────────────────────────────────────────────────── -->
   <div id="atendFooter">
     <span id="atSalvandoMsg" class="text-muted small align-self-center d-none">
       <i class="bi bi-cloud-check text-success"></i> Rascunho salvo
@@ -275,313 +302,369 @@
 
 <script>
 (function () {
-  /* ── State ──────────────────────────────────────────────────── */
-  var AT = {
-    agId:    null,  // id da linha em agenda
-    atId:    null,  // id em atendimentos (null = novo)
-    agData:  null,  // objeto agenda completo
-    presc:   [],
-    exames:  [],
-    timerInterval: null,
-    horaInicio: new Date()
-  };
+/* ── State ── */
+var AT = {
+  agId:       null,
+  atId:       null,
+  agData:     null,
+  pacData:    null,  // dados do paciente carregados do banco
+  presc:      [],
+  exames:     [],
+  timerInterval: null,
+  horaInicio:    new Date()
+};
 
-  /* ── API helper ─────────────────────────────────────────────── */
-  async function api(params, method, body) {
-    var qs = Object.entries(params||{}).map(function(p){
-      return p[0]+'='+encodeURIComponent(p[1]);
-    }).join('&');
-    var opts = { method: method||'GET', headers:{'Content-Type':'application/json'} };
-    if(body) opts.body = JSON.stringify(body);
-    var r = await fetch('/api/atendimento?'+qs, opts);
-    return r.json();
+/* ── API helpers ── */
+async function apiAt(params, method, body) {
+  var qs = Object.entries(params||{}).map(function(p){
+    return p[0]+'='+encodeURIComponent(p[1]);
+  }).join('&');
+  var opts = { method:method||'GET', headers:{'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/atendimento?'+qs, opts);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function apiAg(params, method, body) {
+  var qs = Object.entries(params||{}).map(function(p){
+    return p[0]+'='+encodeURIComponent(p[1]);
+  }).join('&');
+  var opts = { method:method||'GET', headers:{'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/agenda?'+qs, opts);
+  return r.json();
+}
+
+/* ── Timer ── */
+function _iniciarTimer(horaBase) {
+  if(AT.timerInterval) clearInterval(AT.timerInterval);
+  AT.timerInterval = setInterval(function(){
+    var diff = Math.floor((new Date() - horaBase) / 1000);
+    var m = Math.floor(diff/60), s = diff%60;
+    var el = document.getElementById('atendTimer');
+    if(el) el.innerHTML = '<i class="bi bi-stopwatch"></i> '
+      + String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }, 1000);
+}
+
+/* ── Carregar dados do paciente ── */
+async function _carregarPaciente(pcod) {
+  if(!pcod) return null;
+  try {
+    var r = await fetch('/api/pacientes?pcod='+pcod);
+    var d = await r.json();
+    return (d && d.sucesso && d.paciente) ? d.paciente : null;
+  } catch(e) { return null; }
+}
+
+/* ── Preencher painel do paciente ── */
+function _preencherPainel(pac, ag) {
+  // Header
+  var nome = (pac && pac.Nome) || (ag && ag.paciente_nome) || 'Paciente';
+  document.getElementById('atendNomePac').innerHTML = '<i class="bi bi-person-fill"></i> ' + esc(nome);
+
+  var subtitulo = '';
+  if(ag) {
+    subtitulo = (ag.hora_agenda||'') + ' &bull; ' + (ag.tipo||'Consulta');
+    if(ag.modalidade==='ONLINE') subtitulo += ' &bull; <i class="bi bi-camera-video"></i> Online';
+    else subtitulo += ' &bull; <i class="bi bi-building"></i> Presencial';
+  }
+  document.getElementById('atendSubtitulo').innerHTML = subtitulo;
+
+  // Painel
+  document.getElementById('panelNome').textContent = nome;
+
+  if(ag && ag.paciente_id) {
+    document.getElementById('panelPcod').textContent = 'PCOD ' + ag.paciente_id;
+  } else {
+    document.getElementById('panelPcod').textContent = 'Sem cadastro';
+    document.getElementById('panelPcod').style.background = '#dc3545';
   }
 
-  async function apiAgenda(params, method, body) {
-    var qs = Object.entries(params||{}).map(function(p){
-      return p[0]+'='+encodeURIComponent(p[1]);
-    }).join('&');
-    var opts = { method: method||'GET', headers:{'Content-Type':'application/json'} };
-    if(body) opts.body = JSON.stringify(body);
-    var r = await fetch('/api/agenda?'+qs, opts);
-    return r.json();
+  if(ag && ag.primeira_consulta) {
+    document.getElementById('panelPrimeira').classList.remove('d-none');
   }
 
-  /* ── Timer ──────────────────────────────────────────────────── */
-  function _iniciarTimer() {
-    if(AT.timerInterval) clearInterval(AT.timerInterval);
-    AT.timerInterval = setInterval(function(){
-      var diff = Math.floor((new Date() - AT.horaInicio) / 1000);
-      var m = Math.floor(diff/60), s = diff%60;
-      document.getElementById('atendTimer').innerHTML =
-        '<i class="bi bi-stopwatch"></i> '
-        +String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-    }, 1000);
+  // Foto
+  if(pac && pac.foto_url) {
+    document.getElementById('atendFoto').innerHTML = '<img src="'+esc(pac.foto_url)+'" alt="foto">';
   }
 
-  /* ── Carregar dados existentes ──────────────────────────────── */
-  async function _carregarAtendimento() {
-    if(!AT.agId) return;
-    var r = await api({action:'get', agenda_id: AT.agId});
-    if(r && r.id) {
-      AT.atId = r.id;
-      AT.horaInicio = r.hora_inicio ? new Date(r.hora_inicio) : new Date();
-      // Preenche campos
-      _set('atQueixa',     r.queixa_principal);
-      _set('atHDA',        r.historia_doenca_atual);
-      _set('atAntecedentes', r.antecedentes);
-      _set('atExameFisico', r.exame_fisico);
-      _set('atDiagnostico', r.hipotese_diagnostica);
-      _set('atCID',        r.cid);
-      _set('atConduta',    r.conduta);
-      _set('atObs',        r.observacoes);
-      // Vitais
-      if(r.vitais) {
-        _set('vPA',       r.vitais.pressao_arterial);
-        _set('vFC',       r.vitais.frequencia_cardiaca);
-        _set('vFR',       r.vitais.frequencia_respiratoria);
-        _set('vTemp',     r.vitais.temperatura);
-        _set('vSat',      r.vitais.saturacao);
-        _set('vPeso',     r.vitais.peso);
-        _set('vAltura',   r.vitais.altura);
-        _set('vGlicemia', r.vitais.glicemia);
-      }
-      // Prescrições e exames
-      AT.presc  = r.prescricoes      || [];
-      AT.exames = r.exames_solicitados || [];
-      _renderPresc();
-      _renderExames();
+  // Dados demográficos
+  if(pac) {
+    // Idade
+    if(pac.Data_Nascimento) {
+      var nasc = new Date(pac.Data_Nascimento);
+      var hoje = new Date();
+      var idade = hoje.getFullYear() - nasc.getFullYear();
+      if(hoje < new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate())) idade--;
+      document.getElementById('panelIdade').textContent = idade + ' anos';
+      var p = pac.Data_Nascimento.split('T')[0].split('-');
+      document.getElementById('panelNasc').textContent = p[2]+'/'+p[1]+'/'+p[0];
     }
+    document.getElementById('panelCPF').textContent  = pac.Documento || '—';
+    document.getElementById('panelCel').textContent  = pac.Celular || pac.Telefone || '—';
+    document.getElementById('panelConv').textContent = pac.Convenio || (ag && ag.convenio) || '—';
+  } else if(ag) {
+    document.getElementById('panelConv').textContent = ag.convenio || '—';
   }
 
-  function _set(id, val) {
-    var el=document.getElementById(id); if(el&&val!=null&&val!=='') el.value=val;
+  if(ag) {
+    document.getElementById('panelTipo').textContent = (ag.tipo||'Consulta') + ' / ' + (ag.modalidade||'Presencial');
   }
 
-  /* ── Header ─────────────────────────────────────────────────── */
-  function _preencherHeader() {
-    var ag = AT.agData;
-    if(!ag) return;
-    document.getElementById('atendNomePac').innerHTML =
-      '<i class="bi bi-person-fill"></i> ' + (ag.paciente_nome || 'Paciente');
-    document.getElementById('atendInfo').innerHTML =
-      (ag.hora_agenda||'') +
-      ' &bull; ' + (ag.tipo||'Consulta') +
-      (ag.modalidade==='ONLINE'
-        ? ' &bull; <i class="bi bi-camera-video"></i> Online'
-        : ' &bull; <i class="bi bi-building"></i> Presencial') +
-      (ag.convenio ? ' &bull; '+ag.convenio : '') +
-      (ag.primeira_consulta ? ' &bull; <span style="color:#fde68a">★ 1ª Vez</span>' : '');
-
-    // Resumo lateral
-    var resumo='';
-    if(ag.data_agenda)      resumo+='<div><strong>Data:</strong> '+ag.data_agenda.split('-').reverse().join('/')+'</div>';
-    if(ag.hora_agenda)      resumo+='<div><strong>Horário:</strong> '+ag.hora_agenda+'</div>';
-    if(ag.tipo)             resumo+='<div><strong>Tipo:</strong> '+ag.tipo+'</div>';
-    if(ag.convenio)         resumo+='<div><strong>Convênio:</strong> '+ag.convenio+'</div>';
+  // Resumo lateral
+  var resumo = '';
+  if(ag) {
+    if(ag.data_agenda) resumo += '<div><strong>Data:</strong> '+ag.data_agenda.split('-').reverse().join('/')+'</div>';
+    if(ag.hora_agenda) resumo += '<div><strong>Horário:</strong> '+ag.hora_agenda+'</div>';
+    if(ag.tipo)        resumo += '<div><strong>Tipo:</strong> '+ag.tipo+'</div>';
+    if(ag.convenio)    resumo += '<div><strong>Convênio:</strong> '+ag.convenio+'</div>';
     if(ag.telefone_whatsapp) {
-      var tel=(ag.telefone_whatsapp||'').replace(/\D/g,'');
-      resumo+='<div><i class="bi bi-whatsapp text-success"></i> <a href="https://wa.me/55'+tel+'" target="_blank">'+ag.telefone_whatsapp+'</a></div>';
+      var tel = ag.telefone_whatsapp.replace(/\D/g,'');
+      resumo += '<div><i class="bi bi-whatsapp text-success"></i> <a href="https://wa.me/55'+tel+'" target="_blank">'+ag.telefone_whatsapp+'</a></div>';
     }
-    if(ag.observacao) resumo+='<div class="mt-1 text-muted"><i class="bi bi-chat-right-text"></i> '+ag.observacao+'</div>';
-    document.getElementById('atResumoDados').innerHTML = resumo || '<span class="text-muted">—</span>';
+    if(ag.observacao) resumo += '<div class="mt-1 text-muted"><i class="bi bi-chat-right-text"></i> '+esc(ag.observacao)+'</div>';
   }
+  var el = document.getElementById('atResumoDados');
+  if(el) el.innerHTML = resumo || '<span class="text-muted">—</span>';
+}
 
-  /* ── Prescrições ────────────────────────────────────────────── */
-  window.atAddPresc = function() {
-    AT.presc.push({ medicamento:'', dosagem:'', posologia:'', duracao:'', via:'VO' });
-    _renderPresc();
-    // Focus no último campo adicionado
-    setTimeout(function(){
-      var inputs=document.querySelectorAll('#prescList .presc-row input');
-      if(inputs.length) inputs[inputs.length-4].focus();
-    }, 50);
-  };
+/* ── Preencher formulário com atendimento existente ── */
+function _preencherForm(r) {
+  _set('atQueixa',     r.queixa_principal);
+  _set('atHDA',        r.historia_doenca_atual);
+  _set('atAntecedentes', r.antecedentes);
+  _set('atExameFisico', r.exame_fisico);
+  _set('atDiagnostico', r.hipotese_diagnostica);
+  _set('atCID',        r.cid);
+  _set('atConduta',    r.conduta);
+  _set('atObs',        r.observacoes);
+  if(r.vitais) {
+    _set('vPA',       r.vitais.pressao_arterial);
+    _set('vFC',       r.vitais.frequencia_cardiaca);
+    _set('vFR',       r.vitais.frequencia_respiratoria);
+    _set('vTemp',     r.vitais.temperatura);
+    _set('vSat',      r.vitais.saturacao);
+    _set('vPeso',     r.vitais.peso);
+    _set('vAltura',   r.vitais.altura);
+    _set('vGlicemia', r.vitais.glicemia);
+  }
+  AT.presc  = r.prescricoes       || [];
+  AT.exames = r.exames_solicitados || [];
+  _renderPresc();
+  _renderExames();
+}
 
-  function _renderPresc() {
-    var list=document.getElementById('prescList');
-    var empty=document.getElementById('prescEmpty');
-    if(!AT.presc.length) { list.innerHTML=''; empty.classList.remove('d-none'); return; }
-    empty.classList.add('d-none');
-    list.innerHTML = AT.presc.map(function(p,i){
-      return '<div class="presc-row">'
-        +'<div class="flex-grow-1">'
-          +'<div class="row g-1 mb-1">'
-            +'<div class="col-12"><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
-              +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+i+',\'medicamento\',this.value)"></div>'
-          +'</div>'
-          +'<div class="row g-1">'
-            +'<div class="col-4"><input type="text" class="form-control form-control-sm" placeholder="Dose"'
-              +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+i+',\'dosagem\',this.value)"></div>'
-            +'<div class="col-5"><input type="text" class="form-control form-control-sm" placeholder="Posologia"'
-              +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+i+',\'posologia\',this.value)"></div>'
-            +'<div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Duração"'
-              +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+i+',\'duracao\',this.value)"></div>'
-          +'</div>'
+function _set(id, val) {
+  var el = document.getElementById(id);
+  if(el && val != null && val !== '') el.value = val;
+}
+
+/* ── Prescrições ── */
+window.atAddPresc = function() {
+  AT.presc.push({ medicamento:'', dosagem:'', posologia:'', duracao:'' });
+  _renderPresc();
+  setTimeout(function(){
+    var inputs = document.querySelectorAll('#prescList .presc-row input');
+    if(inputs.length) inputs[inputs.length - 4].focus();
+  }, 50);
+};
+function _renderPresc() {
+  var list = document.getElementById('prescList');
+  var empty = document.getElementById('prescEmpty');
+  if(!AT.presc.length) { list.innerHTML=''; empty.classList.remove('d-none'); return; }
+  empty.classList.add('d-none');
+  list.innerHTML = AT.presc.map(function(p, i){
+    return '<div class="presc-row">'
+      +'<div class="flex-grow-1">'
+        +'<div class="mb-1"><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
+          +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+i+',\'medicamento\',this.value)"></div>'
+        +'<div class="row g-1">'
+          +'<div class="col-4"><input type="text" class="form-control form-control-sm" placeholder="Dose"'
+            +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+i+',\'dosagem\',this.value)"></div>'
+          +'<div class="col-5"><input type="text" class="form-control form-control-sm" placeholder="Posologia"'
+            +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+i+',\'posologia\',this.value)"></div>'
+          +'<div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Duração"'
+            +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+i+',\'duracao\',this.value)"></div>'
         +'</div>'
-        +'<button class="btn-remove-row" onclick="atDelPresc('+i+')" title="Remover">'
-          +'<i class="bi bi-trash3"></i></button>'
-        +'</div>';
-    }).join('<hr class="my-1">');
-  }
+      +'</div>'
+      +'<button class="btn-remove-row" onclick="atDelPresc('+i+')"><i class="bi bi-trash3"></i></button>'
+      +'</div>';
+  }).join('<hr class="my-1">');
+}
+window.atUpdPresc = function(i,c,v){ if(AT.presc[i]) AT.presc[i][c]=v; };
+window.atDelPresc = function(i){ AT.presc.splice(i,1); _renderPresc(); };
 
-  window.atUpdPresc = function(i, campo, val) { if(AT.presc[i]) AT.presc[i][campo]=val; };
-  window.atDelPresc = function(i) { AT.presc.splice(i,1); _renderPresc(); };
+/* ── Exames ── */
+window.atAddExame = function() {
+  AT.exames.push({ exame:'', observacao:'' });
+  _renderExames();
+  setTimeout(function(){
+    var inputs = document.querySelectorAll('#exameList .exam-row input');
+    if(inputs.length) inputs[inputs.length - 2].focus();
+  }, 50);
+};
+function _renderExames() {
+  var list = document.getElementById('exameList');
+  var empty = document.getElementById('exameEmpty');
+  if(!AT.exames.length) { list.innerHTML=''; empty.classList.remove('d-none'); return; }
+  empty.classList.add('d-none');
+  list.innerHTML = AT.exames.map(function(e, i){
+    return '<div class="exam-row">'
+      +'<div class="flex-grow-1">'
+        +'<input type="text" class="form-control form-control-sm mb-1" placeholder="Nome do exame *"'
+          +' value="'+esc(e.exame)+'" oninput="atUpdExame('+i+',\'exame\',this.value)">'
+        +'<input type="text" class="form-control form-control-sm" placeholder="Observação (opcional)"'
+          +' value="'+esc(e.observacao)+'" oninput="atUpdExame('+i+',\'observacao\',this.value)">'
+      +'</div>'
+      +'<button class="btn-remove-row" onclick="atDelExame('+i+')"><i class="bi bi-trash3"></i></button>'
+      +'</div>';
+  }).join('<hr class="my-1">');
+}
+window.atUpdExame = function(i,c,v){ if(AT.exames[i]) AT.exames[i][c]=v; };
+window.atDelExame = function(i){ AT.exames.splice(i,1); _renderExames(); };
 
-  /* ── Exames ──────────────────────────────────────────────────── */
-  window.atAddExame = function() {
-    AT.exames.push({ exame:'', observacao:'' });
-    _renderExames();
-    setTimeout(function(){
-      var inputs=document.querySelectorAll('#exameList .exam-row input');
-      if(inputs.length) inputs[inputs.length-2].focus();
-    }, 50);
+/* ── Coletar dados do formulário ── */
+function _coletarDados(status) {
+  var ag = AT.agData || {};
+  return {
+    agenda_id:             AT.agId,
+    paciente_id:           ag.paciente_id || null,     // ← PCOD
+    paciente_nome:         ag.paciente_nome || '',
+    id_profissional:       ag.id_profissional || null,
+    data_atendimento:      ag.data_agenda || new Date().toISOString().split('T')[0],
+    hora_inicio:           AT.horaInicio.toISOString(),
+    queixa_principal:      _val('atQueixa'),
+    historia_doenca_atual: _val('atHDA'),
+    antecedentes:          _val('atAntecedentes'),
+    exame_fisico:          _val('atExameFisico'),
+    hipotese_diagnostica:  _val('atDiagnostico'),
+    cid:                   (_val('atCID')||'').toUpperCase(),
+    conduta:               _val('atConduta'),
+    observacoes:           _val('atObs'),
+    vitais: {
+      pressao_arterial:        _val('vPA')       || null,
+      frequencia_cardiaca:     _num('vFC'),
+      frequencia_respiratoria: _num('vFR'),
+      temperatura:             _num('vTemp'),
+      saturacao:               _num('vSat'),
+      peso:                    _num('vPeso'),
+      altura:                  _num('vAltura'),
+      glicemia:                _num('vGlicemia')
+    },
+    prescricoes:        AT.presc.filter(function(p){ return p.medicamento.trim(); }),
+    exames_solicitados: AT.exames.filter(function(e){ return e.exame.trim(); }),
+    status:             status || 'ABERTO'
   };
+}
+function _val(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
+function _num(id){ var v=_val(id); return v?parseFloat(v):null; }
 
-  function _renderExames() {
-    var list=document.getElementById('exameList');
-    var empty=document.getElementById('exameEmpty');
-    if(!AT.exames.length) { list.innerHTML=''; empty.classList.remove('d-none'); return; }
-    empty.classList.add('d-none');
-    list.innerHTML = AT.exames.map(function(e,i){
-      return '<div class="exam-row">'
-        +'<div class="flex-grow-1">'
-          +'<input type="text" class="form-control form-control-sm mb-1" placeholder="Nome do exame *"'
-            +' value="'+esc(e.exame)+'" oninput="atUpdExame('+i+',\'exame\',this.value)">'
-          +'<input type="text" class="form-control form-control-sm" placeholder="Observação (opcional)"'
-            +' value="'+esc(e.observacao)+'" oninput="atUpdExame('+i+',\'observacao\',this.value)">'
-        +'</div>'
-        +'<button class="btn-remove-row" onclick="atDelExame('+i+')" title="Remover">'
-          +'<i class="bi bi-trash3"></i></button>'
-        +'</div>';
-    }).join('<hr class="my-1">');
-  }
-
-  window.atUpdExame = function(i, campo, val) { if(AT.exames[i]) AT.exames[i][campo]=val; };
-  window.atDelExame = function(i) { AT.exames.splice(i,1); _renderExames(); };
-
-  /* ── Coletar dados do formulário ────────────────────────────── */
-  function _coletarDados() {
-    var ag = AT.agData || {};
-    return {
-      agenda_id:              AT.agId,
-      paciente_id:            ag.paciente_id || null,
-      paciente_nome:          ag.paciente_nome || '',
-      id_profissional:        ag.id_profissional || null,
-      data_atendimento:       ag.data_agenda || new Date().toISOString().split('T')[0],
-      hora_inicio:            AT.horaInicio.toISOString(),
-      queixa_principal:       _val('atQueixa'),
-      historia_doenca_atual:  _val('atHDA'),
-      antecedentes:           _val('atAntecedentes'),
-      exame_fisico:           _val('atExameFisico'),
-      hipotese_diagnostica:   _val('atDiagnostico'),
-      cid:                    (_val('atCID')||'').toUpperCase(),
-      conduta:                _val('atConduta'),
-      observacoes:            _val('atObs'),
-      vitais: {
-        pressao_arterial:         _val('vPA')       || null,
-        frequencia_cardiaca:      _num('vFC'),
-        frequencia_respiratoria:  _num('vFR'),
-        temperatura:              _num('vTemp'),
-        saturacao:                _num('vSat'),
-        peso:                     _num('vPeso'),
-        altura:                   _num('vAltura'),
-        glicemia:                 _num('vGlicemia')
-      },
-      prescricoes:       AT.presc.filter(function(p){ return p.medicamento.trim(); }),
-      exames_solicitados: AT.exames.filter(function(e){ return e.exame.trim(); }),
-      status: 'ABERTO'
-    };
-  }
-
-  function _val(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
-  function _num(id){ var v=_val(id); return v?parseFloat(v):null; }
-
-  /* ── Salvar rascunho ────────────────────────────────────────── */
-  window.atSalvarRascunho = async function() {
-    var dados = _coletarDados();
+/* ── Salvar rascunho ── */
+window.atSalvarRascunho = async function() {
+  var dados = _coletarDados('ABERTO');
+  try {
     var r;
     if(AT.atId) {
-      r = await api({id: AT.atId}, 'PATCH', dados);
+      r = await apiAt({id:AT.atId}, 'PATCH', dados);
     } else {
-      r = await api({}, 'POST', dados);
+      r = await apiAt({}, 'POST', dados);
       if(r && r.id) AT.atId = r.id;
     }
-    if(r && (r.sucesso || r.id)) {
-      var msg = document.getElementById('atSalvandoMsg');
-      msg.classList.remove('d-none');
-      setTimeout(function(){ msg.classList.add('d-none'); }, 3000);
-    } else {
-      alert('Erro ao salvar rascunho: '+(r&&r.erro)||'');
-    }
-  };
+    var msg = document.getElementById('atSalvandoMsg');
+    if(msg){ msg.classList.remove('d-none'); setTimeout(function(){ msg.classList.add('d-none'); }, 3000); }
+  } catch(err) {
+    alert('Erro ao salvar rascunho: '+err.message);
+  }
+};
 
-  /* ── Encerrar Atendimento ───────────────────────────────────── */
-  window.atEncerrar = async function() {
-    if(!confirm('Encerrar o atendimento e marcar como Atendido?')) return;
-
-    var dados = _coletarDados();
-    dados.status    = 'ENCERRADO';
-    dados.hora_fim  = new Date().toISOString();
-
-    // 1. Salva/atualiza atendimento
+/* ── Encerrar Atendimento ── */
+window.atEncerrar = async function() {
+  if(!confirm('Encerrar o atendimento e marcar como Atendido?')) return;
+  var dados = _coletarDados('ENCERRADO');
+  dados.hora_fim = new Date().toISOString();
+  try {
     var r;
     if(AT.atId) {
-      r = await api({id: AT.atId}, 'PATCH', dados);
+      r = await apiAt({id:AT.atId}, 'PATCH', dados);
     } else {
-      r = await api({}, 'POST', dados);
+      r = await apiAt({}, 'POST', dados);
       if(r && r.id) AT.atId = r.id;
     }
-
-    if(r && (r.sucesso || r.id)) {
-      // 2. Atualiza agenda: ATENDIDO + hora_atendido
-      await apiAgenda({id: AT.agId}, 'PATCH', {
-        status:       'ATENDIDO',
-        hora_atendido: new Date().toISOString()
-      });
-
-      // 3. Para o timer
-      if(AT.timerInterval) clearInterval(AT.timerInterval);
-
-      // 4. Volta para a agenda
-      atendVoltar();
-    } else {
-      alert('Erro ao encerrar: '+(r&&r.erro)||'');
-    }
-  };
-
-  /* ── Voltar para a agenda ────────────────────────────────────── */
-  window.atendVoltar = function() {
+    // Atualiza agenda: ATENDIDO + hora_atendido
+    await apiAg({id:AT.agId}, 'PATCH', {
+      status:        'ATENDIDO',
+      hora_atendido: new Date().toISOString()
+    });
     if(AT.timerInterval) clearInterval(AT.timerInterval);
-    if(typeof carregarConteudo === 'function') {
-      carregarConteudo('agenda');
-    } else {
-      window.history.back();
-    }
-  };
+    atendVoltar();
+  } catch(err) {
+    alert('Erro ao encerrar: '+err.message);
+  }
+};
 
-  /* ── Utilidade ───────────────────────────────────────────────── */
-  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* ── Voltar para a agenda ── */
+window.atendVoltar = function() {
+  if(AT.timerInterval) clearInterval(AT.timerInterval);
+  if(typeof carregarConteudo === 'function') carregarConteudo('agenda.html');
+  else window.history.back();
+};
 
-  /* ── Inicialização ────────────────────────────────────────────── */
-  async function inicializarAtendimento() {
-    // Pega contexto passado pela agenda
-    AT.agId   = window._atendimentoAgendaId  || null;
-    AT.agData = window._atendimentoAgendaData || null;
+/* ── Abrir prontuário do paciente ── */
+window.atendVerProntuario = function() {
+  var ag = AT.agData;
+  if(!ag || !ag.paciente_id) { alert('Paciente sem cadastro. Não é possível abrir o prontuário.'); return; }
+  window._prontuarioPcod    = ag.paciente_id;
+  window._prontuarioRetorno = 'atendimento.html';
+  window._atendimentoAgendaId   = AT.agId;
+  window._atendimentoAgendaData = AT.agData;
+  if(AT.timerInterval) clearInterval(AT.timerInterval);
+  if(typeof carregarConteudo === 'function') carregarConteudo('prontuario.html');
+};
 
-    if(!AT.agId) {
-      document.getElementById('atendNomePac').textContent = 'Nenhum atendimento selecionado';
-      return;
-    }
+/* ── Utilitário ── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-    _preencherHeader();
-    _iniciarTimer();
-    await _carregarAtendimento();
+/* ── INICIALIZAÇÃO ── */
+async function inicializarAtendimento() {
+  AT.agId   = window._atendimentoAgendaId   || null;
+  AT.agData = window._atendimentoAgendaData || null;
+
+  if(!AT.agId) {
+    document.getElementById('atendNomePac').textContent = 'Nenhum atendimento selecionado';
+    return;
   }
 
-  // Expõe para o dashboard chamar diretamente
-  window.inicializarPaginaAtendimento = inicializarAtendimento;
-  inicializarAtendimento();
+  var ag = AT.agData;
+
+  // Carrega dados do paciente (se tem PCOD)
+  var pac = null;
+  if(ag && ag.paciente_id) {
+    pac = await _carregarPaciente(ag.paciente_id);
+    AT.pacData = pac;
+  }
+
+  _preencherPainel(pac, ag);
+  AT.horaInicio = new Date();
+  _iniciarTimer(AT.horaInicio);
+
+  // Busca atendimento existente para este slot (rascunho salvo)
+  try {
+    var existente = await apiAt({action:'get', agenda_id: AT.agId});
+    if(existente && existente.id) {
+      AT.atId = existente.id;
+      if(existente.hora_inicio) AT.horaInicio = new Date(existente.hora_inicio);
+      _iniciarTimer(AT.horaInicio);
+      _preencherForm(existente);
+    }
+  } catch(e) {
+    // Atendimento novo — tudo bem
+  }
+}
+
+window.inicializarPaginaAtendimento = inicializarAtendimento;
+inicializarAtendimento();
 
 })();
 </script>
