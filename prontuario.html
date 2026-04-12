@@ -1,0 +1,413 @@
+<!-- prontuario.html — Fragmento carregado via carregarConteudo() no dashboard -->
+<style>
+#prontWrap { animation: fadeIn .18s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+#prontHeader {
+  background: linear-gradient(135deg,#0f6e56,#1d9e75);
+  color:#fff; padding:8px 16px;
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+}
+#prontHeader h5 { margin:0; font-size:.95rem; font-weight:700; }
+
+/* Painel do paciente */
+#prontPacPanel {
+  background:#fff; border-bottom:2px solid #e9ecef;
+  padding:10px 16px; display:flex; gap:14px; align-items:center;
+}
+#prontFoto {
+  width:60px; height:60px; border-radius:50%;
+  background:#e9ecef; display:flex; align-items:center; justify-content:center;
+  font-size:1.5rem; color:#6c757d; flex-shrink:0; overflow:hidden;
+}
+#prontFoto img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+/* Busca */
+#prontBuscaBar {
+  background:#fff; border-bottom:1px solid #e9ecef;
+  padding:10px 16px; display:flex; gap:8px; align-items:center;
+}
+
+/* Cards de consulta */
+.pront-card {
+  background:#fff; border-radius:8px; border:1px solid #e9ecef;
+  margin-bottom:12px; overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  transition:box-shadow .15s;
+}
+.pront-card:hover { box-shadow:0 3px 10px rgba(0,0,0,.1); }
+.pront-card-hd {
+  padding:10px 14px; cursor:pointer;
+  display:flex; align-items:center; gap:10px;
+  border-bottom:1px solid #f0f0f0;
+}
+.pront-card-hd:hover { background:#f8f9fa; }
+.pront-date {
+  background:#e3f2fd; color:#0c447c; border-radius:8px;
+  padding:4px 10px; font-size:.78rem; font-weight:700; white-space:nowrap;
+}
+.pront-cid {
+  background:#d1e7dd; color:#0a3622; border-radius:20px;
+  padding:2px 8px; font-size:.7rem; font-weight:700;
+}
+.pront-card-body { padding:14px; display:none; }
+.pront-card-body.aberto { display:block; }
+.pront-field { margin-bottom:10px; }
+.pront-field label { font-size:.72rem; font-weight:700; color:#6c757d; text-transform:uppercase; display:block; margin-bottom:3px; }
+.pront-field p { margin:0; font-size:.85rem; color:#212529; white-space:pre-wrap; }
+.pront-presc-item {
+  background:#f0f4ff; border-radius:6px; padding:6px 10px; margin-bottom:6px;
+  font-size:.82rem;
+}
+.pront-presc-item strong { display:block; }
+.pront-exame-item {
+  background:#fff8e1; border-radius:6px; padding:5px 10px; margin-bottom:5px;
+  font-size:.82rem;
+}
+.vital-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  background:#f8f9fa; border:1px solid #dee2e6; border-radius:6px;
+  padding:3px 8px; font-size:.75rem; margin:2px;
+}
+</style>
+
+<div id="prontWrap">
+
+  <!-- ── HEADER ─────────────────────────────────────────────────── -->
+  <div id="prontHeader">
+    <button class="btn btn-sm btn-outline-light" onclick="prontVoltar()">
+      <i class="bi bi-arrow-left"></i>
+      <span id="prontBtnLabel">Voltar</span>
+    </button>
+    <h5><i class="bi bi-journal-medical"></i> Prontuário do Paciente</h5>
+  </div>
+
+  <!-- ── BUSCA (aparece quando não há paciente pré-selecionado) ─── -->
+  <div id="prontBuscaBar">
+    <i class="bi bi-search text-muted"></i>
+    <input type="text" class="form-control form-control-sm" id="prontBuscaInput"
+           placeholder="Digite nome ou PCOD do paciente e pressione Enter..."
+           onkeydown="if(event.key==='Enter') prontBuscar()"
+           style="max-width:400px">
+    <button class="btn btn-info btn-sm text-white" onclick="prontBuscar()">
+      <i class="bi bi-search"></i> Buscar
+    </button>
+    <div id="prontBuscaResultados" style="position:relative;flex:1"></div>
+  </div>
+
+  <!-- ── PAINEL DO PACIENTE ─────────────────────────────────────── -->
+  <div id="prontPacPanel" class="d-none">
+    <div id="prontFoto"><i class="bi bi-person"></i></div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+        <strong id="prontPacNome" style="font-size:.95rem">—</strong>
+        <span class="badge" style="background:#1d9e75;font-size:.7rem" id="prontPacPcod">—</span>
+      </div>
+      <div class="d-flex flex-wrap gap-3" style="font-size:.8rem">
+        <span><span class="text-muted">Idade:</span> <strong id="prontPacIdade">—</strong></span>
+        <span><span class="text-muted">CPF:</span> <strong id="prontPacCPF">—</strong></span>
+        <span><span class="text-muted">Celular:</span> <strong id="prontPacCel">—</strong></span>
+        <span><span class="text-muted">Convênio:</span> <strong id="prontPacConv">—</strong></span>
+      </div>
+    </div>
+    <div class="text-end">
+      <div id="prontTotalConsultas" class="badge bg-info text-dark" style="font-size:.75rem"></div>
+    </div>
+  </div>
+
+  <!-- ── CONTEÚDO ───────────────────────────────────────────────── -->
+  <div class="container-fluid p-3" style="max-height:calc(100vh - 170px);overflow-y:auto">
+
+    <!-- Estado inicial / vazio -->
+    <div id="prontEstadoInicial" class="text-center py-5 text-muted">
+      <i class="bi bi-journal-medical" style="font-size:3rem;opacity:.3"></i>
+      <p class="mt-2">Busque um paciente pelo nome ou PCOD para ver o histórico.</p>
+    </div>
+
+    <!-- Spinner -->
+    <div id="prontSpinner" class="text-center py-5 d-none">
+      <div class="spinner-border text-success"></div>
+      <p class="mt-2 text-muted small">Carregando prontuário...</p>
+    </div>
+
+    <!-- Sem consultas -->
+    <div id="prontSemConsultas" class="text-center py-5 text-muted d-none">
+      <i class="bi bi-calendar-x" style="font-size:2.5rem;opacity:.3"></i>
+      <p class="mt-2">Nenhuma consulta registrada para este paciente.</p>
+    </div>
+
+    <!-- Lista de consultas -->
+    <div id="prontLista"></div>
+
+  </div>
+
+</div><!-- /prontWrap -->
+
+<!-- Dropdown busca rápida -->
+<div id="prontDropdown" style="
+  position:fixed; z-index:1080; background:#fff;
+  border:1px solid #dee2e6; border-radius:8px;
+  box-shadow:0 6px 20px rgba(0,0,0,.15);
+  max-height:220px; overflow-y:auto; min-width:340px;
+  display:none;
+"></div>
+
+
+<script>
+(function(){
+
+var PRONT = {
+  pcod:     null,
+  retorno:  null,
+  pac:      null,
+  consultas: []
+};
+
+/* ── Voltar ── */
+window.prontVoltar = function() {
+  var ret = PRONT.retorno || window._prontuarioRetorno || 'agenda.html';
+  if(typeof carregarConteudo === 'function') carregarConteudo(ret);
+  else window.history.back();
+};
+
+/* ── Buscar paciente (autocomplete) ── */
+var _bTmr = null;
+document.getElementById('prontBuscaInput').addEventListener('input', function(){
+  var v = this.value.trim();
+  if(_bTmr) clearTimeout(_bTmr);
+  var dd = document.getElementById('prontDropdown');
+  if(v.length < 2) { dd.style.display='none'; return; }
+  _bTmr = setTimeout(async function(){
+    try {
+      var r = await fetch('/api/pacientes?nome='+encodeURIComponent(v));
+      var d = await r.json();
+      var lista = (d && d.dados) ? d.dados : [];
+      if(!lista.length) { dd.style.display='none'; return; }
+      var inp = document.getElementById('prontBuscaInput');
+      var rect = inp.getBoundingClientRect();
+      dd.style.top  = (rect.bottom + window.scrollY + 2)+'px';
+      dd.style.left = rect.left+'px';
+      dd.innerHTML  = lista.map(function(p){
+        return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:.83rem" '
+          +'onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'\'" '
+          +'onclick="prontSelecionarPac('+p.pcod+')">'
+          +'<strong>'+esc(p.Nome||'')+'</strong>'
+          +(p.Documento?' <span style="color:#6c757d;font-size:.75rem">'+esc(p.Documento)+'</span>':'')
+          +'<br><span style="color:#6c757d;font-size:.75rem">PCOD '+p.pcod+'</span>'
+          +'</div>';
+      }).join('');
+      dd.style.display = 'block';
+    } catch(e){ /* silencia */ }
+  }, 350);
+});
+document.addEventListener('click', function(e){
+  var dd = document.getElementById('prontDropdown');
+  var inp = document.getElementById('prontBuscaInput');
+  if(dd && inp && !dd.contains(e.target) && e.target !== inp) dd.style.display='none';
+});
+
+window.prontBuscar = async function() {
+  var v = document.getElementById('prontBuscaInput').value.trim();
+  if(!v) return;
+  // Se for número, trata como PCOD
+  if(!isNaN(v)) {
+    prontSelecionarPac(parseInt(v));
+  } else {
+    // Faz busca e seleciona o primeiro
+    try {
+      var r = await fetch('/api/pacientes?nome='+encodeURIComponent(v));
+      var d = await r.json();
+      var lista = (d && d.dados) ? d.dados : [];
+      if(lista.length) prontSelecionarPac(lista[0].pcod);
+      else { alert('Paciente não encontrado.'); }
+    } catch(e){ alert('Erro na busca.'); }
+  }
+};
+
+window.prontSelecionarPac = async function(pcod) {
+  document.getElementById('prontDropdown').style.display='none';
+  PRONT.pcod = pcod;
+  await _carregarProntuario(pcod);
+};
+
+/* ── Carregar prontuário ── */
+async function _carregarProntuario(pcod) {
+  document.getElementById('prontEstadoInicial').classList.add('d-none');
+  document.getElementById('prontSemConsultas').classList.add('d-none');
+  document.getElementById('prontLista').innerHTML = '';
+  document.getElementById('prontSpinner').classList.remove('d-none');
+
+  try {
+    // Carrega dados do paciente
+    var rp = await fetch('/api/pacientes?pcod='+pcod);
+    var dp = await rp.json();
+    PRONT.pac = (dp && dp.sucesso && dp.paciente) ? dp.paciente : null;
+    _preencherPainelPac(PRONT.pac, pcod);
+
+    // Carrega consultas
+    var rc = await fetch('/api/atendimento?action=historico&paciente_id='+pcod);
+    var dc = await rc.json();
+    PRONT.consultas = Array.isArray(dc) ? dc : [];
+
+  } catch(e) {
+    PRONT.consultas = [];
+  }
+
+  document.getElementById('prontSpinner').classList.add('d-none');
+
+  if(!PRONT.consultas.length) {
+    document.getElementById('prontSemConsultas').classList.remove('d-none');
+  } else {
+    document.getElementById('prontTotalConsultas').textContent =
+      PRONT.consultas.length + ' consulta(s) registrada(s)';
+    _renderConsultas(PRONT.consultas);
+  }
+}
+
+function _preencherPainelPac(pac, pcod) {
+  document.getElementById('prontPacPanel').classList.remove('d-none');
+  document.getElementById('prontPacPcod').textContent = 'PCOD ' + pcod;
+
+  if(!pac) {
+    document.getElementById('prontPacNome').textContent = 'Paciente #'+pcod;
+    return;
+  }
+  document.getElementById('prontPacNome').textContent = pac.Nome || '—';
+  document.getElementById('prontPacCPF').textContent  = pac.Documento || '—';
+  document.getElementById('prontPacCel').textContent  = pac.Celular || pac.Telefone || '—';
+  document.getElementById('prontPacConv').textContent = pac.Convenio || '—';
+
+  if(pac.foto_url) {
+    document.getElementById('prontFoto').innerHTML = '<img src="'+esc(pac.foto_url)+'" alt="foto">';
+  }
+  if(pac.Data_Nascimento) {
+    var nasc = new Date(pac.Data_Nascimento);
+    var hoje = new Date();
+    var idade = hoje.getFullYear() - nasc.getFullYear();
+    if(hoje < new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate())) idade--;
+    document.getElementById('prontPacIdade').textContent = idade + ' anos';
+  }
+}
+
+/* ── Renderizar lista de consultas ── */
+function _renderConsultas(lista) {
+  // Ordena mais recente primeiro
+  var ordenadas = lista.slice().sort(function(a,b){
+    return new Date(b.data_atendimento||b.hora_inicio) - new Date(a.data_atendimento||a.hora_inicio);
+  });
+
+  var html = '';
+  ordenadas.forEach(function(c, i){
+    var dt = c.data_atendimento ? c.data_atendimento.split('-').reverse().join('/') : '—';
+    var horaIni = c.hora_inicio ? new Date(c.hora_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+    var horaFim = c.hora_fim   ? new Date(c.hora_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})   : '';
+    var duracao = '';
+    if(c.hora_inicio && c.hora_fim) {
+      var diff = Math.floor((new Date(c.hora_fim) - new Date(c.hora_inicio))/60000);
+      duracao = diff + ' min';
+    }
+
+    html += '<div class="pront-card">';
+    // Cabeçalho clicável
+    html += '<div class="pront-card-hd" onclick="prontToggle('+i+')" id="prontHd-'+i+'">';
+    html += '<div style="font-size:1.1rem;color:#888"><i class="bi bi-chevron-right" id="prontChev-'+i+'"></i></div>';
+    html += '<span class="pront-date"><i class="bi bi-calendar3"></i> '+dt+'</span>';
+    if(horaIni) html += '<span class="text-muted" style="font-size:.78rem">'+horaIni+(horaFim?' – '+horaFim:'')+(duracao?' ('+duracao+')':'')+'</span>';
+    html += '<div class="flex-grow-1">';
+    if(c.queixa_principal) html += '<div class="fw-bold" style="font-size:.85rem">'+esc(c.queixa_principal)+'</div>';
+    if(c.hipotese_diagnostica) html += '<div class="text-muted" style="font-size:.78rem">'+esc(c.hipotese_diagnostica.substring(0,80))+(c.hipotese_diagnostica.length>80?'...':'')+'</div>';
+    html += '</div>';
+    if(c.cid) html += '<span class="pront-cid">CID '+esc(c.cid)+'</span>';
+    html += '</div>'; // /hd
+
+    // Corpo expansível
+    html += '<div class="pront-card-body" id="prontBody-'+i+'">';
+
+    // Vitais
+    if(c.vitais && Object.values(c.vitais).some(function(v){ return v; })) {
+      html += '<div class="pront-field mb-3"><label>Sinais Vitais</label><div>';
+      var v = c.vitais;
+      if(v.pressao_arterial)        html += '<span class="vital-badge"><i class="bi bi-activity"></i> '+esc(v.pressao_arterial)+'</span>';
+      if(v.frequencia_cardiaca)     html += '<span class="vital-badge"><i class="bi bi-heart-fill text-danger"></i> '+v.frequencia_cardiaca+' bpm</span>';
+      if(v.temperatura)             html += '<span class="vital-badge"><i class="bi bi-thermometer-half text-warning"></i> '+v.temperatura+'°C</span>';
+      if(v.saturacao)               html += '<span class="vital-badge"><i class="bi bi-droplet-fill text-primary"></i> '+v.saturacao+'%</span>';
+      if(v.peso)                    html += '<span class="vital-badge"><i class="bi bi-person-fill"></i> '+v.peso+' kg</span>';
+      if(v.altura)                  html += '<span class="vital-badge"><i class="bi bi-rulers"></i> '+v.altura+' cm</span>';
+      if(v.glicemia)                html += '<span class="vital-badge"><i class="bi bi-droplet-fill text-warning"></i> '+v.glicemia+' mg/dL</span>';
+      html += '</div></div>';
+    }
+
+    if(c.queixa_principal)      html += _campo('Queixa Principal', c.queixa_principal);
+    if(c.historia_doenca_atual) html += _campo('HDA', c.historia_doenca_atual);
+    if(c.antecedentes)          html += _campo('Antecedentes', c.antecedentes);
+    if(c.exame_fisico)          html += _campo('Exame Físico', c.exame_fisico);
+    if(c.hipotese_diagnostica)  html += _campo('Diagnóstico'+(c.cid?' (CID '+esc(c.cid)+')':''), c.hipotese_diagnostica);
+    if(c.conduta)               html += _campo('Conduta', c.conduta);
+
+    // Prescrições
+    if(c.prescricoes && c.prescricoes.length) {
+      html += '<div class="pront-field"><label>Prescrições</label>';
+      c.prescricoes.forEach(function(p){
+        html += '<div class="pront-presc-item"><strong>'+esc(p.medicamento||'')+'</strong>';
+        var detalhe = [p.dosagem, p.posologia, p.duracao].filter(Boolean).join(' · ');
+        if(detalhe) html += ' <span class="text-muted">'+esc(detalhe)+'</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Exames
+    if(c.exames_solicitados && c.exames_solicitados.length) {
+      html += '<div class="pront-field"><label>Exames Solicitados</label>';
+      c.exames_solicitados.forEach(function(e){
+        html += '<div class="pront-exame-item"><i class="bi bi-file-earmark-medical text-warning"></i> '+esc(e.exame||'');
+        if(e.observacao) html += ' <span class="text-muted">— '+esc(e.observacao)+'</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    if(c.observacoes) html += _campo('Observações Internas', c.observacoes);
+
+    html += '</div>'; // /body
+    html += '</div>'; // /card
+  });
+
+  document.getElementById('prontLista').innerHTML = html;
+}
+
+function _campo(label, texto) {
+  return '<div class="pront-field"><label>'+label+'</label><p>'+esc(texto)+'</p></div>';
+}
+
+window.prontToggle = function(i) {
+  var body = document.getElementById('prontBody-'+i);
+  var chev = document.getElementById('prontChev-'+i);
+  if(!body) return;
+  var aberto = body.classList.toggle('aberto');
+  if(chev) chev.className = aberto ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
+};
+
+/* ── Utilitário ── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── INICIALIZAÇÃO ── */
+async function inicializarProntuario() {
+  PRONT.pcod    = window._prontuarioPcod    || null;
+  PRONT.retorno = window._prontuarioRetorno || 'agenda.html';
+
+  // Label do botão Voltar
+  var btnLabel = document.getElementById('prontBtnLabel');
+  if(btnLabel) btnLabel.textContent = PRONT.retorno === 'atendimento.html' ? 'Atendimento' : 'Agenda';
+
+  if(PRONT.pcod) {
+    document.getElementById('prontBuscaInput').value = String(PRONT.pcod);
+    await _carregarProntuario(PRONT.pcod);
+  }
+}
+
+window.inicializarPaginaProntuario = inicializarProntuario;
+inicializarProntuario();
+
+})();
+</script>
