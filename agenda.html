@@ -1,5 +1,11 @@
 <!-- agenda.html — Fragmento carregado via carregarConteudo() no dashboard -->
 <style>
+/* ── Fix: impede que o conteúdo da agenda empurre/encolha o sidebar ─────
+   O sidebar do dashboard não tem flex-shrink:0, então qualquer overflow
+   horizontal no conteúdo pode comprimi-lo. Travamos isso aqui. */
+.sidebar          { flex-shrink: 0 !important; }
+#corpo-paginas    { overflow-x: hidden !important; }
+
 :root { --slot-h: 58px; --col-hora: 68px; }
 
 #toolbarAgenda {
@@ -604,6 +610,12 @@ function abrirModal(id) {
 }
 function fecharModal(id) {
   var el=document.getElementById(id); if(!el) return;
+  // FIX aria-hidden: se houver foco dentro do modal, tira antes de fechar.
+  // Sem isso o Bootstrap seta aria-hidden="true" com o foco ainda lá dentro,
+  // gerando o aviso "Blocked aria-hidden on a focused element".
+  if(document.activeElement && el.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
   var m=bootstrap.Modal.getInstance(el); if(m) m.hide();
   setTimeout(function(){
     document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
