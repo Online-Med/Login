@@ -487,6 +487,64 @@
 </div>
 
 
+<!-- Modal Cadastro Rápido 1ª Vez ════════════════════════════════ -->
+<div class="modal fade" id="agModalCad1v" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#d97706,#b45309)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-star-fill"></i> Cadastrar Paciente — 1ª Vez
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning py-2 small mb-3">
+          <i class="bi bi-info-circle-fill"></i>
+          Este paciente ainda não possui cadastro. Preencha os dados abaixo para gerar o prontuário antes do atendimento.
+        </div>
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label small fw-bold">Nome Completo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="cad1vNome">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-bold">Data de Nascimento</label>
+            <input type="date" class="form-control form-control-sm" id="cad1vNasc">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-bold">CPF</label>
+            <input type="text" class="form-control form-control-sm" id="cad1vCPF" placeholder="000.000.000-00">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-bold">Celular</label>
+            <input type="text" class="form-control form-control-sm" id="cad1vCel" placeholder="(00) 00000-0000">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-bold">Sexo</label>
+            <select class="form-select form-select-sm" id="cad1vSexo">
+              <option value="">Selecione</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Feminino">Feminino</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Convênio</label>
+            <input type="text" class="form-control form-control-sm" id="cad1vConvenio" placeholder="Particular, Unimed...">
+          </div>
+        </div>
+        <div id="cad1vMsg" class="mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-warning text-dark btn-sm fw-bold" id="cad1vBtn" onclick="agSalvarCad1v()">
+          <i class="bi bi-person-plus-fill"></i> Cadastrar e Iniciar Atendimento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ SCRIPT ═══════════════════════════════════════════════════ -->
 <script>
 (function() {
@@ -506,7 +564,7 @@ const DIAS_MAP = { DOM:0, SEG:1, TER:2, QUA:3, QUI:4, SEX:5, SAB:6 };
 
 // ── FIX MODAL: move modais para document.body ─────────────────────
 // Sem isso ficam presos no overflow do #corpo-paginas
-['agModalAg','agModalBlq','agModalEnc','agModalEditar'].forEach(function(id) {
+['agModalAg','agModalBlq','agModalEnc','agModalEditar','agModalCad1v'].forEach(function(id) {
   var el = document.getElementById(id);
   if (el && el.parentNode !== document.body) document.body.appendChild(el);
 });
@@ -1234,52 +1292,120 @@ AG.iniciarAtendimento = function(id) {
   var ag = AG.dados.find(function(a){ return a.id == id; });
   if(!ag) return;
 
-  // ── Para o timer da agenda ANTES de sair da página ──────────────
-  // Sem isso o setInterval continua disparando e tenta escrever
-  // em #agListaEspera que já não existe mais no DOM.
+  // Para o timer antes de qualquer navegação
   if(AG.timerInt) { clearInterval(AG.timerInt); AG.timerInt = null; }
 
-  // Passa o contexto para a tela de atendimento via window
-  window._atendimentoAgendaId   = id;
+  // ── Paciente sem PCOD (1ª Vez sem cadastro) ──────────────────────
+  // Antes de abrir o atendimento, obriga o cadastro para gerar o PCOD
+  if(!ag.paciente_id) {
+    // Guarda qual agendamento vai ser atendido
+    AG._pendingAtendId = id;
+    // Pré-preenche o nome no modal
+    document.getElementById('cad1vNome').value    = ag.paciente_nome || '';
+    document.getElementById('cad1vCel').value     = ag.telefone_whatsapp || '';
+    document.getElementById('cad1vConvenio').value= ag.convenio || '';
+    document.getElementById('cad1vCPF').value     = '';
+    document.getElementById('cad1vNasc').value    = '';
+    document.getElementById('cad1vSexo').value    = '';
+    var msg = document.getElementById('cad1vMsg');
+    msg.className='mt-2 d-none'; msg.innerHTML='';
+    document.getElementById('cad1vBtn').disabled = false;
+    abrirModal('agModalCad1v');
+    return;
+  }
+
+  // ── Paciente já cadastrado — abre atendimento diretamente ─────────
+  _agAbrirAtendimento(ag);
+};
+
+// Abre a tela de atendimento de fato
+function _agAbrirAtendimento(ag) {
+  window._atendimentoAgendaId   = ag.id;
   window._atendimentoAgendaData = ag;
 
-  // Se ainda não está EM_ATENDIMENTO, atualiza status e hora_chegada na agenda
+  // Atualiza status para EM_ATENDIMENTO se necessário
   if(ag.status !== 'EM_ATENDIMENTO') {
     var patch = { status: 'EM_ATENDIMENTO' };
     if(!ag.hora_chegada) patch.hora_chegada = new Date().toISOString();
-    api({id: id}, 'PATCH', patch).catch(function(){});
+    api({id: ag.id}, 'PATCH', patch).catch(function(){});
   }
 
-  // ── Navega para a tela de atendimento ───────────────────────────
-  // carregarConteudo() no seu dashboard faz fetch do caminho passado.
-  // Como o arquivo se chama atendimento.html, passamos 'atendimento.html'.
   if(typeof carregarConteudo === 'function') {
     carregarConteudo('atendimento.html');
-  } else if(typeof window.carregarPagina === 'function') {
-    window.carregarPagina('atendimento.html');
-  } else if(typeof window.navegarPara === 'function') {
-    window.navegarPara('atendimento.html');
   } else {
-    // Fallback genérico
-    var container = document.getElementById('corpo-paginas')
-                 || document.getElementById('conteudo-principal')
-                 || document.getElementById('app-content')
-                 || document.getElementById('main-content')
-                 || document.body;
-    fetch('atendimento.html')
-      .then(function(res){ return res.text(); })
+    fetch('atendimento.html').then(function(r){ return r.text(); })
       .then(function(html){
-        container.innerHTML = html;
-        container.querySelectorAll('script').forEach(function(s){
-          var ns = document.createElement('script');
-          ns.textContent = s.textContent;
+        var c = document.getElementById('corpo-paginas') || document.body;
+        c.innerHTML = html;
+        c.querySelectorAll('script').forEach(function(s){
+          var ns=document.createElement('script'); ns.textContent=s.textContent;
           document.body.appendChild(ns);
         });
-      })
-      .catch(function(err){
-        console.error('[Agenda] Erro ao carregar atendimento.html:', err);
-        alert('Não foi possível abrir a tela de atendimento.');
       });
+  }
+}
+
+// ── Salvar cadastro rápido 1ª vez e abrir atendimento ─────────────
+window.agSalvarCad1v = async function() {
+  var nome = document.getElementById('cad1vNome').value.trim();
+  if(!nome){ alert('Informe o nome do paciente.'); return; }
+
+  var btn = document.getElementById('cad1vBtn');
+  var msg = document.getElementById('cad1vMsg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
+
+  try {
+    // 1. Reserva o PCOD
+    var r1 = await fetch('/api/pacientes', { method:'POST', headers:{'Content-Type':'application/json'} });
+    var d1 = await r1.json();
+    if(!d1.sucesso || !d1.pcod) throw new Error('Erro ao reservar PCOD');
+    var pcod = d1.pcod;
+
+    // 2. Salva os dados do paciente
+    var dados = {
+      Nome:             nome,
+      Documento:        document.getElementById('cad1vCPF').value.trim() || undefined,
+      Data_Nascimento:  document.getElementById('cad1vNasc').value       || undefined,
+      Celular:          document.getElementById('cad1vCel').value.trim() || undefined,
+      Sexo:             document.getElementById('cad1vSexo').value       || undefined,
+      Convenio:         document.getElementById('cad1vConvenio').value.trim() || undefined,
+      Data_Cadastro:    new Date().toISOString()
+    };
+    // Remove campos vazios/undefined
+    Object.keys(dados).forEach(function(k){ if(!dados[k]) delete dados[k]; });
+
+    var r2 = await fetch('/api/pacientes?pcod='+pcod, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(dados)
+    });
+    var d2 = await r2.json();
+    if(!d2.sucesso) throw new Error('Erro ao salvar dados do paciente');
+
+    // 3. Vincula o PCOD ao agendamento
+    var agId = AG._pendingAtendId;
+    var r3 = await api({id: agId}, 'PATCH', { paciente_id: pcod });
+    if(!r3.sucesso) throw new Error('Erro ao vincular PCOD ao agendamento');
+
+    // 4. Atualiza em memória e abre atendimento
+    var ag = AG.dados.find(function(a){ return a.id == agId; });
+    if(ag) {
+      ag.paciente_id   = pcod;
+      ag.primeira_consulta = true;
+    }
+
+    fecharModal('agModalCad1v');
+    setTimeout(function(){
+      if(ag) _agAbrirAtendimento(ag);
+    }, 250);
+
+  } catch(err) {
+    msg.className = 'mt-2 alert alert-danger py-2 small';
+    msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ' + err.message;
+    msg.classList.remove('d-none');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-person-plus-fill"></i> Cadastrar e Iniciar Atendimento';
   }
 };
 
