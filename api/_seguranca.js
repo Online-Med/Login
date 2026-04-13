@@ -1,6 +1,8 @@
 // ════════════════════════════════════════════════════════════════════
 //  api/_seguranca.js
 //  ⚠️  ESTE ARQUIVO USA ES MODULES — NÃO ADICIONE module.exports AQUI
+//  O underscore no nome impede que o Vercel exponha como rota pública.
+//  Coloque este arquivo DENTRO da pasta api/ junto com os outros .js
 // ════════════════════════════════════════════════════════════════════
 
 export const SUPABASE_URL = "https://pijymmyhtjvgfnpazjww.supabase.co";
@@ -27,7 +29,8 @@ export async function sb(path, method = 'GET', body = null, extraHeaders = {}) {
   return { ok: r.ok, status: r.status, data };
 }
 
-// ── Valida sessão ──
+// ── Valida sessão: checa se o e-mail do header existe na tabela usuarios ──
+// Lança erro se não autorizado. Use em TODOS os handlers exceto login e keep-alive.
 export async function validarSessao(req) {
   const userEmail = (req.headers['x-user-email'] || '').trim().toLowerCase();
   if (!userEmail) throw new Error("Não autorizado: sessão ausente");
@@ -36,28 +39,5 @@ export async function validarSessao(req) {
     `usuarios?email=eq.${encodeURIComponent(userEmail)}&select=id_profissional,perfil&limit=1`
   );
   if (!ok || !data || data.length === 0) throw new Error("Acesso negado");
-  return data[0];
+  return data[0]; // { id_profissional, perfil }
 }
-
-// ✅ CORREÇÃO: Adicionado 'export' antes da função
-export function gerarSenhaAleatoria() {
-  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%&*";
-  let senha = "";
-  for (let i = 0; i < 8; i++) {
-    senha += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return senha;
-}
-
-// ✅ CORREÇÃO: Adicionado 'export' antes da função
-export async function buscarConfig(chave) {
-  const url = `${SUPABASE_URL}/rest/v1/configuracoes?chave_config=eq.${chave}&select=valor`;
-  const res = await fetch(url, {
-    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
-  });
-  const dados = await res.json();
-  return dados.length > 0 ? dados[0].valor : null;
-}
-
-// ❌ REMOVIDO: module.exports que estava no final. 
-// Em ES Modules (quando usamos 'export' lá em cima), o module.exports causa erro de sintaxe.
