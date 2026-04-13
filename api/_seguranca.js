@@ -39,7 +39,7 @@ export async function validarSessao(req) {
   return data[0];
 }
 
-// ✅ ADICIONADO 'export' AQUI
+// ✅ CORREÇÃO: Adicionado 'export' antes da função
 export function gerarSenhaAleatoria() {
   const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%&*";
   let senha = "";
@@ -49,7 +49,7 @@ export function gerarSenhaAleatoria() {
   return senha;
 }
 
-// ✅ ADICIONADO 'export' AQUI
+// ✅ CORREÇÃO: Adicionado 'export' antes da função
 export async function buscarConfig(chave) {
   const url = `${SUPABASE_URL}/rest/v1/configuracoes?chave_config=eq.${chave}&select=valor`;
   const res = await fetch(url, {
@@ -59,4 +59,5 @@ export async function buscarConfig(chave) {
   return dados.length > 0 ? dados[0].valor : null;
 }
 
-// ❌ REMOVIDO: module.exports (Isso causa erro em ES Modules)
+// ❌ REMOVIDO: module.exports que estava no final. 
+// Em ES Modules (quando usamos 'export' lá em cima), o module.exports causa erro de sintaxe.
