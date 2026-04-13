@@ -1,4 +1,4 @@
-import { validarEBuscaDados } from './_seguranca.js';
+import { validarEBuscaDados } from './seguranca.js';
 
 export default async function handler(req, res) {
   try {
