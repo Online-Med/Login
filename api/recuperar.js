@@ -29,10 +29,8 @@ export default async function handler(req, res) {
     // ✅ PROTEÇÃO CONTRA O ERRO 'UNDEFINED':
     // Verifica se a resposta é nula ou se a lista está vazia antes de tentar acessar o item [0]
     if (!usuarios || !Array.isArray(usuarios) || usuarios.length === 0) {
-      return res.status(404).json({ 
-        sucesso: false, 
-        mensagem: "E-mail não cadastrado no sistema." 
-      });
+      return res.status(200).json({ sucesso: false, mensagem: "E-mail não cadastrado no sistema." });
+     
     }
 
     const usuario = usuarios[0];
