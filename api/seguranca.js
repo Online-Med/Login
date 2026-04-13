@@ -2,7 +2,7 @@
 export const SUPABASE_URL = "https://pijymmyhtjvgfnpazjww.supabase.co";
 const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpanltbXlodGp2Z2ZucGF6and3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDIwMDgxMCwiZXhwIjoyMDg5Nzc2ODEwfQ.VA6bhNcYV2y95tuUZh8W94jCy4d8bh-bDFXcLYI2LVM"; // Sua chave mestra
 
-export async function validarEBuscaDados(req, tabela, query = "*") {
+async function validarEBuscaDados(req, tabela, query = "*") {
   const userEmail = req.headers['x-user-email'];
   if (!userEmail) throw new Error("Não autorizado: E-mail não fornecido");
 
@@ -20,3 +20,6 @@ export async function validarEBuscaDados(req, tabela, query = "*") {
   });
   return await response.json();
 }
+
+// Exportação no padrão CommonJS
+module.exports = { SUPABASE_URL, SERVICE_KEY, validarEBuscaDados };
