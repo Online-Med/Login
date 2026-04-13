@@ -66,8 +66,26 @@
 <script>
   window.onload = function() {
     verificarSessao();
+    _instalarInterceptorFetch(); // injeta x-user-email em todas as chamadas /api/
     carregarMenu();
   };
+
+  // ── Interceptor global de fetch ──────────────────────────────────
+  // Adiciona automaticamente o header x-user-email em TODA chamada
+  // para /api/... sem precisar alterar cada página HTML.
+  function _instalarInterceptorFetch() {
+    const _fetchOriginal = window.fetch;
+    window.fetch = function(url, options = {}) {
+      const urlStr = typeof url === 'string' ? url : (url.url || '');
+      if (urlStr.startsWith('/api/')) {
+        const email = localStorage.getItem('onlineMed_email') || '';
+        options.headers = Object.assign({}, options.headers || {}, {
+          'x-user-email': email
+        });
+      }
+      return _fetchOriginal.call(this, url, options);
+    };
+  }
 
   function verificarSessao() {
     const usuario = localStorage.getItem('onlineMed_usuario');
@@ -152,7 +170,7 @@ html += `
       });
 
       // Ajustes de título conforme a página
-      const titulos = { 'pacientes.html': 'PACIENTES', 'agenda.html': 'AGENDA MÉDICA', 'atendimento.html': 'ATENDIMENTO' };
+      const titulos = { 'pacientes.html': 'PACIENTES', 'agenda.html': 'AGENDA MÉDICA', 'atendimento.html': 'ATENDIMENTO', 'prontuario.html': 'PRONTUÁRIO' };
       document.getElementById('titulo-topo').innerText = titulos[pagina] || 'CONSULTÓRIO';
 
     } catch (err) {
