@@ -42,16 +42,26 @@ export async function validarSessao(req) {
   return data[0]; // { id_profissional, perfil }
 }
 
-
-// funcao para gerar senha aleatoria
+// Função para gerar senha aleatória forte
 function gerarSenhaAleatoria() {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*";
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%&*";
   let senha = "";
   for (let i = 0; i < 8; i++) {
     senha += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return senha;
-}  
+}
+
+// Função para buscar configurações da tabela configuracoes
+async function buscarConfig(chave) {
+  const url = `${SUPABASE_URL}/rest/v1/configuracoes?chave_config=eq.${chave}&select=valor`;
+  const res = await fetch(url, {
+    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+  });
+  const dados = await res.json();
+  return dados.length > 0 ? dados[0].valor : null;
+}
+
 
 // Atualize o module.exports no final do arquivo
 module.exports = { SUPABASE_URL, SERVICE_KEY, validarEBuscaDados, gerarSenhaAleatoria };
