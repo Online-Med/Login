@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SERVICE_KEY } from './_seguranca.js';
+import { SUPABASE_URL, SERVICE_KEY } from './seguranca.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
