@@ -41,3 +41,56 @@ export async function validarSessao(req) {
   if (!ok || !data || data.length === 0) throw new Error("Acesso negado");
   return data[0]; // { id_profissional, perfil }
 }
+
+// ── Gera uma senha aleatória segura (usada no recuperar.js) ──────
+export function gerarSenhaAleatoria(tamanho = 10) {
+  const maiusculas = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O (confusos)
+  const minusculas = 'abcdefghjkmnpqrstuvwxyz';  // sem l e o
+  const digitos    = '23456789';                  // sem 0 e 1
+  const especiais  = '@#$%&*!';
+  const todos      = maiusculas + minusculas + digitos + especiais;
+
+  // Garante pelo menos 1 de cada categoria
+  let senha = '';
+  senha += maiusculas[Math.floor(Math.random() * maiusculas.length)];
+  senha += minusculas[Math.floor(Math.random() * minusculas.length)];
+  senha += digitos   [Math.floor(Math.random() * digitos.length)];
+  senha += especiais [Math.floor(Math.random() * especiais.length)];
+
+  for (let i = senha.length; i < tamanho; i++) {
+    senha += todos[Math.floor(Math.random() * todos.length)];
+  }
+
+  // Embaralha para os caracteres garantidos não ficarem sempre no início
+  return senha.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// ── Busca configurações ─────────────────────────────────────────────
+//
+// USO 1 — por id_profissional (retorna objeto { chave: valor }):
+//   const cfg = await buscarConfig(3);
+//   cfg.horario_inicio_agenda  →  '08:00'
+//
+// USO 2 — por chave global (retorna o valor como string):
+//   const email = await buscarConfig('email_cadastrado');
+//   email  →  'suporte@clinica.com'
+//
+export async function buscarConfig(idOuChave) {
+  if (typeof idOuChave === 'string') {
+    // Chave global — devolve só o valor
+    const { ok, data } = await sb(
+      `configuracoes?chave_config=eq.${encodeURIComponent(idOuChave)}&select=valor&limit=1`
+    );
+    if (!ok || !data || data.length === 0) return null;
+    return data[0].valor;
+  }
+
+  // id_profissional — devolve objeto { chave: valor }
+  const { ok, data } = await sb(
+    `configuracoes?id_profissional=eq.${idOuChave}&select=chave_config,valor`
+  );
+  if (!ok || !data) return {};
+  const cfg = {};
+  data.forEach(row => { cfg[row.chave_config] = row.valor; });
+  return cfg;
+}
