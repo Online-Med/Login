@@ -41,3 +41,17 @@ export async function validarSessao(req) {
   if (!ok || !data || data.length === 0) throw new Error("Acesso negado");
   return data[0]; // { id_profissional, perfil }
 }
+
+
+// funcao para gerar senha aleatoria
+function gerarSenhaAleatoria() {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*";
+  let senha = "";
+  for (let i = 0; i < 8; i++) {
+    senha += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return senha;
+}  
+
+// Atualize o module.exports no final do arquivo
+module.exports = { SUPABASE_URL, SERVICE_KEY, validarEBuscaDados, gerarSenhaAleatoria };
