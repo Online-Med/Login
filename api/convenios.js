@@ -1,13 +1,12 @@
+// api/convenios.js
+import { SUPABASE_URL, sbHeaders, validarSessao } from './_seguranca.js';
+
 export default async function handler(req, res) {
-  const SUPABASE_URL = "https://pijymmyhtjvgfnpazjww.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_vYQjncMfOtRRrySBsI7new_gJN2frSG";
+  try { await validarSessao(req); } catch (e) { return res.status(401).json({ erro: e.message }); }
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/convenios?select=CONVENIO&order=CONVENIO.asc`;
-    const response = await fetch(url, {
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-    });
-    const dados = await response.json();
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?select=CONVENIO&order=CONVENIO.asc`, { headers: sbHeaders });
+    const dados = await r.json();
     return res.status(200).json(dados);
   } catch (error) {
     return res.status(500).json([]);
