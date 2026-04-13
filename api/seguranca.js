@@ -4,28 +4,19 @@ const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 export async function validarEBuscaDados(req, tabela, query = "*") {
   const userEmail = req.headers['x-user-email'];
+  if (!userEmail) throw new Error("Não autorizado: E-mail não fornecido");
 
-  if (!userEmail) {
-    throw new Error("Não autorizado: E-mail não fornecido");
-  }
-
-  // Validação simples do e-mail
   const checkUrl = `${SUPABASE_URL}/rest/v1/usuarios?email=eq.${userEmail}&select=id_profissional`;
   const checkRes = await fetch(checkUrl, {
     headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
   });
-  
   const usuarioValido = await checkRes.json();
 
-  if (!usuarioValido || usuarioValido.length === 0) {
-    throw new Error("Acesso Negado: Usuário não cadastrado");
-  }
+  if (!usuarioValido || usuarioValido.length === 0) throw new Error("Acesso Negado");
 
-  // Busca os dados reais
   const dataUrl = `${SUPABASE_URL}/rest/v1/${tabela}?select=${query}`;
   const response = await fetch(dataUrl, {
     headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
   });
-
   return await response.json();
 }
