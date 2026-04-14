@@ -813,7 +813,7 @@ function _renderCard(ag) {
       +'<i class="bi bi-whatsapp"></i></a>';
   } else {
     btnWpp='<button class="btn btn-outline-secondary btn-act" '
-      +'onclick="event.stopPropagation();alert(\'Celular não cadastrado para este paciente.\')" '
+      +'onclick="event.stopPropagation();Swal.fire({icon:\'warning\',title:\'Sem celular\',text:\'Celular não cadastrado para este paciente.\',confirmButtonColor:\'#0dcaf0\'})" '
       +'title="Sem celular"><i class="bi bi-whatsapp text-muted"></i></button>';
   }
 
@@ -929,10 +929,16 @@ AG.onDrop = async function(e, novaH) {
   var ag = AG.dados.find(function(a){ return a.id==AG.dragId; });
   var id = AG.dragId; AG.dragId=null;
   if(!ag||ag.hora_agenda===novaH) return;
-  if(!confirm('Mover "'+esc(ag.paciente_nome||'')+'" de '+ag.hora_agenda+' para '+novaH+'?')) return;
+  var confirmado = await Swal.fire({
+    icon:'question', title:'Mover agendamento',
+    text:'Mover "'+esc(ag.paciente_nome||'')+'" de '+ag.hora_agenda+' para '+novaH+'?',
+    showCancelButton:true, confirmButtonText:'Sim, mover',
+    cancelButtonText:'Cancelar', confirmButtonColor:'#0dcaf0'
+  });
+  if(!confirmado.isConfirmed) return;
   var r = await api({id:id}, 'PATCH', {hora_agenda:novaH});
   if(r.sucesso) { ag.hora_agenda=novaH; _preencherSlots(); _atualizarEspera(); }
-  else alert('Erro: '+(r.erro||'Horário pode estar ocupado.'));
+  else Swal.fire({icon:'error',title:'Erro',text:r.erro||'Horário pode estar ocupado.',confirmButtonColor:'#dc3545'});
 };
 
 // ── Ações de status ──────────────────────────────────────────────
@@ -953,13 +959,25 @@ AG.acao = async function(tipo, id, extra) {
     body={status:'ATENDIDO', hora_atendido:ts};
     campos={status:'ATENDIDO', hora_atendido:ts};
   } else if(tipo==='excluir') {
-    if(!confirm('Excluir este agendamento?')) return;
+    var conf = await Swal.fire({
+      icon:'warning', title:'Excluir agendamento',
+      text:'Esta ação não pode ser desfeita. Deseja continuar?',
+      showCancelButton:true, confirmButtonText:'Sim, excluir',
+      cancelButtonText:'Cancelar', confirmButtonColor:'#dc3545'
+    });
+    if(!conf.isConfirmed) return;
     var r=await api({id:id},'DELETE');
     if(r.sucesso){ AG.dados=AG.dados.filter(function(a){return a.id!=id;}); _preencherSlots(); _atualizarContadores(); _atualizarEspera(); }
-    else alert('Erro: '+r.erro);
+    else Swal.fire({icon:'error',title:'Erro',text:r.erro||'Não foi possível excluir.',confirmButtonColor:'#dc3545'});
     return;
   } else if(tipo==='desbloquear') {
-    if(!confirm('Desbloquear este horário?')) return;
+    var conf2 = await Swal.fire({
+      icon:'question', title:'Desbloquear horário',
+      text:'O horário ficará disponível para agendamentos.',
+      showCancelButton:true, confirmButtonText:'Sim, desbloquear',
+      cancelButtonText:'Cancelar', confirmButtonColor:'#20c997'
+    });
+    if(!conf2.isConfirmed) return;
     var r=await api({id:id},'DELETE');
     if(r.sucesso){ AG.dados=AG.dados.filter(function(a){return a.id!=id;}); _preencherSlots(); }
     return;
@@ -967,7 +985,7 @@ AG.acao = async function(tipo, id, extra) {
 
   var r=await api({id:id},'PATCH',body);
   if(r.sucesso){ Object.assign(ag,campos); _preencherSlots(); _atualizarContadores(); _atualizarEspera(); _atualizarAtendimento(); }
-  else alert('Erro: '+r.erro);
+  else Swal.fire({icon:'error',title:'Erro',text:r.erro||'Não foi possível atualizar.',confirmButtonColor:'#dc3545'});
 };
 
 // ── Timers ───────────────────────────────────────────────────────
@@ -1090,7 +1108,7 @@ async function agConfirmarEditar() {
   if(!ag) return;
 
   var nome = document.getElementById('agEditNome').value.trim();
-  if(!nome) { alert('Informe o nome do paciente.'); return; }
+  if(!nome) { Swal.fire({icon:'warning',title:'Campo obrigatório',text:'Informe o nome do paciente.',confirmButtonColor:'#0dcaf0'}); return; }
 
   var novaData = document.getElementById('agEditData').value;
   var novaHora = document.getElementById('agEditHora').value;
@@ -1108,7 +1126,13 @@ async function agConfirmarEditar() {
   if(mudouDataHora) {
     body.data_agenda = novaData;
     body.hora_agenda = novaHora;
-    if(!confirm('Remarcar "'+nome+'" para '+novaData.split('-').reverse().join('/')+' às '+novaHora+'?')) return;
+    var confRem = await Swal.fire({
+      icon:'question', title:'Remarcar consulta',
+      html:'Mover <strong>'+esc(nome)+'</strong> para <strong>'+novaData.split('-').reverse().join('/')+'</strong> às <strong>'+novaHora+'</strong>?',
+      showCancelButton:true, confirmButtonText:'Sim, remarcar',
+      cancelButtonText:'Cancelar', confirmButtonColor:'#6f42c1'
+    });
+    if(!confRem.isConfirmed) return;
   }
 
   var r = await api({id:id}, 'PATCH', body);
@@ -1122,7 +1146,7 @@ async function agConfirmarEditar() {
       _preencherSlots(); _atualizarContadores(); _atualizarEspera();
     }
   } else {
-    alert('Erro ao salvar: '+(r.erro||'Verifique se o horário não está ocupado.'));
+    Swal.fire({icon:'error',title:'Erro ao salvar',text:r.erro||'Verifique se o horário não está ocupado.',confirmButtonColor:'#dc3545'});
   }
 }
 window.agConfirmarEditar = agConfirmarEditar;
@@ -1149,12 +1173,17 @@ window.abrirModalAgendamento = AG.abrirModalAg; // alias
 
 async function agConfirmarAg() {
   var nome = document.getElementById('agBuscaPac').value.trim();
-  if(!nome){ alert('Informe o nome do paciente.'); return; }
+  if(!nome){ Swal.fire({icon:'warning',title:'Campo obrigatório',text:'Informe o nome do paciente.',confirmButtonColor:'#0dcaf0'}); return; }
 
-  // Se não tem paciente cadastrado, exige 1ª consulta marcada
   var pacId = document.getElementById('agPacId').value;
   if(!pacId && !document.getElementById('agPrimeira').checked) {
-    if(!confirm('Paciente não encontrado no cadastro. Marcar como Primeira Consulta?')) return;
+    var confPac = await Swal.fire({
+      icon:'question', title:'Paciente não cadastrado',
+      text:'Paciente não encontrado no cadastro. Marcar como Primeira Consulta?',
+      showCancelButton:true, confirmButtonText:'Sim, marcar',
+      cancelButtonText:'Cancelar', confirmButtonColor:'#d97706'
+    });
+    if(!confPac.isConfirmed) return;
     document.getElementById('agPrimeira').checked = true;
   }
 
@@ -1176,7 +1205,7 @@ async function agConfirmarAg() {
   });
 
   if(r.sucesso){ fecharModal('agModalAg'); await _carregarDados(); }
-  else alert('Erro: '+(r.erro||''));
+  else Swal.fire({icon:'error',title:'Erro ao agendar',text:r.erro||'Não foi possível criar o agendamento.',confirmButtonColor:'#dc3545'});
 }
 window.agConfirmarAg = agConfirmarAg;
 
@@ -1250,8 +1279,8 @@ async function agConfirmarBlq() {
   var ini=document.getElementById('agBlqIni').value;
   var fim=document.getElementById('agBlqFim').value;
   var mot=document.getElementById('agBlqMotivo').value;
-  if(!ini||!fim){ alert('Informe início e fim.'); return; }
-  if(ini>=fim){ alert('O início deve ser anterior ao fim.'); return; }
+  if(!ini||!fim){ Swal.fire({icon:'warning',title:'Campos obrigatórios',text:'Informe o horário de início e fim.',confirmButtonColor:'#ffc107'}); return; }
+  if(ini>=fim){ Swal.fire({icon:'warning',title:'Horário inválido',text:'O início deve ser anterior ao fim.',confirmButtonColor:'#ffc107'}); return; }
 
   var r=await api({},'POST',{
     action:         'bloquear_faixa',
@@ -1260,7 +1289,7 @@ async function agConfirmarBlq() {
     hora_inicio:ini, hora_fim:fim, motivo:mot, intervalo:AG.cfg.intervalo
   });
   if(r.sucesso){ fecharModal('agModalBlq'); await _carregarDados(); }
-  else alert('Erro: '+(r.erro||''));
+  else Swal.fire({icon:'error',title:'Erro ao bloquear',text:r.erro||'Não foi possível bloquear os horários.',confirmButtonColor:'#dc3545'});
 }
 window.agConfirmarBlq = agConfirmarBlq;
 
@@ -1282,7 +1311,7 @@ window.agAbrirEncaixe = agAbrirEncaixe;
 
 async function agConfirmarEnc() {
   var nome=document.getElementById('agEncPac').value.trim();
-  if(!nome){ alert('Informe o nome do paciente.'); return; }
+  if(!nome){ Swal.fire({icon:'warning',title:'Campo obrigatório',text:'Informe o nome do paciente.',confirmButtonColor:'#0d6efd'}); return; }
   var r=await api({},'POST',{
     id_profissional: parseInt(document.getElementById('agProfissional').value),
     data_agenda:     document.getElementById('agData').value,
@@ -1295,7 +1324,7 @@ async function agConfirmarEnc() {
     is_encaixe:true, is_bloqueado:false
   });
   if(r.sucesso){ fecharModal('agModalEnc'); await _carregarDados(); }
-  else alert('Erro: '+(r.erro||''));
+  else Swal.fire({icon:'error',title:'Erro no encaixe',text:r.erro||'Não foi possível criar o encaixe.',confirmButtonColor:'#dc3545'});
 }
 window.agConfirmarEnc = agConfirmarEnc;
 
@@ -1360,7 +1389,7 @@ function _agAbrirAtendimento(ag) {
 // ── Salvar cadastro rápido 1ª vez e abrir atendimento ─────────────
 window.agSalvarCad1v = async function() {
   var nome = document.getElementById('cad1vNome').value.trim();
-  if(!nome){ alert('Informe o nome do paciente.'); return; }
+  if(!nome){ Swal.fire({icon:'warning',title:'Campo obrigatório',text:'Informe o nome do paciente.',confirmButtonColor:'#d97706'}); return; }
 
   var btn = document.getElementById('cad1vBtn');
   var msg = document.getElementById('cad1vMsg');
