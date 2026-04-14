@@ -575,13 +575,19 @@ window.atSalvarRascunho = async function() {
     var msg = document.getElementById('atSalvandoMsg');
     if(msg){ msg.classList.remove('d-none'); setTimeout(function(){ msg.classList.add('d-none'); }, 3000); }
   } catch(err) {
-    alert('Erro ao salvar rascunho: '+err.message);
+    Swal.fire({icon:'error',title:'Erro ao salvar',text:err.message,confirmButtonColor:'#dc3545'});
   }
 };
 
 /* ── Encerrar Atendimento ── */
 window.atEncerrar = async function() {
-  if(!confirm('Encerrar o atendimento e marcar como Atendido?')) return;
+  var confEnc = await Swal.fire({
+    icon:'question', title:'Encerrar atendimento',
+    html:'O atendimento será finalizado e marcado como <strong>Atendido</strong> na agenda.',
+    showCancelButton:true, confirmButtonText:'Sim, encerrar',
+    cancelButtonText:'Cancelar', confirmButtonColor:'#198754'
+  });
+  if(!confEnc.isConfirmed) return;
   var dados = _coletarDados('ENCERRADO');
   dados.hora_fim = new Date().toISOString();
   try {
@@ -600,7 +606,7 @@ window.atEncerrar = async function() {
     if(AT.timerInterval) clearInterval(AT.timerInterval);
     atendVoltar();
   } catch(err) {
-    alert('Erro ao encerrar: '+err.message);
+    Swal.fire({icon:'error',title:'Erro ao encerrar',text:err.message,confirmButtonColor:'#dc3545'});
   }
 };
 
@@ -614,7 +620,7 @@ window.atendVoltar = function() {
 /* ── Abrir prontuário do paciente ── */
 window.atendVerProntuario = function() {
   var ag = AT.agData;
-  if(!ag || !ag.paciente_id) { alert('Paciente sem cadastro. Não é possível abrir o prontuário.'); return; }
+  if(!ag || !ag.paciente_id) { Swal.fire({icon:'warning',title:'Sem cadastro',text:'Este paciente não possui cadastro. Finalize o cadastro antes de abrir o prontuário.',confirmButtonColor:'#0dcaf0'}); return; }
   window._prontuarioPcod    = ag.paciente_id;
   window._prontuarioRetorno = 'atendimento.html';
   window._atendimentoAgendaId   = AT.agId;
