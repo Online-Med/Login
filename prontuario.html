@@ -225,8 +225,8 @@ window.prontBuscar = async function() {
       var d = await r.json();
       var lista = (d && d.dados) ? d.dados : [];
       if(lista.length) prontSelecionarPac(lista[0].pcod);
-      else { alert('Paciente não encontrado.'); }
-    } catch(e){ alert('Erro na busca.'); }
+      else Swal.fire({icon:'info',title:'Não encontrado',text:'Nenhum paciente encontrado com esse nome.',confirmButtonColor:'#0dcaf0'});
+    } catch(e){ Swal.fire({icon:'error',title:'Erro na busca',text:'Não foi possível buscar o paciente.',confirmButtonColor:'#dc3545'}); }
   }
 };
 
