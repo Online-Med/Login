@@ -1,0 +1,484 @@
+<!-- configuracoes_agenda.html — Fragmento carregado via carregarConteudo() no dashboard -->
+<style>
+/* Impede que o layout encolha o sidebar (mesmo fix da agenda) */
+.sidebar       { flex-shrink: 0 !important; }
+#corpo-paginas { overflow-x: hidden !important; }
+
+#cfgWrap { animation: fadeInCfg .18s ease; }
+@keyframes fadeInCfg { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+/* Cards de dias */
+.dia-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%; border: 2px solid #dee2e6;
+  background: #fff; color: #6c757d;
+  font-size: .78rem; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none;
+}
+.dia-btn.ativo {
+  background: #0d6efd; border-color: #0d6efd; color: #fff;
+}
+.dia-btn:hover:not(.ativo) { background: #e9ecef; }
+
+/* Resumo config */
+.cfg-resumo {
+  font-size: .8rem; padding: 6px 10px;
+  background: #f8f9fa; border-radius: 6px;
+  border-left: 3px solid #0d6efd; margin-top: 6px;
+  color: #495057;
+}
+
+/* Tabela de profissionais */
+.prof-row { cursor: pointer; }
+.prof-row:hover td { background: #f0f4ff !important; }
+.prof-row.selecionado td { background: #e8f0ff !important; }
+.badge-dias {
+  display: inline-block; background: #e3f2fd; color: #0c447c;
+  border-radius: 4px; padding: 1px 6px; font-size: .7rem;
+  font-weight: 700; margin: 1px;
+}
+</style>
+
+<div id="cfgWrap" class="container-fluid mt-3">
+
+  <!-- ── Breadcrumb ── -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
+        <li class="breadcrumb-item">Configurações</li>
+        <li class="breadcrumb-item active">Agenda</li>
+      </ol>
+    </nav>
+  </div>
+
+  <div class="row g-3">
+
+    <!-- ── COLUNA ESQUERDA: lista de profissionais ── -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+          <span class="fw-bold small"><i class="bi bi-people-fill text-info me-1"></i> Profissionais com Agenda</span>
+          <button class="btn btn-info btn-sm text-white" onclick="cfgNovoConfig()">
+            <i class="bi bi-plus-lg"></i> Novo
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div id="cfgListaProfs">
+            <div class="text-center py-4 text-muted">
+              <div class="spinner-border spinner-border-sm text-info me-1"></div> Carregando...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COLUNA DIREITA: formulário de configuração ── -->
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0" id="cfgFormCard">
+
+        <!-- Estado inicial -->
+        <div id="cfgEstadoInicial" class="card-body text-center py-5 text-muted">
+          <i class="bi bi-gear-fill" style="font-size:3rem;opacity:.2"></i>
+          <p class="mt-2">Selecione um profissional à esquerda para editar a configuração<br>ou clique em <strong>Novo</strong> para adicionar.</p>
+        </div>
+
+        <!-- Formulário -->
+        <div id="cfgFormBody" class="d-none">
+          <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
+            <i class="bi bi-person-gear text-info fs-5"></i>
+            <span class="fw-bold" id="cfgProfNome">—</span>
+            <span class="badge bg-secondary ms-1" style="font-size:.7rem" id="cfgProfId"></span>
+          </div>
+          <div class="card-body">
+
+            <!-- Seletor de profissional (aparece só no modo "Novo") -->
+            <div id="cfgSelectProfBox" class="mb-4 d-none">
+              <label class="form-label fw-bold small">Profissional <span class="text-danger">*</span></label>
+              <select class="form-select form-select-sm" id="cfgSelectProf">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+
+            <div class="row g-4">
+
+              <!-- Horários -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-bold small">
+                    <i class="bi bi-clock-fill text-info"></i> Horário de Início
+                  </label>
+                  <input type="time" class="form-control form-control-sm" id="cfgInicio" value="08:00">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold small">
+                    <i class="bi bi-clock text-secondary"></i> Horário de Fim
+                  </label>
+                  <input type="time" class="form-control form-control-sm" id="cfgFim" value="18:00">
+                </div>
+                <div>
+                  <label class="form-label fw-bold small">
+                    <i class="bi bi-hourglass-split text-warning"></i> Duração do Slot (minutos)
+                  </label>
+                  <div class="d-flex gap-2 flex-wrap" id="cfgTempoOpts">
+                    <!-- gerado via JS -->
+                  </div>
+                  <div class="mt-2">
+                    <small class="text-muted">Outro valor:</small>
+                    <input type="number" class="form-control form-control-sm mt-1" id="cfgTempoCustom"
+                           placeholder="Ex: 45" min="5" max="120" style="width:120px">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Dias da semana -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold small d-block">
+                  <i class="bi bi-calendar-week text-primary"></i> Dias de Atendimento
+                </label>
+                <div class="d-flex gap-2 flex-wrap mb-3" id="cfgDiasBtns">
+                  <!-- gerado via JS -->
+                </div>
+                <div id="cfgResumoHorario" class="cfg-resumo d-none"></div>
+              </div>
+
+              <!-- Preview -->
+              <div class="col-12">
+                <div class="alert alert-info py-2 small mb-0" id="cfgPreview">
+                  <i class="bi bi-info-circle"></i> Selecione os dias e horários para ver o resumo.
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="card-footer bg-white d-flex justify-content-end gap-2 py-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="cfgCancelar()">
+              <i class="bi bi-x-lg"></i> Cancelar
+            </button>
+            <button class="btn btn-info text-white btn-sm" id="cfgBtnSalvar" onclick="cfgSalvar()">
+              <i class="bi bi-check-circle-fill"></i> Salvar Configuração
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+
+var CFG = {
+  idSel:    null,   // id_profissional selecionado
+  nomeSel:  '',
+  modo:     null,   // 'editar' | 'novo'
+  profs:    [],     // todos profissionais com tem_agenda=SIM
+  diasSel:  [],     // ex: ['SEG','TER','QUA']
+  tempoSel: 30
+};
+
+var DIAS = [
+  { cod:'DOM', lbl:'Dom' },
+  { cod:'SEG', lbl:'Seg' },
+  { cod:'TER', lbl:'Ter' },
+  { cod:'QUA', lbl:'Qua' },
+  { cod:'QUI', lbl:'Qui' },
+  { cod:'SEX', lbl:'Sex' },
+  { cod:'SAB', lbl:'Sáb' }
+];
+
+var TEMPOS_FIXOS = [10, 15, 20, 30, 40, 60];
+
+/* ── API helpers ── */
+async function apiFetch(url, opts) {
+  var r = await fetch(url, opts || {});
+  return r.json();
+}
+
+/* ── Inicializa ── */
+async function inicializar() {
+  _renderDiasBtns();
+  _renderTempoOpts();
+
+  var data = await apiFetch('/api/usuarios?perfil=MEDICO');
+  // Pega todos que têm tem_agenda=SIM
+  var todos = await apiFetch('/api/configuracoes?_lista=1'); // não existe, vamos pegar de usuarios
+  // Usa endpoint de agenda (lista profissionais com agenda)
+  var r = await apiFetch('/api/agenda?action=profissionais');
+  CFG.profs = Array.isArray(r) ? r : [];
+  _renderListaProfs();
+}
+
+/* ── Renderiza botões de dias ── */
+function _renderDiasBtns() {
+  var cont = document.getElementById('cfgDiasBtns');
+  cont.innerHTML = DIAS.map(function(d){
+    return '<div class="dia-btn" data-cod="'+d.cod+'" onclick="cfgToggleDia(this,\''+d.cod+'\')">'+d.lbl+'</div>';
+  }).join('');
+}
+
+/* ── Renderiza opções de tempo ── */
+function _renderTempoOpts() {
+  var cont = document.getElementById('cfgTempoOpts');
+  cont.innerHTML = TEMPOS_FIXOS.map(function(t){
+    return '<button type="button" class="btn btn-outline-secondary btn-sm tempo-opt" '
+      +'data-min="'+t+'" onclick="cfgSelecionarTempo('+t+',this)">'
+      +t+'min</button>';
+  }).join('');
+}
+
+/* ── Renderiza lista de profissionais ── */
+function _renderListaProfs() {
+  var cont = document.getElementById('cfgListaProfs');
+  if(!CFG.profs.length) {
+    cont.innerHTML = '<p class="text-muted small text-center p-3">Nenhum profissional com agenda cadastrado.</p>';
+    return;
+  }
+  var html = '<table class="table table-hover table-sm mb-0" style="font-size:.84rem">'
+    +'<thead class="table-light"><tr>'
+    +'<th style="width:50px">ID</th><th>Nome</th><th class="text-center">Config</th>'
+    +'</tr></thead><tbody>';
+  CFG.profs.forEach(function(p){
+    html += '<tr class="prof-row" id="profRow-'+p.id_profissional+'" '
+      +'onclick="cfgSelecionarProf('+p.id_profissional+',\''+esc(p.nome)+'\')">'
+      +'<td class="text-muted">'+p.id_profissional+'</td>'
+      +'<td><i class="bi bi-person-fill text-info me-1"></i>'+esc(p.nome)+'</td>'
+      +'<td class="text-center"><i class="bi bi-pencil-square text-primary"></i></td>'
+      +'</tr>';
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+}
+
+/* ── Selecionar profissional ── */
+window.cfgSelecionarProf = async function(id, nome) {
+  CFG.idSel   = id;
+  CFG.nomeSel = nome;
+  CFG.modo    = 'editar';
+
+  // Destaca linha
+  document.querySelectorAll('.prof-row').forEach(function(r){ r.classList.remove('selecionado'); });
+  var row = document.getElementById('profRow-'+id);
+  if(row) row.classList.add('selecionado');
+
+  document.getElementById('cfgProfNome').textContent = nome;
+  document.getElementById('cfgProfId').textContent   = 'ID '+id;
+  document.getElementById('cfgSelectProfBox').classList.add('d-none');
+  document.getElementById('cfgEstadoInicial').classList.add('d-none');
+  document.getElementById('cfgFormBody').classList.remove('d-none');
+
+  // Carrega config do servidor
+  var r = await apiFetch('/api/configuracoes?id_profissional='+id);
+  if(r.sucesso && r.config) _preencherForm(r.config);
+};
+
+/* ── Novo config (profissional sem agenda ainda) ── */
+window.cfgNovoConfig = async function() {
+  CFG.modo = 'novo';
+  CFG.idSel = null;
+
+  // Popula select com TODOS os usuários
+  var todos = await apiFetch('/api/usuarios');
+  var sel   = document.getElementById('cfgSelectProf');
+  sel.innerHTML = '<option value="">Selecione o profissional...</option>';
+  if(todos.sucesso && todos.dados) {
+    todos.dados.forEach(function(u){
+      sel.innerHTML += '<option value="'+u.id_profissional+'">'+esc(u.nome)+'</option>';
+    });
+  }
+
+  document.getElementById('cfgProfNome').textContent = 'Novo profissional';
+  document.getElementById('cfgProfId').textContent   = '';
+  document.getElementById('cfgSelectProfBox').classList.remove('d-none');
+  document.getElementById('cfgEstadoInicial').classList.add('d-none');
+  document.getElementById('cfgFormBody').classList.remove('d-none');
+  document.querySelectorAll('.prof-row').forEach(function(r){ r.classList.remove('selecionado'); });
+
+  // Aplica defaults
+  _preencherForm({
+    horario_inicio_agenda: '08:00',
+    horario_fim_agenda:    '18:00',
+    dias_agenda:           'SEG:TER:QUA:QUI:SEX',
+    tempo_agenda:          '30'
+  });
+};
+
+/* ── Preenche formulário com dados carregados ── */
+function _preencherForm(cfg) {
+  document.getElementById('cfgInicio').value = cfg.horario_inicio_agenda || '08:00';
+  document.getElementById('cfgFim').value    = cfg.horario_fim_agenda    || '18:00';
+
+  // Dias
+  CFG.diasSel = (cfg.dias_agenda || 'SEG:TER:QUA:QUI:SEX').split(':');
+  document.querySelectorAll('.dia-btn').forEach(function(btn){
+    btn.classList.toggle('ativo', CFG.diasSel.indexOf(btn.dataset.cod) !== -1);
+  });
+
+  // Tempo
+  var tempo = parseInt(cfg.tempo_agenda) || 30;
+  cfgSelecionarTempo(tempo, null);
+
+  _atualizarPreview();
+}
+
+/* ── Toggle dia ── */
+window.cfgToggleDia = function(el, cod) {
+  el.classList.toggle('ativo');
+  var idx = CFG.diasSel.indexOf(cod);
+  if(idx === -1) CFG.diasSel.push(cod);
+  else            CFG.diasSel.splice(idx,1);
+  // Mantém a ordem correta (Dom→Sáb)
+  var ordem = DIAS.map(function(d){ return d.cod; });
+  CFG.diasSel.sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
+  _atualizarPreview();
+};
+
+/* ── Selecionar tempo ── */
+window.cfgSelecionarTempo = function(min, btnEl) {
+  CFG.tempoSel = min;
+  document.querySelectorAll('.tempo-opt').forEach(function(b){
+    b.classList.toggle('btn-info',    parseInt(b.dataset.min)===min);
+    b.classList.toggle('text-white',  parseInt(b.dataset.min)===min);
+    b.classList.toggle('btn-outline-secondary', parseInt(b.dataset.min)!==min);
+  });
+  // Se for valor customizado
+  if(TEMPOS_FIXOS.indexOf(min) === -1) {
+    document.getElementById('cfgTempoCustom').value = min;
+  } else {
+    document.getElementById('cfgTempoCustom').value = '';
+  }
+  _atualizarPreview();
+};
+
+// Listener para campo customizado
+document.getElementById('cfgTempoCustom').addEventListener('input', function(){
+  var v = parseInt(this.value);
+  if(v >= 5 && v <= 120) cfgSelecionarTempo(v, null);
+});
+
+/* ── Preview dinâmico ── */
+function _atualizarPreview() {
+  var ini  = document.getElementById('cfgInicio').value;
+  var fim  = document.getElementById('cfgFim').value;
+  var dias = CFG.diasSel;
+  var min  = CFG.tempoSel;
+
+  var nomeDias = { DOM:'Domingo',SEG:'Segunda',TER:'Terça',QUA:'Quarta',QUI:'Quinta',SEX:'Sexta',SAB:'Sábado' };
+  var diasNome = dias.map(function(d){ return nomeDias[d]||d; }).join(', ');
+
+  var slots = 0;
+  if(ini && fim && min) {
+    var parse = function(h){ var p=h.split(':'); return +p[0]*60+ +p[1]; };
+    slots = Math.floor((parse(fim) - parse(ini)) / min);
+  }
+
+  var preview = document.getElementById('cfgPreview');
+  if(!ini || !fim || !dias.length) {
+    preview.innerHTML = '<i class="bi bi-info-circle"></i> Preencha os campos para ver o resumo.';
+    return;
+  }
+
+  preview.innerHTML = '<i class="bi bi-calendar2-check text-info me-1"></i>'
+    +'<strong>'+diasNome+'</strong>'
+    +' &bull; '+ini+' às '+fim
+    +' &bull; Slots de <strong>'+min+'min</strong>'
+    +' &bull; <strong>'+slots+'</strong> atendimentos/dia';
+}
+
+// Listeners de horário
+['cfgInicio','cfgFim'].forEach(function(id){
+  document.getElementById(id).addEventListener('change', _atualizarPreview);
+});
+
+/* ── Salvar ── */
+window.cfgSalvar = async function() {
+  var idProf = CFG.idSel;
+
+  // Modo novo: pega do select
+  if(CFG.modo === 'novo') {
+    idProf = document.getElementById('cfgSelectProf').value;
+    if(!idProf) {
+      Swal.fire({icon:'warning',title:'Selecione o profissional',text:'Escolha um profissional antes de salvar.',confirmButtonColor:'#0dcaf0'});
+      return;
+    }
+  }
+
+  if(!CFG.diasSel.length) {
+    Swal.fire({icon:'warning',title:'Dias não selecionados',text:'Selecione pelo menos um dia de atendimento.',confirmButtonColor:'#0dcaf0'});
+    return;
+  }
+
+  var ini = document.getElementById('cfgInicio').value;
+  var fim = document.getElementById('cfgFim').value;
+  if(!ini || !fim) {
+    Swal.fire({icon:'warning',title:'Horários obrigatórios',text:'Informe o horário de início e fim.',confirmButtonColor:'#0dcaf0'});
+    return;
+  }
+  if(ini >= fim) {
+    Swal.fire({icon:'warning',title:'Horário inválido',text:'O horário de início deve ser anterior ao fim.',confirmButtonColor:'#ffc107'});
+    return;
+  }
+
+  var btn = document.getElementById('cfgBtnSalvar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
+
+  try {
+    var r = await fetch('/api/configuracoes?id_profissional='+idProf, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        horario_inicio_agenda: ini,
+        horario_fim_agenda:    fim,
+        dias_agenda:           CFG.diasSel.join(':'),
+        tempo_agenda:          String(CFG.tempoSel)
+      })
+    });
+    var d = await r.json();
+
+    if(d.sucesso) {
+      Swal.fire({
+        icon: 'success', title: 'Configuração salva!',
+        text: 'As configurações de agenda foram atualizadas com sucesso.',
+        timer: 2000, showConfirmButton: false
+      });
+      // Se foi modo novo, garante que o profissional apareça na lista
+      // (pode ter sido adicionado agora) — recarrega lista
+      if(CFG.modo === 'novo') {
+        var r2 = await apiFetch('/api/agenda?action=profissionais');
+        CFG.profs = Array.isArray(r2) ? r2 : [];
+        _renderListaProfs();
+      }
+      CFG.modo = 'editar';
+      document.getElementById('cfgSelectProfBox').classList.add('d-none');
+    } else {
+      throw new Error(d.erro || 'Erro desconhecido');
+    }
+  } catch(err) {
+    Swal.fire({icon:'error',title:'Erro ao salvar',text:err.message,confirmButtonColor:'#dc3545'});
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Salvar Configuração';
+  }
+};
+
+/* ── Cancelar ── */
+window.cfgCancelar = function() {
+  document.getElementById('cfgFormBody').classList.add('d-none');
+  document.getElementById('cfgEstadoInicial').classList.remove('d-none');
+  document.querySelectorAll('.prof-row').forEach(function(r){ r.classList.remove('selecionado'); });
+  CFG.idSel = null; CFG.modo = null;
+};
+
+/* ── Utilitário ── */
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+inicializar();
+
+})();
+</script>
