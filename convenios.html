@@ -1,18 +1,18 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Convênios</h4>
-    <button class="btn btn-primary" onclick="novoConvenio()">
+    <h4 class="text-secondary fw-bold">Gestão de Convênios</h4>
+    <button class="btn btn-primary shadow-sm" onclick="novoConvenio()">
         <i class="bi bi-person-plus me-2"></i>Novo Convênio
     </button>
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <table class="table table-hover">
-            <thead>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
                 <tr>
-                    <th>ID</th>
-                    <th>Convenio</th>
-                    <th class="text-center">Ações</th>
+                    <th class="ps-4">ID</th>
+                    <th>Convênio</th>
+                    <th class="text-center pe-4">Ações</th>
                 </tr>
             </thead>
             <tbody id="tabelaConvenios"></tbody>
@@ -27,15 +27,15 @@ async function carregarConvenios() {
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
 
-    if (json.dados) {
+    if (json.sucesso && json.dados) {
         json.dados.forEach(u => {
             corpo.innerHTML += `
                 <tr>
-                    <td>${u.id}</td>
+                    <td class="ps-4 fw-bold text-secondary">${u.id}</td>
                     <td>${u.CONVENIO}</td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editarConvenio(${u.id})">
-                            <i class="bi bi-pencil"></i>
+                    <td class="text-center pe-4">
+                        <button class="btn btn-sm btn-outline-primary border-0" onclick="editarConvenio(${u.id})">
+                            <i class="bi bi-pencil-square"></i>
                         </button>
                     </td>
                 </tr>`;
