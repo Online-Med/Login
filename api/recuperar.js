@@ -1,8 +1,8 @@
-// api/recuperar.js
 import { SUPABASE_URL, SERVICE_KEY, gerarSenhaAleatoria, buscarConfig } from './_seguranca.js';
 import nodemailer from 'nodemailer';
 
 export default async function handler(req, res) {
+  // Define o header de resposta logo no início
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') {
@@ -15,18 +15,18 @@ export default async function handler(req, res) {
   }
 
   const adminHeaders = {
-    'apikey':        SERVICE_KEY,
+    'apikey': SERVICE_KEY,
     'Authorization': `Bearer ${SERVICE_KEY}`,
-    'Content-Type':  'application/json'
+    'Content-Type': 'application/json'
   };
 
   try {
-    // 1. Busca o usuário no banco
-    // ⚠️  FIX: campo correto é id_profissional, não id
-    const resUser = await fetch(
-      `${SUPABASE_URL}/rest/v1/usuarios?email=eq.${encodeURIComponent(email.trim())}&select=id_profissional,ultimo_reset_at`,
-      { headers: adminHeaders }
-    );
+    // 1. Busca o usuário no banco usando a nova URL API para evitar o aviso de 'deprecation'
+    const consultaUrl = new URL(`${SUPABASE_URL}/rest/v1/usuarios`);
+    consultaUrl.searchParams.set('email', `eq.${email.trim().toLowerCase()}`);
+    consultaUrl.searchParams.set('select', 'id_profissional,ultimo_reset_at');
+
+    const resUser = await fetch(consultaUrl.toString(), { headers: adminHeaders });
 
     if (!resUser.ok) {
       throw new Error("Erro ao consultar usuários: HTTP " + resUser.status);
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     const usuarios = await resUser.json();
 
     if (!usuarios || !Array.isArray(usuarios) || usuarios.length === 0) {
+      // Retornamos 200 com sucesso:false para evitar erros 404 de console que te confundiram
       return res.status(200).json({ sucesso: false, mensagem: "E-mail não cadastrado no sistema." });
     }
 
@@ -42,7 +43,10 @@ export default async function handler(req, res) {
 
     // 2. Trava de segurança: só 1 reset a cada 15 minutos
     if (usuario?.ultimo_reset_at) {
-      const difMinutos = (new Date() - new Date(usuario.ultimo_reset_at)) / (1000 * 60);
+      const ultimaVez = new Date(usuario.ultimo_reset_at);
+      const agora = new Date();
+      const difMinutos = (agora - ultimaVez) / (1000 * 60);
+
       if (difMinutos < 15) {
         const falta = Math.ceil(15 - difMinutos);
         return res.status(429).json({
@@ -52,7 +56,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3. Busca credenciais de e-mail na tabela configuracoes (chaves globais)
+    // 3. Busca credenciais de e-mail (Gmail)
     const gmailUser = await buscarConfig('email_cadastrado');
     const gmailPass = await buscarConfig('email_senha_api');
 
@@ -64,15 +68,15 @@ export default async function handler(req, res) {
     const novaSenha = gerarSenhaAleatoria();
     const senhaHash = "HASH_" + Buffer.from(novaSenha).toString('base64');
 
-    // 5. Envia o e-mail via Nodemailer + Gmail
+    // 5. Envia o e-mail via Nodemailer
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: gmailUser, pass: gmailPass }
     });
 
     await transporter.sendMail({
-      from:    `"Suporte Online-Med" <${gmailUser}>`,
-      to:      email.trim(),
+      from: `"Suporte Online-Med" <${gmailUser}>`,
+      to: email.trim(),
       subject: '🔑 Recuperação de Acesso - Online-Med',
       html: `
         <div style="font-family:sans-serif;max-width:500px;padding:20px;border:1px solid #eee;border-radius:10px;">
@@ -90,15 +94,17 @@ export default async function handler(req, res) {
     });
 
     // 6. Atualiza a senha e o timestamp no banco
-    // ⚠️  FIX: filtro por id_profissional (era id — que não existe)
-    const updateRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/usuarios?id_profissional=eq.${usuario.id_profissional}`,
-      {
-        method:  'PATCH',
-        headers: adminHeaders,
-        body:    JSON.stringify({ senha: senhaHash, ultimo_reset_at: new Date().toISOString() })
-      }
-    );
+    const updateUrl = new URL(`${SUPABASE_URL}/rest/v1/usuarios`);
+    updateUrl.searchParams.set('id_profissional', `eq.${usuario.id_profissional}`);
+
+    const updateRes = await fetch(updateUrl.toString(), {
+      method: 'PATCH',
+      headers: adminHeaders,
+      body: JSON.stringify({ 
+        senha: senhaHash, 
+        ultimo_reset_at: new Date().toISOString() 
+      })
+    });
 
     if (!updateRes.ok) throw new Error("Falha ao atualizar a senha no banco.");
 
@@ -106,6 +112,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("recuperar.js ERRO:", error.message);
-    return res.status(500).json({ sucesso: false, mensagem: "Erro ao processar: " + error.message });
+    return res.status(500).json({ sucesso: false, mensagem: "Erro técnico: " + error.message });
   }
 }
