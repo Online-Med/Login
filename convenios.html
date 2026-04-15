@@ -15,26 +15,24 @@
                     <th class="text-center">Ações</th>
                 </tr>
             </thead>
-            <tbody id="tabelaConvenios">
-                </tbody>
+            <tbody id="tabelaConvenios"></tbody>
         </table>
     </div>
 </div>
 
 <script>
-// No convenios.html, dentro de carregarConvenios:
 async function carregarConvenios() {
     const res = await fetch('/api/convenios');
     const json = await res.json();
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
 
-    if (json.dados && json.dados.length > 0) {
+    if (json.dados) {
         json.dados.forEach(u => {
             corpo.innerHTML += `
                 <tr>
                     <td>${u.id}</td>
-                    <td>${u.CONVENIO || 'NOME NÃO DEFINIDO'}</td>
+                    <td>${u.CONVENIO}</td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-outline-primary" onclick="editarConvenio(${u.id})">
                             <i class="bi bi-pencil"></i>
@@ -42,10 +40,9 @@ async function carregarConvenios() {
                     </td>
                 </tr>`;
         });
-    } else {
-        corpo.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum convénio encontrado.</td></tr>';
     }
 }
+carregarConvenios();
 
 function novoConvenio() {
     window.ehEdicaoConvenio = false;
