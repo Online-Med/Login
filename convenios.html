@@ -1,0 +1,62 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>Convênios</h4>
+    <button class="btn btn-primary" onclick="novoUsuario()">
+        <i class="bi bi-person-plus me-2"></i>Novo Usuário
+    </button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Perfil</th>
+                    <th>Especialidade</th>
+                    <th>Agenda?</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaUsuarios">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function carregarConvenios() {
+    const res = await fetch('/api/convenios');
+    const json = await res.json();
+    const corpo = document.getElementById('tabelaConvenios');
+    corpo.innerHTML = '';
+
+    json.dados.forEach(u => {
+        corpo.innerHTML += `
+            <tr>
+                <td>${u.id_profissional}</td>
+                <td>${u.nome}</td>
+                <td><span class="badge bg-info">${u.perfil}</span></td>
+                <td>${u.especialidade || '-'}</td>
+                <td>${u.tem_agenda}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarUsuario(${u.id_profissional})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </td>
+            </tr>`;
+    });
+}
+carregarUsuarios();
+
+function novoUsuario() {
+    window.ehEdicaoUsuario = false;
+    carregarConteudo('cadastro_usuarios.html');
+}
+
+function editarConvenio(id) {
+    window.ehEdicaoConvenio = true;
+    window.idUsuarioEdicao = id;
+    carregarConteudo('cadastro_Convenios.html');
+}
+</script>
