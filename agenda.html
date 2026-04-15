@@ -6,7 +6,7 @@
 .sidebar          { flex-shrink: 0 !important; }
 #corpo-paginas    { overflow-x: hidden !important; }
 
-:root { --slot-h: 58px; --col-hora: 68px; }
+:root { --slot-h: 44px; --col-hora: 68px; }
 
 #toolbarAgenda {
   background:#fff; border-bottom:1px solid #e9ecef;
@@ -87,7 +87,7 @@
 .bpre { background:#d1e7dd; color:#0a3622; font-size:.64rem; font-weight:600; }
 
 /* Botões de ação no card */
-.ag-actions { display:flex; align-items:center; gap:3px; margin-top:5px; flex-wrap:wrap; }
+.ag-actions { display:flex; align-items:center; gap:3px; flex-wrap:nowrap; flex-shrink:0; }
 .btn-act { font-size:.7rem !important; padding:3px 8px !important; border-radius:4px !important; line-height:1.4 !important; }
 .btn-purple { background:#6f42c1; border-color:#6f42c1; }
 .btn-purple:hover { background:#5a32a3; border-color:#5a32a3; }
@@ -874,25 +874,18 @@ function _renderCard(ag) {
     +'ondblclick="window._AG.abrirEditar(event,'+ag.id+')" '
     +'ondragstart="window._AG.onDragStart(event,'+ag.id+')" ondragend="window._AG.onDragEnd(event)">'
     +'<span class="card-grip"><i class="bi bi-grip-vertical"></i></span>'
-    +'<div class="flex-grow-1 overflow-hidden">'
-      // Linha 1: nome + badges
-      +'<div class="d-flex align-items-center flex-wrap gap-1">'
-        +'<span class="fw-bold" style="font-size:.85rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
-        +badges
-      +'</div>'
-      // Linha 2: status + tipo + convênio + timer
-      +'<div class="d-flex flex-wrap align-items-center gap-1 mt-1">'
-        +'<span class="badge bg-'+corMap[st]+' text-'+(corMap[st]==='warning'?'dark':'white')+'" style="font-size:.65rem">'
-          +'<i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
-        +(ag.tipo?'<span class="badge bg-secondary" style="font-size:.63rem">'+esc(ag.tipo)+'</span>':'')
-        +(ag.convenio?'<span class="badge bg-light text-dark border" style="font-size:.63rem">'+esc(ag.convenio)+'</span>':'')
-        +espPill
-      +'</div>'
+    +'<div class="flex-grow-1 d-flex align-items-center flex-wrap gap-1 overflow-hidden" style="min-width:0">'
+      +'<span class="fw-bold" style="font-size:.85rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
+      +badges
+      +'<span class="badge bg-'+corMap[st]+' text-'+(corMap[st]==='warning'?'dark':'white')+'" style="font-size:.65rem">'
+        +'<i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
+      +(ag.tipo?'<span class="badge bg-secondary" style="font-size:.63rem">'+esc(ag.tipo)+'</span>':'')
+      +(ag.convenio?'<span class="badge bg-light text-dark border" style="font-size:.63rem">'+esc(ag.convenio)+'</span>':'')
+      +espPill
       +horaAten
-      // Linha 3: botões de ação
-      +'<div class="ag-actions">'
-        +btnWpp+btnStatus+dropdown
-      +'</div>'
+    +'</div>'
+    +'<div class="ag-actions">'
+      +btnWpp+btnStatus+dropdown
     +'</div>'
     +'</div>';
 }
