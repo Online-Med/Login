@@ -23,8 +23,8 @@
 
 <script>
 async function carregarConvenios() {
-    const r = await fetch('/api/convenios');
-    const json = await r.json();
+    const res = await fetch('/api/convenios');
+    const json = await res.json();
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
 
