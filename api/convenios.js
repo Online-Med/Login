@@ -34,23 +34,29 @@ export default async function handler(req, res) {
       return res.status(200).json({ sucesso: true, dados: d });
     }
 
-    // --- CRIAR NOVO CONVÊNIO ---
+// --- CRIAR NOVO CONVÊNIO (POST) ---
     if (method === 'POST') {
-      // Criamos um registro básico para o usuário preencher depois
       const reserva = { 
-        CONVENIO: "NOVO CONVÊNIO", 
-        // Adicione aqui outros campos obrigatórios da sua tabela, se houver
+        CONVENIO: "NOVO CONVÊNIO" 
       };
 
       const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios`, { 
         method: 'POST', 
-        headers: { ...sbHeaders, 'Prefer': 'return=representation' }, 
+        headers: { 
+          ...sbHeaders, 
+          'Prefer': 'return=representation' // <--- OBRIGATÓRIO para o Supabase devolver o ID criado
+        }, 
         body: JSON.stringify(reserva) 
       });
       
       const d = await r.json();
-      // Retorna o ID do novo registro para a página de cadastro abrir
-      return res.status(200).json({ sucesso: true, id: d[0].id });
+      
+      // Verifica se o Supabase devolveu o dado e extrai o ID
+      if (d && d.length > 0) {
+        return res.status(200).json({ sucesso: true, id: d[0].id });
+      } else {
+        throw new Error("Erro ao criar reserva no banco.");
+      }
     }
 
     // --- ATUALIZAR CONVÊNIO ---
