@@ -1,7 +1,7 @@
 // api/convenios.js
 import { SUPABASE_URL, sbHeaders, validarSessao } from './_seguranca.js';
 
-export default async function handler(req, res) {
+export default async function handler(req, r) {
   try { await validarSessao(req); } catch (e) { return res.status(401).json({ erro: e.message }); }
 
   try {
