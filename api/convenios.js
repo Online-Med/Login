@@ -2,86 +2,64 @@
 import { SUPABASE_URL, sbHeaders, validarSessao } from './_seguranca.js';
 
 export default async function handler(req, res) {
-  // 1. Proteção de Sessão
-  try { 
-    await validarSessao(req); 
-  } catch (e) { 
-    return res.status(401).json({ erro: e.message }); 
-  }
+  try { await validarSessao(req); } catch (e) { return res.status(401).json({ erro: e.message }); }
 
   const { method, query } = req;
 
   try {
-    // --- BUSCAR CONVÊNIOS ---
     if (method === 'GET') {
       const { id, nome } = query;
-
-      // Se pedir um ID específico (para edição)
+      const url = new URL(`${SUPABASE_URL}/rest/v1/convenios`);
+      
       if (id) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?select=*&id=eq.${id}`, { headers: sbHeaders });
+        url.searchParams.set('id', `eq.${id}`);
+        url.searchParams.set('select', '*');
+        const r = await fetch(url.toString(), { headers: sbHeaders });
         const d = await r.json();
         return res.status(200).json({ sucesso: true, convenio: d[0] });
       }
 
-      // Listagem geral
-      let url = `${SUPABASE_URL}/rest/v1/convenios?select=*&order=CONVENIO.asc`;
-      
-      // Filtro de busca por nome (se houver)
-      if (nome) url += `&CONVENIO=ilike.*${nome}*`;
+      url.searchParams.set('select', '*');
+      url.searchParams.set('order', 'CONVENIO.asc');
+      if (nome) url.searchParams.set('CONVENIO', `ilike.*${nome}*`);
 
-      const r = await fetch(url, { headers: sbHeaders });
+      const r = await fetch(url.toString(), { headers: sbHeaders });
       const d = await r.json();
       return res.status(200).json({ sucesso: true, dados: d });
     }
 
-// --- CRIAR NOVO CONVÊNIO (POST) ---
     if (method === 'POST') {
-      const reserva = { 
-        CONVENIO: "NOVO CONVÊNIO" 
-      };
-
+      // Ajuste: Certifique-se que o campo no Supabase aceita "NOVO CONVÊNIO"
       const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios`, { 
         method: 'POST', 
-        headers: { 
-          ...sbHeaders, 
-          'Prefer': 'return=representation' // <--- OBRIGATÓRIO para o Supabase devolver o ID criado
-        }, 
-        body: JSON.stringify(reserva) 
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' }, 
+        body: JSON.stringify({ CONVENIO: "NOVO CONVÊNIO" }) 
       });
       
       const d = await r.json();
       
-      // Verifica se o Supabase devolveu o dado e extrai o ID
+      // LOG de depuração: se d[0].id for undefined, mude para o nome correto da coluna
       if (d && d.length > 0) {
-        return res.status(200).json({ sucesso: true, id: d[0].id });
-      } else {
-        throw new Error("Erro ao criar reserva no banco.");
+        return res.status(200).json({ sucesso: true, id: d[0].id }); 
       }
+      return res.status(400).json({ sucesso: false, erro: "Não foi possível gerar ID. Verifique a tabela." });
     }
 
-    // --- ATUALIZAR CONVÊNIO ---
-    if (method === 'PATCH') {
-      const { id } = query;
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { 
-        method: 'PATCH', 
-        headers: { ...sbHeaders, 'Prefer': 'return=representation' }, 
-        body: JSON.stringify(body) 
-      });
-
-      return r.ok ? res.status(200).json({ sucesso: true }) : res.status(400).json({ sucesso: false, erro: "Erro ao atualizar convênio." });
-    }
-
-    // --- DELETAR CONVÊNIO ---
-    if (method === 'DELETE') {
-      const { id } = query;
-      await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders });
-      return res.status(200).json({ sucesso: true });
+    // PATCH e DELETE seguem a mesma lógica de URL segura...
+    if (method === 'PATCH' || method === 'DELETE') {
+        const { id } = query;
+        const url = `${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`;
+        const options = { 
+            method: method, 
+            headers: method === 'PATCH' ? { ...sbHeaders, 'Prefer': 'return=representation' } : sbHeaders 
+        };
+        if (method === 'PATCH') options.body = JSON.stringify(req.body);
+        
+        const r = await fetch(url, options);
+        return res.status(200).json({ sucesso: r.ok });
     }
 
   } catch (error) {
-    console.error("Erro em convenios.js:", error.message);
     return res.status(500).json({ sucesso: false, erro: error.message });
   }
 }
