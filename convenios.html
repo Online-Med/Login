@@ -1,7 +1,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4>Convênios</h4>
     <button class="btn btn-primary" onclick="novoUsuario()">
-        <i class="bi bi-person-plus me-2"></i>Novo Usuário
+        <i class="bi bi-person-plus me-2"></i>Novo Convênio
     </button>
 </div>
 
@@ -23,7 +23,7 @@
 
 <script>
 async function carregarConvenios() {
-    const res = await fetch('/api/convenios');
+    const r = await fetch('/api/convenios');
     const json = await res.json();
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
