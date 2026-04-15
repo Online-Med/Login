@@ -1,0 +1,182 @@
+
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><i class="bi bi-house-door-fill me-1"></i>INÍCIO</li>
+            <li class="breadcrumb-item">configurações</li>
+            <li class="breadcrumb-item active">CADASTRO DE CONVENIOS</li>
+        </ol>
+    </nav>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-secondary" onclick="cancelarConvenio()">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-info text-white" onclick="salvarConvenio()">
+            <i class="bi bi-check-lg me-1"></i>Salvar Registro
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0 text-info">Identificação e Acesso</h5>
+    </div>
+    <div class="card-body">
+        <form id="formUsuario">
+            <div class="row g-3">
+
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">Codigo</label>
+                    <input type="text" class="form-control" id="u_nome" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">E-mail Convenio *</label>
+                    <input type="email" class="form-control" id="CONVENIO" required>
+                </div>
+
+                </div>
+            </div>
+
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css">
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+            
+        </form>
+    </div>
+</div>
+
+<script>
+// 1. FUNÇÃO DE INICIALIZAÇÃO (Roda ao abrir a tela)
+async function inicializarCadastroUsuario() {
+    const campoId = document.getElementById('u_id');
+    const campoNome = document.getElementById('u_nome');
+
+    // Adiciona o texto esmaecido (Placeholder)
+    campoNome.placeholder = "Inserir nome do usuário";
+
+    if (window.ehEdicaoUsuario && window.idUsuarioEdicao) {
+        console.log("Modo EDIÇÃO para ID:", window.idUsuarioEdicao);
+        try {
+            const res = await fetch(`/api/usuarios?id=${window.idUsuarioEdicao}`);
+            const json = await res.json();
+            
+            if (json.sucesso) {
+                const u = json.usuario;
+                campoId.value = u.id_profissional;
+                campoNome.value = u.nome;
+                document.getElementById('u_email').value = u.email;
+                document.getElementById('u_perfil').value = u.perfil;
+                document.getElementById('u_especialidade').value = u.especialidade || "";
+                document.getElementById('u_agenda').checked = (u.tem_agenda === 'SIM');
+            }
+        } catch (e) {
+            console.error("Erro ao carregar dados:", e);
+        }
+    } else {
+        console.log("Modo NOVO cadastro...");
+        try {
+            const res = await fetch('/api/usuarios', { method: 'POST' });
+            const json = await res.json();
+            
+            if (json.sucesso) {
+                campoId.value = json.id_profissional;
+                
+                // DEIXA O CAMPO VAZIO NA TELA
+                campoNome.value = ""; 
+                
+                // Guarda o texto de reserva em uma variável oculta para o botão Cancelar funcionar
+                window.textoReservaSeguranca = "NOVO USUÁRIO - AGUARDANDO DADOS";
+            }
+        } catch (e) {
+            console.error("Erro ao gerar reserva:", e);
+        }
+    }
+}
+
+// 2. FUNÇÃO SALVAR
+async function salvarUsuario() {
+    const id = document.getElementById('u_id').value;
+    const dados = {
+        nome: document.getElementById('u_nome').value,
+        email: document.getElementById('u_email').value,
+        perfil: document.getElementById('u_perfil').value,
+        especialidade: document.getElementById('u_especialidade').value,
+        tem_agenda: document.getElementById('u_agenda').checked ? 'SIM' : 'NÃO'
+    };
+
+    if (!dados.nome || !dados.email) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos Obrigatórios',
+            text: 'Por favor, preencha o Nome e o E-mail antes de salvar.',
+            confirmButtonColor: '#0dcaf0'
+        });
+        return;
+    }
+
+    // Exibe um alerta de "Salvando..."
+    Swal.fire({
+        title: 'Gravando dados...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    try {
+        const res = await fetch(`/api/usuarios?id=${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        });
+
+        if (res.ok) {
+            // Sucesso!
+            Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: 'Dados gravados com sucesso!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                carregarConteudo('usuarios.html');
+            });
+        } else {
+            throw new Error("Erro no servidor");
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Ops!',
+            text: 'Ocorreu um erro ao salvar os dados no banco.',
+            confirmButtonColor: '#dc3545'
+        });
+        console.error("Erro no fetch:", e);
+    }
+}
+
+
+    
+
+// 3. FUNÇÃO CANCELAR (Com limpeza de reserva)
+async function cancelarUsuario() {
+    const id = document.getElementById('u_id').value;
+    const nomeAtual = document.getElementById('u_nome').value;
+
+    // Se for um novo registro e o nome ainda for o de reserva, deleta a linha
+    if (!window.ehEdicaoUsuario && id && nomeAtual.includes("NOVO USUÁRIO")) {
+        console.log("Cancelando reserva vazia ID:", id);
+        try {
+            await fetch(`/api/usuarios?id=${id}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error("Erro ao deletar reserva:", e);
+        }
+    }
+
+    window.ehEdicaoUsuario = false;
+    carregarConteudo('usuarios.html');
+}
+
+// Disparar a inicialização assim que o script carregar
+inicializarCadastroUsuario();
+</script>
