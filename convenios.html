@@ -1,6 +1,6 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4>Convênios</h4>
-    <button class="btn btn-primary" onclick="novoUsuario()">
+    <button class="btn btn-primary" onclick="novoConvenio()">
         <i class="bi bi-person-plus me-2"></i>Novo Convênio
     </button>
 </div>
@@ -32,7 +32,7 @@ async function carregarConvenios() {
         corpo.innerHTML += `
             <tr>
                 <td>${u.id}</td>
-                <td>${u.Convenio}</td>
+                <td>${u.CONVENIO}</td>
                 <td class="text-center">
                 <button class="btn btn-sm btn-outline-primary" onclick="editarConvenio(${u.id})">
                         <i class="bi bi-pencil"></i>
@@ -41,11 +41,11 @@ async function carregarConvenios() {
             </tr>`;
     });
 }
-carregarUsuarios();
+carregarConvenios();
 
 function novoUsuario() {
     window.ehEdicaoConvenio = false;
-    carregarConteudo('cadastro_usuarios.html');
+    carregarConteudo('cadastro_Convenios.html');
 }
 
 function editarConvenio(id) {
