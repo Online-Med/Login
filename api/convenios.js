@@ -7,7 +7,7 @@ export default async function handler(req, r) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?select=CONVENIO&order=CONVENIO.asc`, { headers: sbHeaders });
     const dados = await r.json();
-    return res.status(200).json(dados);
+    return r.status(200).json(dados);
   } catch (error) {
     return res.status(500).json([]);
   }
