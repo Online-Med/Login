@@ -11,14 +11,11 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Nome</th>
-                    <th>Perfil</th>
-                    <th>Especialidade</th>
-                    <th>Agenda?</th>
+                    <th>Convenio</th>
                     <th class="text-center">Ações</th>
                 </tr>
             </thead>
-            <tbody id="tabelaUsuarios">
+            <tbody id="tabelaConvenios">
                 </tbody>
         </table>
     </div>
@@ -50,7 +47,7 @@ async function carregarConvenios() {
 carregarUsuarios();
 
 function novoUsuario() {
-    window.ehEdicaoUsuario = false;
+    window.ehEdicaoConvenio = false;
     carregarConteudo('cadastro_usuarios.html');
 }
 
