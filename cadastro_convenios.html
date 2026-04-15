@@ -1,8 +1,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="text-primary fw-bold mb-0">CADASTRO DE CONVÊNIO</h5>
+    <h5 class="text-primary fw-bold"><i class="bi bi-plus-circle me-2"></i>CADASTRO DE CONVÊNIO</h5>
     <div class="d-flex gap-2">
         <button class="btn btn-outline-secondary px-4" onclick="cancelarConvenio()">Cancelar</button>
-        <button class="btn btn-primary px-4 shadow-sm" onclick="salvarConvenio()">Salvar</button>
+        <button class="btn btn-primary px-4 shadow-sm" onclick="salvarConvenio()">Salvar Registro</button>
     </div>
 </div>
 
@@ -10,12 +10,12 @@
     <div class="card-body p-4">
         <div class="row g-3">
             <div class="col-md-2">
-                <label class="form-label fw-bold">ID</label>
-                <input type="text" class="form-control bg-light" id="c_id" readonly>
+                <label class="form-label fw-bold text-muted">ID</label>
+                <input type="text" class="form-control bg-light" id="c_id" readonly placeholder="#">
             </div>
             <div class="col-md-10">
                 <label class="form-label fw-bold">Nome do Convênio *</label>
-                <input type="text" class="form-control" id="c_nome" placeholder="Ex: UNIMED" required>
+                <input type="text" class="form-control form-control-lg" id="c_nome" placeholder="Ex: UNIMED">
             </div>
         </div>
     </div>
@@ -23,21 +23,24 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-async function inicializar() {
+async function iniciar() {
+    const campoId = document.getElementById('c_id');
+    const campoNome = document.getElementById('c_nome');
+
     if (window.ehEdicaoConvenio && window.idUsuarioEdicao) {
         const res = await fetch(`/api/convenios?id=${window.idUsuarioEdicao}`);
         const json = await res.json();
         if (json.sucesso) {
-            document.getElementById('c_id').value = json.convenio.id;
-            document.getElementById('c_nome').value = json.convenio.CONVENIO;
+            campoId.value = json.convenio.id;
+            campoNome.value = json.convenio.CONVENIO;
         }
     } else {
         const res = await fetch('/api/convenios', { method: 'POST' });
         const json = await res.json();
         if (json.sucesso) {
-            document.getElementById('c_id').value = json.id;
+            campoId.value = json.id;
         } else {
-            Swal.fire('Erro', 'Não foi possível reservar o ID. Verifique o autoincremento no Supabase.', 'error');
+            Swal.fire('Erro no Banco', json.erro, 'error');
         }
     }
 }
@@ -45,7 +48,7 @@ async function inicializar() {
 async function salvarConvenio() {
     const id = document.getElementById('c_id').value;
     const nome = document.getElementById('c_nome').value;
-    if(!nome) return Swal.fire('Aviso', 'Preencha o nome.', 'warning');
+    if(!nome) return Swal.fire('Aviso', 'Preencha o nome do convênio.', 'warning');
 
     const res = await fetch(`/api/convenios?id=${id}`, {
         method: 'PATCH',
@@ -56,11 +59,9 @@ async function salvarConvenio() {
 }
 
 async function cancelarConvenio() {
-    if (!window.ehEdicaoConvenio) {
-        const id = document.getElementById('c_id').value;
-        if (id) await fetch(`/api/convenios?id=${id}`, { method: 'DELETE' });
-    }
+    const id = document.getElementById('c_id').value;
+    if (!window.ehEdicaoConvenio && id) await fetch(`/api/convenios?id=${id}`, { method: 'DELETE' });
     carregarConteudo('convenios.html');
 }
-inicializar();
+iniciar();
 </script>
