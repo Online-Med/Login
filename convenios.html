@@ -24,7 +24,7 @@
 <script>
 async function carregarConvenios() {
     const res = await fetch('/api/convenios');
-    const json = await res.json();
+    const json = await r.json();
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
 
