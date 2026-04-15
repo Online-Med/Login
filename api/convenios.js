@@ -1,14 +1,49 @@
-// api/convenios.js
+// api/usuarios.js
 import { SUPABASE_URL, sbHeaders, validarSessao } from './_seguranca.js';
 
-export default async function handler(req, r) {
+export default async function handler(req, res) {
   try { await validarSessao(req); } catch (e) { return res.status(401).json({ erro: e.message }); }
 
+  const { method, query } = req;
+
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?select=CONVENIO&order=CONVENIO.asc`, { headers: sbHeaders });
-    const dados = await r.json();
-    return r.status(200).json(dados);
+    if (method === 'GET') {
+      const { id, nome, perfil } = query;
+      if (id) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?select=*&id=eq.${id}`, { headers: sbHeaders });
+        const d = await r.json();
+        return res.status(200).json({ sucesso: true, convenio: d[0] });
+      }
+      let url = `${SUPABASE_URL}/rest/v1/convenios?select=*&order=convenio.asc`;
+      if (convenio)   url += `&nome=ilike.*${CONVENIO}*`;
+      const r = await fetch(url, { headers: sbHeaders });
+      const d = await r.json();
+      return res.status(200).json({ sucesso: true, dados: d });
+    }
+
+    if (method === 'POST') {
+      const rMax  = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id&order=id.desc&limit=1`, { headers: sbHeaders });
+      const ultimo = await rMax.json();
+      const novoId = (ultimo.length > 0) ? (parseInt(ultimo[0].id) + 1) : 1;
+      const reserva = { id_profissional: novoId, nome: "NOVO CONVENIO - AGUARDANDO DADOS", email: `temp_${novoId}@med.com`};
+      await fetch(`${SUPABASE_URL}/rest/v1/convenios`, { method: 'POST', headers: { ...sbHeaders, 'Prefer': 'return=representation' }, body: JSON.stringify(reserva) });
+      return res.status(200).json({ sucesso: true, id: novoId });
+    }
+
+    if (method === 'PATCH') {
+      const { id } = query;
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { method: 'PATCH', headers: { ...sbHeaders, 'Prefer': 'return=representation' }, body: JSON.stringify(body) });
+      return r.ok ? res.status(200).json({ sucesso: true }) : res.status(400).json({ sucesso: false, erro: "Erro ao atualizar Convenio." });
+    }
+
+    if (method === 'DELETE') {
+      const { id } = query;
+      await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders });
+      return res.status(200).json({ sucesso: true });
+    }
+
   } catch (error) {
-    return res.status(500).json([]);
+    return res.status(500).json({ sucesso: false, erro: error.message });
   }
 }
