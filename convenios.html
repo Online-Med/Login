@@ -1,30 +1,91 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold">Convênios</h4>
-    <button class="btn btn-primary" onclick="novoConvenio()">+ Novo</button>
+    <h4 class="text-secondary fw-bold">Gestão de Convênios</h4>
+    <button class="btn btn-primary shadow-sm" onclick="novoConvenio()">
+        <i class="bi bi-person-plus me-2"></i>Novo Convênio
+    </button>
 </div>
-<div class="card shadow-sm border-0">
+
+<div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead class="bg-light">
-                <tr><th class="ps-3">ID</th><th>Convênio</th><th class="text-center">Ações</th></tr>
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">ID</th>
+                    <th>Convênio</th>
+                    <th class="text-center pe-4">Ações</th>
+                </tr>
             </thead>
             <tbody id="tabelaConvenios"></tbody>
         </table>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-async function carregar() {
+async function carregarConvenios() {
     const res = await fetch('/api/convenios');
     const json = await res.json();
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
-    if (json.dados) {
+
+    if (json.sucesso && json.dados) {
         json.dados.forEach(u => {
-            corpo.innerHTML += `<tr><td class="ps-3">${u.id}</td><td>${u.CONVENIO}</td><td class="text-center"><button class="btn btn-sm btn-outline-primary" onclick="editarConvenio(${u.id})">Editar</button></td></tr>`;
+            corpo.innerHTML += `
+                <tr>
+                    <td class="ps-4 fw-bold text-secondary">${u.id}</td>
+                    <td>${u.CONVENIO}</td>
+                    <td class="text-center pe-4">
+                        <div class="btn-group gap-1">
+                            <button class="btn btn-sm btn-outline-primary border-0" title="Editar" onclick="editarConvenio(${u.id})">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger border-0" title="Excluir" onclick="deletarConvenio(${u.id}, '${u.CONVENIO}')">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
         });
     }
 }
-carregar();
-function novoConvenio() { window.ehEdicaoConvenio = false; carregarConteudo('cadastro_convenios.html'); }
-function editarConvenio(id) { window.ehEdicaoConvenio = true; window.idUsuarioEdicao = id; carregarConteudo('cadastro_convenios.html'); }
+
+async function deletarConvenio(id, nome) {
+    // Pergunta de confirmação
+    Swal.fire({
+        title: 'Excluir Convênio?',
+        text: `Deseja realmente excluir o convênio "${nome}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sim, excluir',
+        cancelButtonText: 'Não'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch(`/api/convenios?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    Swal.fire({ icon: 'success', title: 'Excluído!', timer: 1000, showConfirmButton: false });
+                    carregarConvenios(); // Recarrega a tabela
+                }
+            } catch (e) {
+                Swal.fire('Erro', 'Não foi possível excluir o registro.', 'error');
+            }
+        }
+    });
+}
+
+function novoConvenio() {
+    window.ehEdicaoConvenio = false;
+    carregarConteudo('cadastro_convenios.html');
+}
+
+function editarConvenio(id) {
+    window.ehEdicaoConvenio = true;
+    window.idUsuarioEdicao = id;
+    carregarConteudo('cadastro_convenios.html');
+}
+
+carregarConvenios();
 </script>
