@@ -1,79 +1,124 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item">INÍCIO</li>
+            <li class="breadcrumb-item"><i class="bi bi-house-door me-1"></i>INÍCIO</li>
             <li class="breadcrumb-item">Configurações</li>
-            <li class="breadcrumb-item active">CADASTRO DE CONVÊNIOS</li>
+            <li class="breadcrumb-item active fw-bold text-primary">CADASTRO DE CONVÊNIOS</li>
         </ol>
     </nav>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-secondary" onclick="cancelarConvenio()">Cancelar</button>
-        <button type="button" class="btn btn-info text-white" onclick="salvarConvenio()">Salvar Registro</button>
+        <button type="button" class="btn btn-outline-secondary px-4" onclick="cancelarConvenio()">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-primary px-4 shadow-sm" onclick="salvarConvenio()">
+            <i class="bi bi-save me-2"></i>Salvar Registro
+        </button>
     </div>
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-body">
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 text-primary"><i class="bi bi-card-list me-2"></i>Identificação do Convênio</h5>
+    </div>
+    <div class="card-body p-4">
         <form id="formConvenio">
-            <div class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label fw-bold">Código</label>
-                    <input type="text" class="form-control bg-light" id="c_id" readonly>
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-secondary">Código (Automático)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-hash"></i></span>
+                        <input type="text" class="form-control bg-light fw-bold" id="c_id" readonly>
+                    </div>
                 </div>
-                <div class="col-md-10">
-                    <label class="form-label fw-bold">Nome do Convênio *</label>
-                    <input type="text" class="form-control" id="c_nome" required>
+                
+                <div class="col-md-9">
+                    <label class="form-label fw-bold text-secondary">Nome do Convênio *</label>
+                    <input type="text" class="form-control form-control-lg" id="c_nome" required 
+                           placeholder="Digite o nome completo do convênio">
                 </div>
             </div>
         </form>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
 async function inicializarCadastroConvenio() {
     const campoId = document.getElementById('c_id');
     const campoNome = document.getElementById('c_nome');
 
-    if (window.ehEdicaoConvenio && window.idUsuarioEdicao) {
-        const res = await fetch(`/api/convenios?id=${window.idUsuarioEdicao}`);
-        const json = await res.json();
-        if (json.sucesso) {
-            campoId.value = json.convenio.id;
-            campoNome.value = json.convenio.CONVENIO;
-        }
-    } else {
-        const res = await fetch('/api/convenios', { method: 'POST' });
-        const json = await res.json();
-        if (json.sucesso && json.id) {
-            campoId.value = json.id;
-            campoNome.value = "";
+    try {
+        if (window.ehEdicaoConvenio && window.idUsuarioEdicao) {
+            const res = await fetch(`/api/convenios?id=${window.idUsuarioEdicao}`);
+            const json = await res.json();
+            if (json.sucesso) {
+                campoId.value = json.convenio.id;
+                campoNome.value = json.convenio.CONVENIO;
+            }
         } else {
-            alert("Erro ao reservar ID no servidor.");
+            // Chamada para reservar o ID
+            const res = await fetch('/api/convenios', { method: 'POST' });
+            const json = await res.json();
+            
+            if (json.sucesso && json.id) {
+                campoId.value = json.id;
+                campoNome.value = "";
+                campoNome.focus();
+            } else {
+                throw new Error(json.erro || "Falha na reserva de ID");
+            }
         }
+    } catch (e) {
+        console.error("Erro na inicialização:", e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro de Conexão',
+            text: 'Não foi possível gerar um código no servidor. Verifique sua internet ou o banco de dados.',
+            confirmButtonColor: '#0d6efd'
+        });
     }
 }
 
 async function salvarConvenio() {
     const id = document.getElementById('c_id').value;
     const nome = document.getElementById('c_nome').value;
-    
-    const res = await fetch(`/api/convenios?id=${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ CONVENIO: nome.toUpperCase() })
-    });
 
-    if (res.ok) carregarConteudo('convenios.html');
+    if (!nome.trim()) {
+        return Swal.fire('Atenção', 'O nome do convênio é obrigatório.', 'warning');
+    }
+
+    Swal.fire({ title: 'Salvando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const res = await fetch(`/api/convenios?id=${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ CONVENIO: nome.toUpperCase() })
+        });
+
+        if (res.ok) {
+            Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Convênio registrado.', timer: 1500, showConfirmButton: false })
+            .then(() => carregarConteudo('convenios.html'));
+        } else {
+            throw new Error("Erro ao salvar");
+        }
+    } catch (e) {
+        Swal.fire('Erro', 'Não foi possível salvar os dados.', 'error');
+    }
 }
 
 async function cancelarConvenio() {
     const id = document.getElementById('c_id').value;
     const nome = document.getElementById('c_nome').value;
-    if (!window.ehEdicaoConvenio && (nome === "" || nome === "NOVO CONVÊNIO")) {
+
+    // Se for novo e não preencheu, limpa a reserva do banco
+    if (!window.ehEdicaoConvenio && id && (nome === "" || nome.includes("NOVO CONVÊNIO"))) {
         await fetch(`/api/convenios?id=${id}`, { method: 'DELETE' });
     }
     carregarConteudo('convenios.html');
 }
 
+// Inicia o processo
 inicializarCadastroConvenio();
 </script>
