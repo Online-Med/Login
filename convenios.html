@@ -1,57 +1,30 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="text-secondary fw-bold">Gestão de Convênios</h4>
-    <button class="btn btn-primary shadow-sm" onclick="novoConvenio()">
-        <i class="bi bi-person-plus me-2"></i>Novo Convênio
-    </button>
+    <h4 class="fw-bold">Convênios</h4>
+    <button class="btn btn-primary" onclick="novoConvenio()">+ Novo</button>
 </div>
-
-<div class="card border-0 shadow-sm">
+<div class="card shadow-sm border-0">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th class="ps-4">ID</th>
-                    <th>Convênio</th>
-                    <th class="text-center pe-4">Ações</th>
-                </tr>
+            <thead class="bg-light">
+                <tr><th class="ps-3">ID</th><th>Convênio</th><th class="text-center">Ações</th></tr>
             </thead>
             <tbody id="tabelaConvenios"></tbody>
         </table>
     </div>
 </div>
-
 <script>
-async function carregarConvenios() {
+async function carregar() {
     const res = await fetch('/api/convenios');
     const json = await res.json();
     const corpo = document.getElementById('tabelaConvenios');
     corpo.innerHTML = '';
-
-    if (json.sucesso && json.dados) {
+    if (json.dados) {
         json.dados.forEach(u => {
-            corpo.innerHTML += `
-                <tr>
-                    <td class="ps-4 fw-bold text-secondary">${u.id}</td>
-                    <td>${u.CONVENIO}</td>
-                    <td class="text-center pe-4">
-                        <button class="btn btn-sm btn-outline-primary border-0" onclick="editarConvenio(${u.id})">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                    </td>
-                </tr>`;
+            corpo.innerHTML += `<tr><td class="ps-3">${u.id}</td><td>${u.CONVENIO}</td><td class="text-center"><button class="btn btn-sm btn-outline-primary" onclick="editarConvenio(${u.id})">Editar</button></td></tr>`;
         });
     }
 }
-carregarConvenios();
-
-function novoConvenio() {
-    window.ehEdicaoConvenio = false;
-    carregarConteudo('cadastro_convenios.html');
-}
-
-function editarConvenio(id) {
-    window.ehEdicaoConvenio = true;
-    window.idUsuarioEdicao = id;
-    carregarConteudo('cadastro_convenios.html');
-}
+carregar();
+function novoConvenio() { window.ehEdicaoConvenio = false; carregarConteudo('cadastro_convenios.html'); }
+function editarConvenio(id) { window.ehEdicaoConvenio = true; window.idUsuarioEdicao = id; carregarConteudo('cadastro_convenios.html'); }
 </script>
