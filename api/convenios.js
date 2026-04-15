@@ -1,42 +1,73 @@
-// api/usuarios.js
+// api/convenios.js
 import { SUPABASE_URL, sbHeaders, validarSessao } from './_seguranca.js';
 
 export default async function handler(req, res) {
-  try { await validarSessao(req); } catch (e) { return res.status(401).json({ erro: e.message }); }
+  // 1. Proteção de Sessão
+  try { 
+    await validarSessao(req); 
+  } catch (e) { 
+    return res.status(401).json({ erro: e.message }); 
+  }
 
   const { method, query } = req;
 
   try {
+    // --- BUSCAR CONVÊNIOS ---
     if (method === 'GET') {
-      const { id, nome, perfil } = query;
+      const { id, nome } = query;
+
+      // Se pedir um ID específico (para edição)
       if (id) {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?select=*&id=eq.${id}`, { headers: sbHeaders });
         const d = await r.json();
         return res.status(200).json({ sucesso: true, convenio: d[0] });
       }
-      let url = `${SUPABASE_URL}/rest/v1/convenios?select=*&order=convenio.asc`;
-      if (convenio)   url += `&nome=ilike.*${CONVENIO}*`;
+
+      // Listagem geral
+      let url = `${SUPABASE_URL}/rest/v1/convenios?select=*&order=CONVENIO.asc`;
+      
+      // Filtro de busca por nome (se houver)
+      if (nome) url += `&CONVENIO=ilike.*${nome}*`;
+
       const r = await fetch(url, { headers: sbHeaders });
       const d = await r.json();
       return res.status(200).json({ sucesso: true, dados: d });
     }
 
+    // --- CRIAR NOVO CONVÊNIO ---
     if (method === 'POST') {
-      const rMax  = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id&order=id.desc&limit=1`, { headers: sbHeaders });
-      const ultimo = await rMax.json();
-      const novoId = (ultimo.length > 0) ? (parseInt(ultimo[0].id) + 1) : 1;
-      const reserva = { id: novoId, nome: "NOVO CONVENIO - AGUARDANDO DADOS", email: `temp_${novoId}@med.com`};
-      await fetch(`${SUPABASE_URL}/rest/v1/convenios`, { method: 'POST', headers: { ...sbHeaders, 'Prefer': 'return=representation' }, body: JSON.stringify(reserva) });
-      return res.status(200).json({ sucesso: true, id: novoId });
+      // Criamos um registro básico para o usuário preencher depois
+      const reserva = { 
+        CONVENIO: "NOVO CONVÊNIO", 
+        // Adicione aqui outros campos obrigatórios da sua tabela, se houver
+      };
+
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios`, { 
+        method: 'POST', 
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' }, 
+        body: JSON.stringify(reserva) 
+      });
+      
+      const d = await r.json();
+      // Retorna o ID do novo registro para a página de cadastro abrir
+      return res.status(200).json({ sucesso: true, id: d[0].id });
     }
 
+    // --- ATUALIZAR CONVÊNIO ---
     if (method === 'PATCH') {
       const { id } = query;
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { method: 'PATCH', headers: { ...sbHeaders, 'Prefer': 'return=representation' }, body: JSON.stringify(body) });
-      return r.ok ? res.status(200).json({ sucesso: true }) : res.status(400).json({ sucesso: false, erro: "Erro ao atualizar Convenio." });
+
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { 
+        method: 'PATCH', 
+        headers: { ...sbHeaders, 'Prefer': 'return=representation' }, 
+        body: JSON.stringify(body) 
+      });
+
+      return r.ok ? res.status(200).json({ sucesso: true }) : res.status(400).json({ sucesso: false, erro: "Erro ao atualizar convênio." });
     }
 
+    // --- DELETAR CONVÊNIO ---
     if (method === 'DELETE') {
       const { id } = query;
       await fetch(`${SUPABASE_URL}/rest/v1/convenios?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders });
@@ -44,6 +75,7 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
+    console.error("Erro em convenios.js:", error.message);
     return res.status(500).json({ sucesso: false, erro: error.message });
   }
 }
