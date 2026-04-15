@@ -31,13 +31,10 @@ async function carregarConvenios() {
     json.dados.forEach(u => {
         corpo.innerHTML += `
             <tr>
-                <td>${u.id_profissional}</td>
-                <td>${u.nome}</td>
-                <td><span class="badge bg-info">${u.perfil}</span></td>
-                <td>${u.especialidade || '-'}</td>
-                <td>${u.tem_agenda}</td>
+                <td>${u.id}</td>
+                <td>${u.Convenio}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary" onclick="editarUsuario(${u.id_profissional})">
+                <button class="btn btn-sm btn-outline-primary" onclick="editarConvenio(${u.id})">
                         <i class="bi bi-pencil"></i>
                     </button>
                 </td>
