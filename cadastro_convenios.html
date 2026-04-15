@@ -63,17 +63,20 @@ async function inicializarCadastroConvenio() {
         }
     } else {
         console.log("Modo NOVO cadastro de convênio...");
-        try {
+try {
             const res = await fetch('/api/convenios', { method: 'POST' });
             const json = await res.json();
             
-            if (json.sucesso) {
-                campoId.value = json.id;
-                campoNome.value = ""; // Deixa limpo para o usuário digitar
+            if (json.sucesso && json.id) {
+                // Aqui garantimos que o ID reservado vai para o campo da tela
+                campoId.value = json.id; 
+                campoNome.value = ""; 
                 window.textoReservaConvenio = "NOVO CONVÊNIO"; 
+            } else {
+                console.error("A API não devolveu um ID válido:", json);
             }
         } catch (e) {
-            console.error("Erro ao gerar reserva de convênio:", e);
+            console.error("Erro ao gerar reserva:", e);
         }
     }
 }
