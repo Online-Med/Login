@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       const rMax  = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=id&order=id.desc&limit=1`, { headers: sbHeaders });
       const ultimo = await rMax.json();
       const novoId = (ultimo.length > 0) ? (parseInt(ultimo[0].id) + 1) : 1;
-      const reserva = { id_profissional: novoId, nome: "NOVO CONVENIO - AGUARDANDO DADOS", email: `temp_${novoId}@med.com`};
+      const reserva = { id: novoId, nome: "NOVO CONVENIO - AGUARDANDO DADOS", email: `temp_${novoId}@med.com`};
       await fetch(`${SUPABASE_URL}/rest/v1/convenios`, { method: 'POST', headers: { ...sbHeaders, 'Prefer': 'return=representation' }, body: JSON.stringify(reserva) });
       return res.status(200).json({ sucesso: true, id: novoId });
     }
