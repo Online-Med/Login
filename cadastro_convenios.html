@@ -61,24 +61,27 @@ async function inicializarCadastroConvenio() {
         } catch (e) {
             console.error("Erro ao carregar dados:", e);
         }
-    } else {
-        console.log("Modo NOVO cadastro de convênio...");
-try {
-            const res = await fetch('/api/convenios', { method: 'POST' });
-            const json = await res.json();
-            
-            if (json.sucesso && json.id) {
-                // Aqui garantimos que o ID reservado vai para o campo da tela
-                campoId.value = json.id; 
-                campoNome.value = ""; 
-                window.textoReservaConvenio = "NOVO CONVÊNIO"; 
-            } else {
-                console.error("A API não devolveu um ID válido:", json);
-            }
-        } catch (e) {
-            console.error("Erro ao gerar reserva:", e);
+} else {
+    console.log("Modo NOVO cadastro de convênio...");
+    try {
+        const res = await fetch('/api/convenios', { method: 'POST' });
+        const json = await res.json();
+        
+        console.log("Resposta da Reserva:", json); // Adicione este log para ver o que chega
+
+        if (json.sucesso && json.id) {
+            campoId.value = json.id; 
+            campoNome.value = ""; 
+            // Importante: Marcar que o nome atual é o de reserva para o cancelar funcionar
+            campoNome.placeholder = "Digite o nome do convênio";
+        } else {
+            Swal.fire('Erro', 'O servidor não reservou um código. Verifique o console.', 'error');
+            console.error("Falha na reserva:", json);
         }
+    } catch (e) {
+        console.error("Erro na requisição de reserva:", e);
     }
+}
 }
 
 // 2. FUNÇÃO SALVAR
