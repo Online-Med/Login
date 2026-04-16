@@ -53,6 +53,7 @@
   cursor:grab; user-select:none;
 }
 .ag-card.dragging  { opacity:.25; }
+.s-AGENDADO        { border-left-color:#20c997; }
 .s-AGUARDANDO      { border-left-color:#ffc107; }
 .s-EM_ATENDIMENTO  { border-left-color:#0d6efd; }
 .s-ATENDIDO        { border-left-color:#198754; background:#f6fdf9; }
@@ -60,6 +61,14 @@
 .s-CANCELADO       { border-left-color:#6c757d; background:#f9f9f9; opacity:.7; }
 .ag-card.encaixe   { background:#eff4ff; border-left-color:#4361ee; }
 .drop-ok           { background:#e7f5ff !important; }
+
+/* Badges de tipo de consulta */
+.btipo-consulta    { background:#cfe2ff; color:#084298; font-size:.6rem; font-weight:600; }
+.btipo-primeira    { background:#fff3cd; color:#664d03; font-size:.6rem; font-weight:700; }
+.btipo-retorno     { background:#d1e7dd; color:#0a3622; font-size:.6rem; font-weight:600; }
+.btipo-proc        { background:#e8d5fb; color:#4a235a; font-size:.6rem; font-weight:600; }
+/* Ícone OBS tooltip */
+.obs-icon { cursor:help; color:#6c757d; font-size:.8rem; flex-shrink:0; }
 
 /* Timer */
 .tpill {
@@ -82,8 +91,7 @@
 }
 .espera-item:last-child { border-bottom:none; }
 
-/* Badges especiais */
-.b1v  { background:#fff3cd; color:#664d03; font-size:.64rem; font-weight:700; }
+/* Badges especiais de modalidade */
 .bonl { background:#cfe2ff; color:#084298; font-size:.64rem; }
 .bpre { background:#d1e7dd; color:#0a3622; font-size:.64rem; font-weight:600; }
 
@@ -270,21 +278,12 @@
             <input type="hidden" id="agPacTel">
           </div>
 
-          <!-- 1ª vez -->
-          <div class="col-12">
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="agPrimeira">
-              <label class="form-check-label small fw-bold" for="agPrimeira" style="color:#d97706">
-                <i class="bi bi-star-fill"></i> Primeira Consulta (1ª Vez)
-              </label>
-            </div>
-          </div>
-
           <!-- Tipo + Modalidade -->
           <div class="col-md-5">
             <label class="form-label small fw-bold">Tipo</label>
             <select class="form-select form-select-sm" id="agTipo">
-              <option value="CONSULTA">Consulta</option>
+              <option value="PRIMEIRA_CONSULTA">⭐ 1ª Consulta</option>
+              <option value="CONSULTA" selected>Consulta</option>
               <option value="RETORNO">Retorno</option>
               <option value="PROCEDIMENTO">Procedimento</option>
             </select>
@@ -295,7 +294,7 @@
               <div class="form-check">
                 <input class="form-check-input" type="radio" name="agMod" id="agModP" value="PRESENCIAL" checked>
                 <label class="form-check-label small" for="agModP">
-                  <i class="bi bi-building"></i> Presencial
+                  <i class="bi bi-person-fill text-success"></i> Presencial
                 </label>
               </div>
               <div class="form-check">
@@ -445,6 +444,7 @@
           <div class="col-md-5">
             <label class="form-label small fw-bold">Tipo</label>
             <select class="form-select form-select-sm" id="agEditTipo">
+              <option value="PRIMEIRA_CONSULTA">⭐ 1ª Consulta</option>
               <option value="CONSULTA">Consulta</option>
               <option value="RETORNO">Retorno</option>
               <option value="PROCEDIMENTO">Procedimento</option>
@@ -793,113 +793,97 @@ function _preencherSlots() {
 
 // ── Render card ──────────────────────────────────────────────────
 function _renderCard(ag) {
-  var st = ag.status||'AGUARDANDO';
-  var corMap = {AGUARDANDO:'warning',EM_ATENDIMENTO:'primary',ATENDIDO:'success',FALTA:'danger',CANCELADO:'secondary'};
-  var stLbl  = {AGUARDANDO:'Aguardando',EM_ATENDIMENTO:'Atendendo',ATENDIDO:'Atendido',FALTA:'Faltou',CANCELADO:'Cancelado'};
-  var stIco  = {AGUARDANDO:'bi-hourglass-split',EM_ATENDIMENTO:'bi-play-fill',ATENDIDO:'bi-check-circle-fill',FALTA:'bi-x-circle',CANCELADO:'bi-slash-circle'};
+  var st = ag.status||'AGENDADO';
+  var corMap = {AGENDADO:'success',AGUARDANDO:'warning',EM_ATENDIMENTO:'primary',ATENDIDO:'success',FALTA:'danger',CANCELADO:'secondary'};
+  var stLbl  = {AGENDADO:'Agendado',AGUARDANDO:'Aguardando',EM_ATENDIMENTO:'Atendendo',ATENDIDO:'Atendido',FALTA:'Faltou',CANCELADO:'Cancelado'};
+  var stIco  = {AGENDADO:'bi-calendar-check',AGUARDANDO:'bi-hourglass-split',EM_ATENDIMENTO:'bi-play-fill',ATENDIDO:'bi-check-circle-fill',FALTA:'bi-x-circle',CANCELADO:'bi-slash-circle'};
+  var stTxt  = {AGENDADO:'text-white',AGUARDANDO:'text-dark',EM_ATENDIMENTO:'text-white',ATENDIDO:'text-white',FALTA:'text-white',CANCELADO:'text-white'};
 
   // Timer de espera
   var espPill='';
   if(ag.hora_chegada&&(st==='AGUARDANDO'||st==='EM_ATENDIMENTO')) {
     var min=minEsp(ag.hora_chegada);
-    espPill=' <span class="tpill'+(min>30?' longo':'')+'" data-chegada="'+ag.hora_chegada+'">'
+    espPill='<span class="tpill'+(min>30?' longo':'')+'" data-chegada="'+ag.hora_chegada+'">'
       +'<i class="bi bi-clock"></i> '+fmtEsp(ag.hora_chegada)+'</span>';
   }
 
-  // Botão WhatsApp — sempre visível
+  // Badge modalidade
+  var badgeMod = ag.modalidade==='ONLINE'
+    ? '<span class="badge bonl"><i class="bi bi-camera-video"></i> Onl</span>'
+    : '<span class="badge bpre"><i class="bi bi-person-fill"></i> Pre</span>';
+  if(ag.is_encaixe) badgeMod='<span class="badge bg-primary" style="font-size:.6rem">ENC</span>'+badgeMod;
+
+  // Badge tipo colorido
+  var tipoMap={PRIMEIRA_CONSULTA:{cls:'btipo-primeira',lbl:'⭐1ªCons'},CONSULTA:{cls:'btipo-consulta',lbl:'Consulta'},RETORNO:{cls:'btipo-retorno',lbl:'Retorno'},PROCEDIMENTO:{cls:'btipo-proc',lbl:'Proced.'}};
+  var tipoInfo = tipoMap[ag.tipo||'CONSULTA']||{cls:'btipo-consulta',lbl:esc(ag.tipo||'')};
+  var badgeTipo='<span class="badge '+tipoInfo.cls+'">'+tipoInfo.lbl+'</span>';
+
+  // Convênio truncado 8 chars
+  var conv=ag.convenio||'';
+  var badgeConv=conv?'<span class="badge bg-light text-dark border" style="font-size:.6rem" title="'+esc(conv)+'">'+esc(conv.length>8?conv.substring(0,8)+'…':conv)+'</span>':'';
+
+  // Hora atendido
+  var horaAten=ag.hora_atendido?'<span class="badge bg-light text-muted border" style="font-size:.6rem"><i class="bi bi-check2-all text-success"></i> '+new Date(ag.hora_atendido).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</span>':'';
+
+  // Ícone OBS — só se tiver texto
+  var obsIcon=(ag.observacao||'').trim()
+    ?'<span class="obs-icon" title="'+esc((ag.observacao||'').trim())+'" data-bs-toggle="tooltip" data-bs-placement="top"><i class="bi bi-chat-left-text-fill"></i></span>'
+    :'';
+
+  // Botão WhatsApp — ícone apenas
   var tel=(ag.telefone_whatsapp||'').replace(/\D/g,'');
   var btnWpp='';
-  if(tel) {
+  if(tel){
     var msg=encodeURIComponent('Olá '+esc(ag.paciente_nome||'')+', sua consulta está agendada para '+brDate(ag.data_agenda)+' às '+ag.hora_agenda+'. Por favor, confirme seu comparecimento. Obrigado!');
-    btnWpp='<a href="https://wa.me/55'+tel+'?text='+msg+'" target="_blank" '
-      +'class="btn btn-success btn-act" onclick="event.stopPropagation()" title="Enviar WhatsApp">'
-      +'<i class="bi bi-whatsapp"></i> WPP</a>';
+    btnWpp='<a href="https://wa.me/55'+tel+'?text='+msg+'" target="_blank" class="btn btn-success btn-act px-2" onclick="event.stopPropagation()" title="Enviar WhatsApp"><i class="bi bi-whatsapp"></i></a>';
   } else {
-    btnWpp='<button class="btn btn-outline-secondary btn-act usado" '
-      +'title="Sem celular"><i class="bi bi-whatsapp"></i> WPP</button>';
+    btnWpp='<button class="btn btn-outline-secondary btn-act px-2 usado" title="Sem celular"><i class="bi bi-whatsapp"></i></button>';
   }
 
-  // Badges de modalidade e extras
-  var badges='';
-  if(ag.is_encaixe)        badges+='<span class="badge bg-primary ms-1" style="font-size:.6rem">ENC</span>';
-  if(ag.primeira_consulta) badges+='<span class="badge b1v ms-1"><i class="bi bi-star-fill"></i> 1ª</span>';
-  if(ag.modalidade==='ONLINE') badges+='<span class="badge bonl ms-1"><i class="bi bi-camera-video"></i> Onl</span>';
-  else                         badges+='<span class="badge bpre ms-1"><i class="bi bi-person-fill"></i> Pre</span>';
+  // Botão Chegada
+  var chegadaUsado=!!ag.hora_chegada;
+  var btnChegada='<button class="btn btn-outline-info btn-act'+(chegadaUsado?' usado':'')+'" '
+    +(chegadaUsado?'':'onclick="event.stopPropagation();window._AG.acao(\'chegada\','+ag.id+')" ')
+    +'title="'+(chegadaUsado?'Chegada já registrada':'Registrar Chegada')+'"><i class="bi bi-door-open"></i> Chegada</button>';
 
-  var horaAten = ag.hora_atendido
-    ? '<span class="badge bg-light text-muted border ms-1" style="font-size:.6rem"><i class="bi bi-check2-all text-success"></i> '
-      +new Date(ag.hora_atendido).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</span>' : '';
-
-  // Botão Chegada — sempre visível, esmaecido se já registrado
-  var chegadaUsado = !!ag.hora_chegada;
-  var btnChegada = '<button class="btn btn-outline-info btn-act'+(chegadaUsado?' usado':'')+'" '
-    +(chegadaUsado ? '' : 'onclick="event.stopPropagation();window._AG.acao(\'chegada\','+ag.id+')" ')
-    +'title="'+(chegadaUsado?'Chegada registrada':'Registrar Chegada')+'">'
-    +'<i class="bi bi-door-open"></i> Chegada</button>';
-
-  // Botão Atender — sempre visível, esmaecido se finalizado/cancelado
-  var atendDesab = (st==='ATENDIDO'||st==='CANCELADO'||st==='FALTA');
-  var btnAtender = '';
-  if(st==='EM_ATENDIMENTO') {
-    btnAtender='<button class="btn btn-success btn-act" '
-      +'onclick="event.stopPropagation();window._AG.iniciarAtendimento('+ag.id+')" title="Retomar Atendimento">'
-      +'<i class="bi bi-arrow-right-circle-fill"></i> Retomar</button>';
+  // Botão Atender
+  var atendDesab=(st==='ATENDIDO'||st==='CANCELADO'||st==='FALTA');
+  var btnAtender='';
+  if(st==='EM_ATENDIMENTO'){
+    btnAtender='<button class="btn btn-success btn-act" onclick="event.stopPropagation();window._AG.iniciarAtendimento('+ag.id+')" title="Retomar"><i class="bi bi-arrow-right-circle-fill"></i> Retomar</button>';
   } else {
     btnAtender='<button class="btn btn-outline-primary btn-act'+(atendDesab?' usado':'')+'" '
       +(atendDesab?'':' onclick="event.stopPropagation();window._AG.iniciarAtendimento('+ag.id+')"')
-      +' title="'+(atendDesab?stLbl[st]:'Iniciar Atendimento')+'">'
-      +'<i class="bi bi-play-fill"></i> Atender</button>';
+      +' title="'+(atendDesab?stLbl[st]:'Iniciar Atendimento')+'"><i class="bi bi-play-fill"></i> Atender</button>';
   }
 
-  // Dropdown — ações secundárias + desfazer chegada
-  var ddItems='';
-  ddItems+='<li><a class="dropdown-item" onclick="window._AG.abrirEditar(event,'+ag.id+')">'
-    +'<i class="bi bi-pencil" style="color:#6f42c1"></i> Editar / Remarcar</a></li>';
-  ddItems+='<li><hr class="dropdown-divider my-1"></li>';
-  // Desfazer chegada
-  if(ag.hora_chegada)
-    ddItems+='<li><a class="dropdown-item text-info" onclick="window._AG.acao(\'remover_chegada\','+ag.id+')">'
-      +'<i class="bi bi-door-closed text-info"></i> Remover Chegada</a></li>';
-  // Voltar status
-  if(st!=='AGUARDANDO')
-    ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'AGUARDANDO\')">'
-      +'<i class="bi bi-arrow-counterclockwise text-warning"></i> Voltar p/ Aguardando</a></li>';
-  if(st!=='FALTA')
-    ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'FALTA\')">'
-      +'<i class="bi bi-x-circle text-danger"></i> Registrar Falta</a></li>';
-  if(st!=='CANCELADO')
-    ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'CANCELADO\')">'
-      +'<i class="bi bi-slash-circle text-secondary"></i> Cancelar</a></li>';
-  ddItems+='<li><hr class="dropdown-divider my-1"></li>';
-  ddItems+='<li><a class="dropdown-item text-danger" onclick="window._AG.acao(\'excluir\','+ag.id+')">'
-    +'<i class="bi bi-trash"></i> Excluir</a></li>';
+  // Dropdown
+  var ddItems='<li><a class="dropdown-item" onclick="window._AG.abrirEditar(event,'+ag.id+')"><i class="bi bi-pencil" style="color:#6f42c1"></i> Editar / Remarcar</a></li>'
+    +'<li><hr class="dropdown-divider my-1"></li>';
+  if(ag.hora_chegada) ddItems+='<li><a class="dropdown-item text-info" onclick="window._AG.acao(\'remover_chegada\','+ag.id+')"><i class="bi bi-door-closed text-info"></i> Remover Chegada</a></li>';
+  if(st!=='AGENDADO')   ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'AGENDADO\')"><i class="bi bi-calendar-check text-success"></i> Voltar p/ Agendado</a></li>';
+  if(st!=='AGUARDANDO') ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'AGUARDANDO\')"><i class="bi bi-arrow-counterclockwise text-warning"></i> Voltar p/ Aguardando</a></li>';
+  if(st!=='FALTA')      ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'FALTA\')"><i class="bi bi-x-circle text-danger"></i> Registrar Falta</a></li>';
+  if(st!=='CANCELADO')  ddItems+='<li><a class="dropdown-item" onclick="window._AG.acao(\'status\','+ag.id+',\'CANCELADO\')"><i class="bi bi-slash-circle text-secondary"></i> Cancelar</a></li>';
+  ddItems+='<li><hr class="dropdown-divider my-1"></li><li><a class="dropdown-item text-danger" onclick="window._AG.acao(\'excluir\','+ag.id+')"><i class="bi bi-trash"></i> Excluir</a></li>';
 
-  var dropdown='<div class="dropdown">'
-    +'<button class="btn btn-outline-secondary btn-act" data-bs-toggle="dropdown" '
-      +'onclick="event.stopPropagation()"><i class="bi bi-three-dots-vertical"></i></button>'
-    +'<ul class="dropdown-menu dropdown-menu-end" style="font-size:.8rem;min-width:190px">'+ddItems+'</ul>'
-    +'</div>';
+  var dropdown='<div class="dropdown"><button class="btn btn-outline-secondary btn-act px-2" data-bs-toggle="dropdown" onclick="event.stopPropagation()"><i class="bi bi-three-dots-vertical"></i></button>'
+    +'<ul class="dropdown-menu dropdown-menu-end" style="font-size:.8rem;min-width:200px">'+ddItems+'</ul></div>';
 
+  // Layout: grip | nome | mod | status | tipo | convenio | timer | horaAten || obs || wpp | chegada | atender | menu
   return '<div class="ag-card s-'+st+(ag.is_encaixe?' encaixe':'')+'" draggable="true" '
     +'ondblclick="window._AG.abrirEditar(event,'+ag.id+')" '
     +'ondragstart="window._AG.onDragStart(event,'+ag.id+')" ondragend="window._AG.onDragEnd(event)">'
     +'<span class="card-grip"><i class="bi bi-grip-vertical"></i></span>'
-    // Info: nome + badges + status + tipo + convênio + timer
     +'<div class="flex-grow-1 d-flex align-items-center flex-wrap gap-1 overflow-hidden" style="min-width:0">'
-      +'<span class="fw-bold" style="font-size:.82rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(ag.paciente_nome||'')+'">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
-      +badges
-      +'<span class="badge bg-'+corMap[st]+' text-'+(corMap[st]==='warning'?'dark':'white')+'" style="font-size:.62rem">'
-        +'<i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
-      +(ag.tipo?'<span class="badge bg-secondary" style="font-size:.6rem">'+esc(ag.tipo)+'</span>':'')
-      +(ag.convenio?'<span class="badge bg-light text-dark border" style="font-size:.6rem">'+esc(ag.convenio)+'</span>':'')
-      +espPill
-      +horaAten
+      +'<span class="fw-bold" style="font-size:.74rem;max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(ag.paciente_nome||'')+'">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
+      +badgeMod
+      +'<span class="badge bg-'+corMap[st]+' '+(stTxt[st]||'text-white')+'" style="font-size:.6rem"><i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
+      +badgeTipo+badgeConv+espPill+horaAten
     +'</div>'
-    // Botões: coluna vertical fixa
-    +'<div class="ag-actions">'
-      +'<div class="d-flex gap-1">'
-        +btnWpp+btnChegada+btnAtender+dropdown
-      +'</div>'
+    +(obsIcon?'<span class="mx-1 flex-shrink-0">'+obsIcon+'</span>':'')
+    +'<div class="d-flex gap-1 align-items-center flex-shrink-0">'
+      +btnWpp+btnChegada+btnAtender+dropdown
     +'</div>'
     +'</div>';
 }
@@ -1179,7 +1163,6 @@ AG.abrirModalAg = function(hora) {
   document.getElementById('agTelefone').value    = '';
   document.getElementById('agConvenio').value    = '';
   document.getElementById('agObs').value         = '';
-  document.getElementById('agPrimeira').checked  = false;
   document.getElementById('agModP').checked      = true;
   document.getElementById('agTipo').value        = 'CONSULTA';
   document.getElementById('agInfoPac').classList.add('d-none');
@@ -1193,27 +1176,29 @@ async function agConfirmarAg() {
   if(!nome){ Swal.fire({icon:'warning',title:'Campo obrigatório',text:'Informe o nome do paciente.',confirmButtonColor:'#0dcaf0'}); return; }
 
   var pacId = document.getElementById('agPacId').value;
-  if(!pacId && !document.getElementById('agPrimeira').checked) {
+  var tipoAtual = document.getElementById('agTipo').value;
+  if(!pacId && tipoAtual !== 'PRIMEIRA_CONSULTA') {
     var confPac = await Swal.fire({
       icon:'question', title:'Paciente não cadastrado',
-      text:'Paciente não encontrado no cadastro. Marcar como Primeira Consulta?',
+      text:'Paciente não encontrado no cadastro. Deseja marcar como 1ª Consulta?',
       showCancelButton:true, confirmButtonText:'Sim, marcar',
       cancelButtonText:'Cancelar', confirmButtonColor:'#d97706'
     });
     if(!confPac.isConfirmed) return;
-    document.getElementById('agPrimeira').checked = true;
+    document.getElementById('agTipo').value = 'PRIMEIRA_CONSULTA';
   }
 
+  var tipoVal = document.getElementById('agTipo').value;
   var r = await api({}, 'POST', {
     id_profissional:   parseInt(document.getElementById('agProfissional').value),
     data_agenda:       document.getElementById('agData').value,
     hora_agenda:       AG.horaSel,
     paciente_nome:     nome,
     paciente_id:       pacId||null,
-    tipo:              document.getElementById('agTipo').value,
+    tipo:              tipoVal,
     modalidade:        document.querySelector('input[name="agMod"]:checked').value,
-    status:            'AGUARDANDO',
-    primeira_consulta: document.getElementById('agPrimeira').checked,
+    status:            'AGENDADO',
+    primeira_consulta: tipoVal==='PRIMEIRA_CONSULTA',
     telefone_whatsapp: document.getElementById('agTelefone').value,
     convenio:          document.getElementById('agConvenio').value,
     observacao:        document.getElementById('agObs').value,
@@ -1236,8 +1221,7 @@ async function agOnBuscaPac(v) {
     if(!pacs||!pacs.length) {
       dd.innerHTML='<div class="dbi text-muted">'
         +'<i class="bi bi-person-x-fill text-danger"></i> Paciente não encontrado no cadastro.<br>'
-        +'<small>Marque como <strong>Primeira Consulta (1ª Vez)</strong>.</small></div>';
-      document.getElementById('agPrimeira').checked = true;
+        +'<small>Selecione <strong>⭐ 1ª Consulta</strong> no campo Tipo.</small></div>';
     } else {
       dd.innerHTML=pacs.map(function(p){
         var tel=p.Celular||p.Telefone||'';
@@ -1255,15 +1239,16 @@ window.agOnBuscaPac = agOnBuscaPac;
 window._agSelecionarPac = function(p) {
   if(typeof p==='string') try{ p=JSON.parse(p.replace(/'/g,'"')); }catch(e){return;}
   var tel=p.Celular||p.Telefone||'';
+  var conv=p.Convenio||p.convenio||'';
   document.getElementById('agBuscaPac').value  = p.Nome||'';
   document.getElementById('agPacId').value     = p.pcod||'';
   document.getElementById('agPacTel').value    = tel;
   document.getElementById('agTelefone').value  = tel;
+  if(conv) document.getElementById('agConvenio').value = conv;
   document.getElementById('agTagNome').textContent = p.Nome||'';
   document.getElementById('agTagDoc').textContent  = p.Documento||'';
   document.getElementById('agInfoPac').classList.remove('d-none');
   document.getElementById('agDropdownBusca').style.display='none';
-  document.getElementById('agPrimeira').checked = false; // paciente cadastrado → não é 1ª vez por default
 };
 
 function agLimparPac() {
