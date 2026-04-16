@@ -235,5 +235,33 @@ async function cancelarCadastro() {
     window.ehEdicao = false;
     carregarConteudo('pacientes.html');
 }
+
+async function carregarComboConvenios(idSelecionado = "") {
+    const select = document.getElementById('p_convenio');
+    
+    try {
+        // Busca a lista de convênios da sua nova API
+        const res = await fetch('/api/convenios');
+        const json = await res.json();
+
+        if (json.sucesso && json.dados) {
+            // Limpa o "Carregando..." e adiciona a opção padrão
+            select.innerHTML = '<option value="">Selecione um Convênio</option>';
+            
+            json.dados.forEach(conv => {
+                const selected = (conv.id == idSelecionado) ? 'selected' : '';
+                select.innerHTML += `<option value="${conv.id}" ${selected}>${conv.CONVENIO}</option>`;
+            });
+        } else {
+            select.innerHTML = '<option value="">Erro ao carregar</option>';
+        }
+    } catch (e) {
+        console.error("Erro ao buscar convênios:", e);
+        select.innerHTML = '<option value="">Erro de conexão</option>';
+    }
+}
+
+
+  
   
 </script>
