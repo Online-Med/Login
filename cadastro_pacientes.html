@@ -240,31 +240,35 @@ async function cancelarCadastro() {
 
 
 
-  async function carregarComboConvenios(idSelecionado = "") {
-    const select = document.getElementById('comboConvenios'); // Ajustado para o ID do seu HTML
-    
+async function carregarComboConvenios(idSelecionado = "") {
+    const select = document.getElementById('comboConvenios');
+    if (!select) return console.error("Elemento 'comboConvenios' não encontrado na página.");
+
     try {
         const res = await fetch('/api/convenios');
         const json = await res.json();
+        
+        console.log("Dados recebidos da API:", json); // Verifique isso no F12 do navegador
 
-        if (json.sucesso && json.dados) {
-            // Limpa o "Carregando..." e adiciona a opção em branco
+        if (json.sucesso && Array.isArray(json.dados)) {
+            // Limpa o "Carregando..."
             select.innerHTML = '<option value="">Selecione um Convênio</option>';
             
+            let options = "";
             json.dados.forEach(conv => {
-                // Compara o ID do banco com o ID que o paciente já tem salvo
-                const selected = (conv.id == idSelecionado) ? 'selected' : '';
-                select.innerHTML += `<option value="${conv.id}" ${selected}>${conv.CONVENIO}</option>`;
+                // Força a comparação de strings/números com '==' 
+                const selected = (String(conv.id) === String(idSelecionado)) ? 'selected' : '';
+                options += `<option value="${conv.id}" ${selected}>${conv.CONVENIO}</option>`;
             });
+            select.innerHTML += options;
         } else {
-            select.innerHTML = '<option value="">Erro ao carregar lista</option>';
+            select.innerHTML = '<option value="">Erro: Dados inválidos</option>';
         }
     } catch (e) {
         console.error("Erro ao buscar convênios:", e);
         select.innerHTML = '<option value="">Erro de conexão</option>';
     }
 }
-
 
   
   
