@@ -236,24 +236,28 @@ async function cancelarCadastro() {
     carregarConteudo('pacientes.html');
 }
 
-async function carregarComboConvenios(idSelecionado = "") {
-    const select = document.getElementById('p_convenio');
+
+
+
+
+  async function carregarComboConvenios(idSelecionado = "") {
+    const select = document.getElementById('comboConvenios'); // Ajustado para o ID do seu HTML
     
     try {
-        // Busca a lista de convênios da sua nova API
         const res = await fetch('/api/convenios');
         const json = await res.json();
 
         if (json.sucesso && json.dados) {
-            // Limpa o "Carregando..." e adiciona a opção padrão
+            // Limpa o "Carregando..." e adiciona a opção em branco
             select.innerHTML = '<option value="">Selecione um Convênio</option>';
             
             json.dados.forEach(conv => {
+                // Compara o ID do banco com o ID que o paciente já tem salvo
                 const selected = (conv.id == idSelecionado) ? 'selected' : '';
                 select.innerHTML += `<option value="${conv.id}" ${selected}>${conv.CONVENIO}</option>`;
             });
         } else {
-            select.innerHTML = '<option value="">Erro ao carregar</option>';
+            select.innerHTML = '<option value="">Erro ao carregar lista</option>';
         }
     } catch (e) {
         console.error("Erro ao buscar convênios:", e);
