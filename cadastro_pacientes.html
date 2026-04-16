@@ -138,38 +138,70 @@
     });
   }
 
-  async function carregarConvenios(valorAtual) {
-    try {
-      const resp = await fetch('/api/convenios');
-      const lista = await resp.json();
-      const combo = document.getElementById('comboConvenios');
-      if (!combo) return;
-      combo.innerHTML = '<option value="">Selecione...</option>';
-      if (lista) lista.forEach(c => {
+async function carregarConvenios(valorAtual) {
+  try {
+    const resp = await fetch('/api/convenios');
+    const json = await resp.json(); // Alterado de 'lista' para 'json' para clareza
+    
+    const combo = document.getElementById('comboConvenios');
+    if (!combo) return;
+
+    combo.innerHTML = '<option value="">Selecione...</option>';
+
+    // IMPORTANTE: Acessar json.dados porque a API retorna um objeto
+    if (json.sucesso && json.dados) {
+      json.dados.forEach(c => {
         const opt = document.createElement('option');
-        opt.value = c.CONVENIO; opt.textContent = c.CONVENIO;
+        opt.value = c.id; // Grava o ID no banco
+        opt.textContent = c.CONVENIO; // Mostra o Nome
+        
+        // Se o ID do convênio for igual ao valorAtual do paciente, seleciona
+        if (String(c.id) === String(valorAtual)) {
+          opt.selected = true;
+        }
+        
         combo.appendChild(opt);
       });
-    } catch (e) { console.error(e); }
-  }
-
-  (async function inicializarCadastro() {
-    await carregarConvenios();
-    
-    // SE NÃO FOR EDIÇÃO, reserva um novo PCOD
-    if (window.ehEdicao === false) {
-      console.log("Iniciando NOVO cadastro...");
-      try {
-        const resp = await fetch('/api/pacientes', { method: 'POST' });
-        const data = await resp.json();
-        if (data.sucesso) {
-          document.getElementById('f_pcod').value = data.pcod;
-        }
-      } catch (err) { console.error("Erro reserva:", err); }
-    } else {
-      console.log("Iniciando EDIÇÃO de paciente existente.");
     }
-  })();
+  } catch (e) { 
+    console.error("Erro ao carregar combo:", e); 
+  }
+}
+
+(async function inicializarCadastro() {
+  // 1. Primeiro declaramos a variável para o valor do convênio
+  let convenioDoPaciente = "";
+
+  // 2. SE FOR EDIÇÃO, precisamos buscar os dados do paciente primeiro
+  if (window.ehEdicao === true && window.idPacienteEdicao) {
+    console.log("Iniciando EDIÇÃO de paciente existente.");
+    try {
+      const resp = await fetch(`/api/pacientes?pcod=${window.idPacienteEdicao}`);
+      const data = await resp.json();
+      if (data.sucesso) {
+        // Supondo que o campo no banco de pacientes se chama 'Convenio'
+        convenioDoPaciente = data.paciente.Convenio; 
+        
+        // ... aqui você preenche os outros campos do paciente (nome, cpf, etc) ...
+      }
+    } catch (err) { console.error("Erro ao buscar dados do paciente:", err); }
+  } 
+  
+  // 3. Agora carregamos os convênios passando o valor para selecionar
+  await carregarConvenios(convenioDoPaciente);
+  
+  // 4. SE NÃO FOR EDIÇÃO, reserva um novo PCOD
+  if (window.ehEdicao === false) {
+    console.log("Iniciando NOVO cadastro...");
+    try {
+      const resp = await fetch('/api/pacientes', { method: 'POST' });
+      const data = await resp.json();
+      if (data.sucesso) {
+        document.getElementById('f_pcod').value = data.pcod;
+      }
+    } catch (err) { console.error("Erro reserva:", err); }
+  }
+})();
 
   async function salvarNovoPaciente() {
     const pcodReal = document.getElementById('f_pcod')?.value;
