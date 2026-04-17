@@ -53,13 +53,14 @@
   cursor:grab; user-select:none;
 }
 .ag-card.dragging  { opacity:.25; }
-.s-AGENDADO        { border-left-color:#20c997; }
-.s-AGUARDANDO      { border-left-color:#ffc107; }
-.s-EM_ATENDIMENTO  { border-left-color:#0d6efd; }
-.s-ATENDIDO        { border-left-color:#198754; background:#f6fdf9; }
-.s-FALTA           { border-left-color:#dc3545; background:#fff7f7; }
-.s-CANCELADO       { border-left-color:#6c757d; background:#f9f9f9; opacity:.7; }
-.ag-card.encaixe   { background:#eff4ff; border-left-color:#4361ee; }
+/* ── Cores de status ─── sincronizadas com o painel lateral ── */
+.s-AGENDADO        { border-left-color:#0dcaf0; background:#f0feff; }   /* ciano  */
+.s-AGUARDANDO      { border-left-color:#ffc107; background:#fffdf0; }   /* âmbar  */
+.s-EM_ATENDIMENTO  { border-left-color:#0d6efd; background:#f0f4ff; }   /* azul   */
+.s-ATENDIDO        { border-left-color:#198754; background:#f0faf4; }   /* verde  */
+.s-FALTA           { border-left-color:#dc3545; background:#fff4f4; }   /* vermelho */
+.s-CANCELADO       { border-left-color:#6c757d; background:#f6f6f6; opacity:.7; }
+.ag-card.encaixe   { border-left-color:#6f42c1 !important; background:#f5f0ff !important; }
 .drop-ok           { background:#e7f5ff !important; }
 
 /* Badges de tipo de consulta */
@@ -95,13 +96,15 @@
 .bonl { background:#cfe2ff; color:#084298; font-size:.64rem; }
 .bpre { background:#d1e7dd; color:#0a3622; font-size:.64rem; font-weight:600; }
 
-/* Botões de ação no card — coluna vertical fixa */
+/* Botões de ação no card */
 .ag-actions { display:flex; flex-direction:column; align-items:stretch; gap:2px; flex-shrink:0; }
 .btn-act { font-size:.68rem !important; padding:2px 7px !important; border-radius:4px !important; line-height:1.4 !important; white-space:nowrap; }
 /* Botão usado: esmaecido mas visível */
 .btn-act.usado { opacity:.35; pointer-events:none; }
 .btn-purple { background:#6f42c1; border-color:#6f42c1; }
 .btn-purple:hover { background:#5a32a3; border-color:#5a32a3; }
+/* Info zone: sem quebra de linha */
+.ag-info { display:flex; align-items:center; gap:4px; flex:1 1 0; min-width:0; overflow:hidden; flex-wrap:nowrap; }
 
 /* Sidebar – Em Atendimento */
 .atend-item {
@@ -197,21 +200,35 @@
           <i class="bi bi-bar-chart-fill text-info"></i> Status do Dia
         </div>
         <div class="card-body p-2">
-          <div class="stat-card" style="background:#fff8e1">
+          <!-- Agendados (novo, topo) -->
+          <div class="stat-card" style="background:#e0f9ff; border-left:3px solid #0dcaf0">
+            <div><div class="num" style="color:#0891b2" id="agCntAgendado">0</div><div class="lbl">Agendados</div></div>
+            <i class="bi bi-calendar-check-fill fs-4" style="color:#0dcaf0"></i>
+          </div>
+          <!-- Aguardando -->
+          <div class="stat-card" style="background:#fff8e1; border-left:3px solid #ffc107">
             <div><div class="num text-warning" id="agCntEspera">0</div><div class="lbl">Aguardando</div></div>
             <i class="bi bi-hourglass-split text-warning fs-4"></i>
           </div>
-          <div class="stat-card" style="background:#e8f5e9">
+          <!-- Em Atendimento -->
+          <div class="stat-card" style="background:#e8eeff; border-left:3px solid #0d6efd">
+            <div><div class="num text-primary" id="agCntAtendendo">0</div><div class="lbl">Em Atendimento</div></div>
+            <i class="bi bi-play-circle-fill text-primary fs-4"></i>
+          </div>
+          <!-- Atendidos -->
+          <div class="stat-card" style="background:#e8f5e9; border-left:3px solid #198754">
             <div><div class="num text-success" id="agCntAtendido">0</div><div class="lbl">Atendidos</div></div>
             <i class="bi bi-check-circle-fill text-success fs-4"></i>
           </div>
-          <div class="stat-card" style="background:#fce4ec">
+          <!-- Faltas/Canc. -->
+          <div class="stat-card" style="background:#fce4ec; border-left:3px solid #dc3545">
             <div><div class="num text-danger" id="agCntFaltas">0</div><div class="lbl">Faltas/Canc.</div></div>
             <i class="bi bi-x-circle-fill text-danger fs-4"></i>
           </div>
-          <div class="stat-card" style="background:#e3f2fd">
-            <div><div class="num text-primary" id="agCntTotal">0</div><div class="lbl">Total</div></div>
-            <i class="bi bi-calendar2-check-fill text-primary fs-4"></i>
+          <!-- Total -->
+          <div class="stat-card" style="background:#f0f0f0; border-left:3px solid #6c757d">
+            <div><div class="num text-secondary" id="agCntTotal">0</div><div class="lbl">Total</div></div>
+            <i class="bi bi-calendar2-check-fill text-secondary fs-4"></i>
           </div>
         </div>
       </div>
@@ -794,10 +811,11 @@ function _preencherSlots() {
 // ── Render card ──────────────────────────────────────────────────
 function _renderCard(ag) {
   var st = ag.status||'AGENDADO';
-  var corMap = {AGENDADO:'success',AGUARDANDO:'warning',EM_ATENDIMENTO:'primary',ATENDIDO:'success',FALTA:'danger',CANCELADO:'secondary'};
-  var stLbl  = {AGENDADO:'Agendado',AGUARDANDO:'Aguardando',EM_ATENDIMENTO:'Atendendo',ATENDIDO:'Atendido',FALTA:'Faltou',CANCELADO:'Cancelado'};
-  var stIco  = {AGENDADO:'bi-calendar-check',AGUARDANDO:'bi-hourglass-split',EM_ATENDIMENTO:'bi-play-fill',ATENDIDO:'bi-check-circle-fill',FALTA:'bi-x-circle',CANCELADO:'bi-slash-circle'};
-  var stTxt  = {AGENDADO:'text-white',AGUARDANDO:'text-dark',EM_ATENDIMENTO:'text-white',ATENDIDO:'text-white',FALTA:'text-white',CANCELADO:'text-white'};
+  // Cores inline sincronizadas com o painel lateral
+  var stBg  = {AGENDADO:'#0dcaf0',AGUARDANDO:'#ffc107',EM_ATENDIMENTO:'#0d6efd',ATENDIDO:'#198754',FALTA:'#dc3545',CANCELADO:'#6c757d'};
+  var stTxt = {AGENDADO:'#000',AGUARDANDO:'#000',EM_ATENDIMENTO:'#fff',ATENDIDO:'#fff',FALTA:'#fff',CANCELADO:'#fff'};
+  var stLbl = {AGENDADO:'Agendado',AGUARDANDO:'Aguardando',EM_ATENDIMENTO:'Atendendo',ATENDIDO:'Atendido',FALTA:'Faltou',CANCELADO:'Cancelado'};
+  var stIco = {AGENDADO:'bi-calendar-check',AGUARDANDO:'bi-hourglass-split',EM_ATENDIMENTO:'bi-play-fill',ATENDIDO:'bi-check-circle-fill',FALTA:'bi-x-circle',CANCELADO:'bi-slash-circle'};
 
   // Timer de espera
   var espPill='';
@@ -875,10 +893,10 @@ function _renderCard(ag) {
     +'ondblclick="window._AG.abrirEditar(event,'+ag.id+')" '
     +'ondragstart="window._AG.onDragStart(event,'+ag.id+')" ondragend="window._AG.onDragEnd(event)">'
     +'<span class="card-grip"><i class="bi bi-grip-vertical"></i></span>'
-    +'<div class="flex-grow-1 d-flex align-items-center flex-wrap gap-1 overflow-hidden" style="min-width:0">'
-      +'<span class="fw-bold" style="font-size:.74rem;max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(ag.paciente_nome||'')+'">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
+    +'<div class="ag-info">'
+      +'<span class="fw-bold flex-shrink-0" style="font-size:.74rem;width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(ag.paciente_nome||'')+'">'+esc(ag.paciente_nome||'Sem nome')+'</span>'
       +badgeMod
-      +'<span class="badge bg-'+corMap[st]+' '+(stTxt[st]||'text-white')+'" style="font-size:.6rem"><i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
+      +'<span class="badge flex-shrink-0" style="font-size:.6rem;background:'+stBg[st]+';color:'+stTxt[st]+'"><i class="bi '+stIco[st]+'"></i> '+stLbl[st]+'</span>'
       +badgeTipo+badgeConv+espPill+horaAten
     +'</div>'
     +(obsIcon?'<span class="mx-1 flex-shrink-0">'+obsIcon+'</span>':'')
@@ -1004,17 +1022,21 @@ function _atualizarTimers() {
   _atualizarEspera();
 }
 function _atualizarContadores() {
-  var tot=0,esp=0,aten=0,falt=0;
+  var tot=0, agendado=0, esp=0, atendendo=0, aten=0, falt=0;
   AG.dados.forEach(function(a){
     if(a.is_bloqueado||a.is_encaixe) return; tot++;
-    if(a.status==='AGUARDANDO'||a.status==='EM_ATENDIMENTO') esp++;
-    if(a.status==='ATENDIDO') aten++;
+    if(a.status==='AGENDADO')        agendado++;
+    if(a.status==='AGUARDANDO')      esp++;
+    if(a.status==='EM_ATENDIMENTO')  atendendo++;
+    if(a.status==='ATENDIDO')        aten++;
     if(a.status==='FALTA'||a.status==='CANCELADO') falt++;
   });
-  var e1=document.getElementById('agCntEspera');   if(e1) e1.textContent=esp;
-  var e2=document.getElementById('agCntAtendido'); if(e2) e2.textContent=aten;
-  var e3=document.getElementById('agCntFaltas');   if(e3) e3.textContent=falt;
-  var e4=document.getElementById('agCntTotal');    if(e4) e4.textContent=tot;
+  var e0=document.getElementById('agCntAgendado');  if(e0) e0.textContent=agendado;
+  var e1=document.getElementById('agCntEspera');    if(e1) e1.textContent=esp;
+  var e5=document.getElementById('agCntAtendendo'); if(e5) e5.textContent=atendendo;
+  var e2=document.getElementById('agCntAtendido');  if(e2) e2.textContent=aten;
+  var e3=document.getElementById('agCntFaltas');    if(e3) e3.textContent=falt;
+  var e4=document.getElementById('agCntTotal');     if(e4) e4.textContent=tot;
 }
 function _atualizarAtendimento() {
   var lista = AG.dados.filter(function(a){
