@@ -41,18 +41,18 @@
   padding:24px 32px; min-height:400px; font-family:'Times New Roman',serif;
   font-size:12pt; line-height:1.6; box-shadow:0 2px 8px rgba(0,0,0,.06);
 }
-.prev-topo1   { font-weight:700; font-size:11pt; color:#1a1a2e; }
-.prev-topo2   { font-size:10pt; color:#333; font-style:italic; }
+.prev-topo1   { font-weight:700; font-size:12pt; color:#1a1a2e; }
+.prev-topo2   { font-size:12pt; color:#333; font-style:italic; }
 .prev-linha   { border-bottom:2px solid #3b5bdb; margin:4px 0 20px; }
 .prev-titulo  { text-align:center; font-weight:700; font-size:14pt; margin:30px 0 24px; letter-spacing:.08em; }
-.prev-data    { margin-bottom:28px; font-size:11pt; }
-.prev-corpo   { text-indent:3em; margin-bottom:30px; font-size:11pt; line-height:1.8; white-space:pre-wrap; }
+.prev-data    { margin-bottom:28px; font-size:12pt; }
+.prev-corpo   { text-indent:3em; margin-bottom:30px; font-size:12pt; line-height:1.8; white-space:pre-wrap; }
 .prev-assin   { text-align:center; margin-top:60px; margin-bottom:4px; }
 .prev-assin-linha { border-top:1px solid #333; width:240px; margin:0 auto 6px; }
-.prev-assin-nome  { font-weight:700; font-size:10pt; }
-.prev-assin-crm   { font-size:10pt; }
-.prev-cid     { font-size:9.5pt; color:#444; text-align:center; margin-top:6px; }
-.prev-rodape  { margin-top:24px; padding-top:10px; border-top:1px solid #dee2e6; font-size:9pt; text-align:center; color:#555; }
+.prev-assin-nome  { font-weight:700; font-size:12pt; }
+.prev-assin-crm   { font-size:12pt; }
+.prev-cid     { font-size:12pt; color:#444; text-align:center; margin-top:6px; }
+.prev-rodape  { margin-top:24px; padding-top:10px; border-top:1px solid #dee2e6; font-size:12pt; text-align:center; color:#555; }
 .prev-corte   { border-top:2px dashed #aaa; margin:28px 0; text-align:center; }
 .prev-corte span { background:#fff; padding:0 10px; font-size:.72rem; color:#aaa; position:relative; top:-1px; }
 
@@ -75,7 +75,7 @@
     bottom:0; left:10mm; right:20mm;
     padding-top:8pt;
     border-top:1px solid #aaa;
-    font-size:8.5pt;
+    font-size:12pt;
     text-align:center;
     color:#444;
   }
@@ -799,21 +799,21 @@ function _htmlAtestadoPrint(corpo) {
   return '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.6">'
 
     // ── TOPO ──
-    +(c.atestado_topo1?'<div style="font-weight:700;font-size:11pt">'+esc(c.atestado_topo1)+'</div>':'')
-    +(c.atestado_topo2?'<div style="font-size:10pt;font-style:italic">'+esc(c.atestado_topo2)+'</div>':'')
+    +(c.atestado_topo1?'<div style="font-weight:700;font-size:12pt">'+esc(c.atestado_topo1)+'</div>':'')
+    +(c.atestado_topo2?'<div style="font-size:12pt;font-style:italic">'+esc(c.atestado_topo2)+'</div>':'')
     +'<div style="border-bottom:2px solid #3b5bdb;margin:4pt 0 0"></div>'
 
     // ── CONTEÚDO ──
     +'<div style="text-align:center;font-weight:700;font-size:14pt;letter-spacing:.06em;margin:32pt 0 24pt">'+esc(c.atestado_titulo||'ATESTADO MÉDICO')+'</div>'
-    +'<div style="margin-bottom:24pt;font-size:11pt">'+esc(dataStr)+'</div>'
-    +'<div style="text-indent:3em;margin-bottom:28pt;font-size:11pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
-    +(AT.cidCod?'<div style="font-size:9.5pt;text-align:center;margin-bottom:8pt">CID-10: '+esc(AT.cidCod)+' – '+esc(AT.cidDesc||'')+'</div>':'')
+    +'<div style="margin-bottom:24pt;font-size:12pt">'+esc(dataStr)+'</div>'
+    +'<div style="text-indent:3em;margin-bottom:28pt;font-size:12pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
+    +(AT.cidCod?'<div style="font-size:11pt;text-align:center;margin-bottom:8pt">CID-10: '+esc(AT.cidCod)+' – '+esc(AT.cidDesc||'')+'</div>':'')
 
     // ── ASSINATURA ──
     +'<div style="text-align:center;margin-top:60pt">'
       +'<div style="border-top:1px solid #333;width:240pt;margin:0 auto 6pt"></div>'
-      +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:10pt">'+esc(c.atestado_assinatura1)+'</div>':'')
-      +(c.atestado_assinatura2?'<div style="font-size:10pt">'+esc(c.atestado_assinatura2)+'</div>':'')
+      +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:12pt">'+esc(c.atestado_assinatura1)+'</div>':'')
+      +(c.atestado_assinatura2?'<div style="font-size:12pt">'+esc(c.atestado_assinatura2)+'</div>':'')
     +'</div>'
 
     +'</div>'
