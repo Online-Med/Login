@@ -51,6 +51,11 @@
                     <label class="form-label fw-bold">Especialidade</label>
                     <input type="text" class="form-control" id="u_especialidade" placeholder="Ex: Cardiologia">
                 </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">CRM</label>
+                    <input type="NUMBER" class="form-control" id="CRM" placeholder="00000">C
+                </div>
                 
                 <div class="col-md-3">
                     <label class="form-label fw-bold d-block">Possui Agenda?</label>
@@ -90,6 +95,7 @@ async function inicializarCadastroUsuario() {
                 document.getElementById('u_email').value = u.email;
                 document.getElementById('u_perfil').value = u.perfil;
                 document.getElementById('u_especialidade').value = u.especialidade || "";
+                document.getElementById('u_crm').value = u.crm || "";
                 document.getElementById('u_agenda').checked = (u.tem_agenda === 'SIM');
             }
         } catch (e) {
@@ -124,6 +130,7 @@ async function salvarUsuario() {
         email: document.getElementById('u_email').value,
         perfil: document.getElementById('u_perfil').value,
         especialidade: document.getElementById('u_especialidade').value,
+        crm: document.getElementById('u_crm').value,
         tem_agenda: document.getElementById('u_agenda').checked ? 'SIM' : 'NÃO'
     };
 
