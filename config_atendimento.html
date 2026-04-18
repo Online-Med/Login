@@ -1,0 +1,1252 @@
+<!-- config_atendimento.html -->
+<style>
+/* ── Toolbar ──────────────────────────────────────────────────── */
+#cfgToolbar {
+  background:#fff; border-bottom:1px solid #e9ecef;
+  padding:8px 16px; display:flex; align-items:center; gap:10px;
+}
+#cfgToolbar h5 { margin:0; font-size:.95rem; }
+
+/* ── Tabela padrão ─────────────────────────────────────────────── */
+.cfg-table { width:100%; font-size:.82rem; border-collapse:collapse; }
+.cfg-table th {
+  background:#f8f9fa; font-size:.72rem; text-transform:uppercase;
+  letter-spacing:.04em; color:#6c757d; padding:7px 10px;
+  border-bottom:2px solid #dee2e6; white-space:nowrap;
+}
+.cfg-table td { padding:6px 10px; border-bottom:1px solid #f2f2f2; vertical-align:middle; }
+.cfg-table tbody tr:hover td { background:#f8f9fb; }
+
+/* ── Sub-tabs seção ────────────────────────────────────────────── */
+.secao-tab {
+  cursor:pointer; padding:7px 14px; font-size:.82rem;
+  color:#6c757d; border-bottom:2px solid transparent;
+  display:inline-flex; align-items:center; gap:5px;
+  user-select:none; transition:color .15s;
+}
+.secao-tab.active { color:#0d6efd; border-bottom-color:#0d6efd; font-weight:500; }
+.secao-tab:hover:not(.active) { color:#495057; }
+
+/* ── Ícone picker ──────────────────────────────────────────────── */
+.icon-grid {
+  display:grid; grid-template-columns:repeat(9,1fr);
+  gap:5px; max-height:310px; overflow-y:auto;
+}
+.icon-cell {
+  display:flex; flex-direction:column; align-items:center;
+  cursor:pointer; padding:6px 3px; border-radius:6px;
+  border:1px solid transparent; font-size:.6rem;
+  color:#6c757d; gap:3px; transition:all .1s;
+}
+.icon-cell:hover { background:#f0f4ff; border-color:#cfe2ff; color:#084298; }
+.icon-cell.selected { background:#cfe2ff; border-color:#084298; color:#084298; }
+.icon-cell i { font-size:1.15rem; }
+
+/* ── Badges ────────────────────────────────────────────────────── */
+.badge-tipo { font-size:.62rem; padding:2px 7px; border-radius:10px; }
+
+/* ── Vincular lista ────────────────────────────────────────────── */
+.vinc-row { display:flex; align-items:center; gap:10px; padding:6px 10px; border-bottom:1px solid #f2f2f2; }
+.vinc-row:last-child { border-bottom:none; }
+.vinc-row:hover { background:#f8f9fb; }
+.vinc-row.inativo { opacity:.5; }
+.vinc-ordem-input { width:52px; }
+
+/* ── SQL block ─────────────────────────────────────────────────── */
+#cfgSQLContent {
+  font-size:.72rem; line-height:1.55;
+  max-height:420px; overflow-y:auto;
+  white-space:pre; background:#1e1e2e; color:#cdd6f4;
+  border-radius:8px; padding:14px 16px;
+}
+</style>
+
+
+<!-- ═══ TOOLBAR ═══════════════════════════════════════════════════ -->
+<div id="cfgToolbar">
+  <h5><i class="bi bi-sliders text-info"></i> Configurações de Atendimento</h5>
+  <div class="ms-auto d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" onclick="cfgMostrarSQL()">
+      <i class="bi bi-database"></i> SQL / Tabelas
+    </button>
+  </div>
+</div>
+
+
+<!-- ═══ CONTEÚDO ══════════════════════════════════════════════════ -->
+<div class="container-fluid p-3">
+  <ul class="nav nav-tabs" id="cfgTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cfgTabTipos" role="tab">
+        <i class="bi bi-list-ul text-info"></i> Tipos de Consulta
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cfgTabComp" role="tab">
+        <i class="bi bi-grid-3x3 text-success"></i> Componentes
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cfgTabMeds" role="tab">
+        <i class="bi bi-capsule text-primary"></i> Medicamentos
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cfgTabExames" role="tab">
+        <i class="bi bi-microscope text-danger"></i> Exames
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content mt-3">
+
+    <!-- ── TAB: TIPOS DE CONSULTA ─────────────────────────────── -->
+    <div class="tab-pane fade show active" id="cfgTabTipos" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="text-muted small mb-0">
+          Defina os tipos de consulta. Em cada um você poderá configurar quais <strong>componentes</strong>,
+          <strong>medicamentos favoritos</strong> e <strong>exames favoritos</strong> aparecem.
+        </p>
+        <button class="btn btn-sm btn-info text-white" onclick="cfgAbrirModalTipo()">
+          <i class="bi bi-plus-circle"></i> Novo Tipo
+        </button>
+      </div>
+      <div class="card border-0 shadow-sm">
+        <table class="cfg-table">
+          <thead>
+            <tr>
+              <th style="width:55px">Ordem</th>
+              <th>Nome</th>
+              <th>Descrição</th>
+              <th style="width:75px">Status</th>
+              <th style="width:220px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="cfgListaTipos">
+            <tr><td colspan="5" class="text-center text-muted py-5">
+              <div class="spinner-border spinner-border-sm text-info me-2"></div>Carregando...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: COMPONENTES ───────────────────────────────────── -->
+    <div class="tab-pane fade" id="cfgTabComp" role="tabpanel">
+      <div class="d-flex align-items-center border-bottom mb-3 gap-0">
+        <span class="secao-tab active" id="sTab-SINAIS_VITAIS" onclick="cfgMudarSecao('SINAIS_VITAIS')">
+          <i class="bi bi-heart-pulse"></i> Sinais Vitais
+        </span>
+        <span class="secao-tab" id="sTab-HDA" onclick="cfgMudarSecao('HDA')">
+          <i class="bi bi-chat-text"></i> História da Doença
+        </span>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted small" id="cfgSecaoDesc">
+          Campos do bloco Sinais Vitais — ícone, valor padrão e unidade.
+        </span>
+        <button class="btn btn-sm btn-success" onclick="cfgAbrirModalComp()">
+          <i class="bi bi-plus-circle"></i> Novo Componente
+        </button>
+      </div>
+      <div class="card border-0 shadow-sm">
+        <table class="cfg-table">
+          <thead>
+            <tr>
+              <th style="width:55px">Ordem</th>
+              <th style="width:44px">Ícone</th>
+              <th>Nome</th>
+              <th>Valor padrão</th>
+              <th style="width:90px">Unidade</th>
+              <th style="width:90px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="cfgListaComp">
+            <tr><td colspan="6" class="text-center text-muted py-5">
+              <div class="spinner-border spinner-border-sm text-success me-2"></div>Carregando...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: MEDICAMENTOS ──────────────────────────────────── -->
+    <div class="tab-pane fade" id="cfgTabMeds" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+        <div class="input-group input-group-sm" style="max-width:290px">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="cfgBuscaMed"
+                 placeholder="Buscar por nome ou categoria..."
+                 oninput="cfgFiltrarMeds(this.value)">
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="cfgAbrirModalMed()">
+          <i class="bi bi-plus-circle"></i> Novo Medicamento
+        </button>
+      </div>
+      <div class="card border-0 shadow-sm">
+        <table class="cfg-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th style="width:90px">Dose</th>
+              <th>Posologia</th>
+              <th style="width:110px">Categoria</th>
+              <th style="width:160px"><i class="bi bi-star-fill text-warning"></i> Favorito em</th>
+              <th style="width:80px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="cfgListaMeds">
+            <tr><td colspan="6" class="text-center text-muted py-5">
+              <div class="spinner-border spinner-border-sm text-primary me-2"></div>Carregando...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB: EXAMES ────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="cfgTabExames" role="tabpanel">
+      <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+        <div class="input-group input-group-sm" style="max-width:290px">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="cfgBuscaExame"
+                 placeholder="Buscar por nome ou grupo..."
+                 oninput="cfgFiltrarExames(this.value)">
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="cfgAbrirModalExame()">
+          <i class="bi bi-plus-circle"></i> Novo Exame
+        </button>
+      </div>
+      <div class="card border-0 shadow-sm">
+        <table class="cfg-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th style="width:130px">Grupo</th>
+              <th style="width:160px"><i class="bi bi-star-fill text-warning"></i> Favorito em</th>
+              <th style="width:80px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="cfgListaExames">
+            <tr><td colspan="4" class="text-center text-muted py-5">
+              <div class="spinner-border spinner-border-sm text-danger me-2"></div>Carregando...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div><!-- /container -->
+
+
+<!-- ═══ MODAIS ════════════════════════════════════════════════════ -->
+
+<!-- Modal: Tipo de Consulta -->
+<div class="modal fade" id="cfgModalTipo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#0dcaf0,#0a9cbf)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-list-ul"></i> <span id="cfgTipoTitulo">Novo Tipo de Consulta</span>
+        </h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cfgTipoId">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cfgTipoNome"
+                 placeholder="ex: Consulta Padrão, Retorno, Procedimento…">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Descrição</label>
+          <input type="text" class="form-control form-control-sm" id="cfgTipoDesc"
+                 placeholder="Breve descrição opcional">
+        </div>
+        <div class="row mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-bold">Ordem de exibição</label>
+            <input type="number" class="form-control form-control-sm" id="cfgTipoOrdem" value="1" min="1">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-bold">Status</label>
+            <div class="form-check form-switch mt-1">
+              <input class="form-check-input" type="checkbox" id="cfgTipoAtivo" checked>
+              <label class="form-check-label small" for="cfgTipoAtivo">Ativo</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-info text-white btn-sm" onclick="cfgSalvarTipo()">
+          <i class="bi bi-check-circle"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Configurar Componentes do Tipo -->
+<div class="modal fade" id="cfgModalVincular" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#6f42c1,#5a32a3)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-grid-3x3"></i> Componentes para:
+          <strong id="cfgVincTipoNome"></strong>
+        </h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <ul class="nav nav-tabs px-3 pt-2 bg-light" id="cfgVincTabs">
+          <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cfgVincSV">
+              <i class="bi bi-heart-pulse"></i> Sinais Vitais
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cfgVincHDA">
+              <i class="bi bi-chat-text"></i> Hist. Doença Atual
+            </button>
+          </li>
+        </ul>
+        <div class="tab-content p-3">
+          <div class="tab-pane fade show active" id="cfgVincSV">
+            <p class="text-muted small mb-2">
+              Ative os campos de Sinais Vitais para este tipo de consulta e defina a ordem.
+            </p>
+            <div id="cfgVincListaSV" class="card border-0 bg-light rounded p-1"></div>
+          </div>
+          <div class="tab-pane fade" id="cfgVincHDA">
+            <p class="text-muted small mb-2">
+              Ative os campos de História da Doença para este tipo de consulta.
+            </p>
+            <div id="cfgVincListaHDA" class="card border-0 bg-light rounded p-1"></div>
+          </div>
+        </div>
+        <div class="px-3 pb-2">
+          <small class="text-muted">
+            <i class="bi bi-info-circle"></i>
+            Componentes inativos não aparecem na tela de atendimento para este tipo.
+          </small>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+        <button class="btn btn-sm text-white" style="background:#6f42c1;border-color:#6f42c1"
+                onclick="cfgSalvarVinculos()">
+          <i class="bi bi-check-circle"></i> Salvar configuração
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Componente -->
+<div class="modal fade" id="cfgModalComp" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#198754,#146c43)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-grid-3x3"></i> <span id="cfgCompTitulo">Novo Componente</span>
+        </h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cfgCompId">
+        <input type="hidden" id="cfgCompSecao">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cfgCompNome"
+                 placeholder="ex: Pressão Arterial, Frequência Cardíaca…">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Ícone Bootstrap Icons</label>
+          <div class="input-group input-group-sm">
+            <span class="input-group-text" style="min-width:38px; justify-content:center">
+              <i id="cfgCompIcoPreview" class="bi bi-circle fs-5"></i>
+            </span>
+            <input type="text" class="form-control" id="cfgCompIcone"
+                   value="bi-circle" placeholder="bi-heart-pulse"
+                   oninput="cfgAtualizarIcoPreview()">
+            <button class="btn btn-outline-secondary" type="button" onclick="cfgAbrirIconePicker()"
+                    title="Escolher ícone">
+              <i class="bi bi-grid-fill"></i>
+            </button>
+          </div>
+          <small class="text-muted">Digite o nome da classe Bootstrap Icons ou use o seletor.</small>
+        </div>
+        <div class="row mb-3">
+          <div class="col-7">
+            <label class="form-label small fw-bold">Valor padrão</label>
+            <input type="text" class="form-control form-control-sm" id="cfgCompDefault"
+                   placeholder="ex: 120/80">
+          </div>
+          <div class="col-5">
+            <label class="form-label small fw-bold">Unidade</label>
+            <input type="text" class="form-control form-control-sm" id="cfgCompUnidade"
+                   placeholder="ex: mmHg">
+          </div>
+        </div>
+        <div class="mb-1">
+          <label class="form-label small fw-bold">Ordem</label>
+          <input type="number" class="form-control form-control-sm" id="cfgCompOrdem"
+                 value="1" min="1" style="width:90px">
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success btn-sm" onclick="cfgSalvarComp()">
+          <i class="bi bi-check-circle"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Medicamento -->
+<div class="modal fade" id="cfgModalMed" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#0d6efd,#0a58ca)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-capsule"></i> <span id="cfgMedTitulo">Novo Medicamento</span>
+        </h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cfgMedId">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cfgMedNome"
+                 placeholder="ex: Amoxicilina 500mg Cápsula">
+        </div>
+        <div class="row mb-3">
+          <div class="col-5">
+            <label class="form-label small fw-bold">Dose</label>
+            <input type="text" class="form-control form-control-sm" id="cfgMedDose"
+                   placeholder="ex: 500mg">
+          </div>
+          <div class="col-7">
+            <label class="form-label small fw-bold">Categoria</label>
+            <input type="text" class="form-control form-control-sm" id="cfgMedCategoria"
+                   placeholder="ex: Antibiótico, Analgésico…">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Posologia</label>
+          <textarea class="form-control form-control-sm" id="cfgMedPosologia" rows="2"
+                    placeholder="ex: 1 cápsula de 8 em 8 horas por 7 dias"></textarea>
+        </div>
+        <div class="mb-1">
+          <label class="form-label small fw-bold">
+            <i class="bi bi-star-fill text-warning"></i> Favorito nos tipos de consulta
+          </label>
+          <div id="cfgMedFavTipos" class="d-flex flex-wrap gap-2 mt-2 p-2 bg-light rounded">
+            <span class="text-muted small">Carregando…</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="cfgSalvarMed()">
+          <i class="bi bi-check-circle"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Exame -->
+<div class="modal fade" id="cfgModalExame" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#dc3545,#b02a37)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-microscope"></i> <span id="cfgExameTitulo">Novo Exame</span>
+        </h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cfgExameId">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" id="cfgExameNome"
+                 placeholder="ex: Hemograma Completo">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Grupo</label>
+          <input type="text" class="form-control form-control-sm" id="cfgExameGrupo"
+                 placeholder="ex: Hematologia, Bioquímica, Imagem, Urinálise…">
+        </div>
+        <div class="mb-1">
+          <label class="form-label small fw-bold">
+            <i class="bi bi-star-fill text-warning"></i> Favorito nos tipos de consulta
+          </label>
+          <div id="cfgExameFavTipos" class="d-flex flex-wrap gap-2 mt-2 p-2 bg-light rounded">
+            <span class="text-muted small">Carregando…</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-danger btn-sm" onclick="cfgSalvarExame()">
+          <i class="bi bi-check-circle"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Ícone Picker -->
+<div class="modal fade" id="cfgModalIcone" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title mb-0"><i class="bi bi-grid-fill"></i> Selecionar ícone</h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" class="form-control form-control-sm mb-3"
+               id="cfgIconeBusca" placeholder="Filtrar ícones (ex: heart, chart, file…)"
+               oninput="cfgFiltrarIcones(this.value)">
+        <div class="icon-grid" id="cfgIconeGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: SQL -->
+<div class="modal fade" id="cfgModalSQL" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title mb-0"><i class="bi bi-database-fill-gear text-info"></i> SQL — criar tabelas no Supabase</h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-info-circle"></i>
+          Execute este SQL no <strong>SQL Editor</strong> do Supabase antes de usar esta página.
+          É necessário executar apenas uma vez.
+        </div>
+        <pre id="cfgSQLContent"></pre>
+        <button class="btn btn-sm btn-outline-secondary mt-2"
+                onclick="navigator.clipboard.writeText(document.getElementById('cfgSQLContent').textContent)
+                  .then(function(){ Swal.fire({icon:'success',title:'Copiado!',timer:900,showConfirmButton:false}); })">
+          <i class="bi bi-clipboard"></i> Copiar SQL
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ SCRIPT ════════════════════════════════════════════════════ -->
+<script>
+(function () {
+'use strict';
+
+/* ── Estado ──────────────────────────────────────────────────── */
+var CFG = {
+  secaoAtual: 'SINAIS_VITAIS',
+  tipos: [],
+  componentes: { SINAIS_VITAIS: [], HDA: [] },
+  meds: [],
+  exames: [],
+  vincTipoId: null,
+  vinculos: [],     // vínculos carregados do backend para o tipo sendo editado
+};
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function cfgApi(params, method, body) {
+  var qs = Object.entries(params || {}).map(function (p) {
+    return encodeURIComponent(p[0]) + '=' + encodeURIComponent(p[1]);
+  }).join('&');
+  var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/config_atendimento?' + qs, opts);
+  return r.json();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TIPOS DE CONSULTA
+════════════════════════════════════════════════════════════════ */
+async function cfgCarregarTipos() {
+  try {
+    var data = await cfgApi({ action: 'tipos' });
+    CFG.tipos = Array.isArray(data) ? data : [];
+    cfgRenderTipos();
+  } catch (e) { console.error('cfgCarregarTipos', e); }
+}
+
+function cfgRenderTipos() {
+  var tbody = document.getElementById('cfgListaTipos');
+  if (!CFG.tipos.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">'
+      + '<i class="bi bi-list-ul fs-3 d-block mb-2 opacity-25"></i>'
+      + 'Nenhum tipo cadastrado. Clique em <strong>Novo Tipo</strong> para começar.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = CFG.tipos.map(function (t) {
+    return '<tr>'
+      + '<td class="text-center text-muted fw-bold">' + t.ordem + '</td>'
+      + '<td><strong>' + esc(t.nome) + '</strong></td>'
+      + '<td class="text-muted small">' + esc(t.descricao || '—') + '</td>'
+      + '<td class="text-center">'
+        + (t.ativo
+          ? '<span class="badge text-bg-success">Ativo</span>'
+          : '<span class="badge text-bg-secondary">Inativo</span>')
+      + '</td>'
+      + '<td>'
+        + '<button class="btn btn-sm py-0 border-0 me-1" style="color:#6f42c1" '
+          + 'onclick="cfgAbrirVincular(' + t.id + ')" title="Configurar componentes">'
+          + '<i class="bi bi-grid-3x3-gap-fill"></i> Componentes</button>'
+        + '<button class="btn btn-sm btn-outline-secondary border-0 py-0 me-1" '
+          + 'onclick="cfgAbrirModalTipo(' + t.id + ')" title="Editar">'
+          + '<i class="bi bi-pencil"></i></button>'
+        + '<button class="btn btn-sm btn-outline-danger border-0 py-0" '
+          + 'onclick="cfgExcluirTipo(' + t.id + ')" title="Excluir">'
+          + '<i class="bi bi-trash"></i></button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+window.cfgAbrirModalTipo = function (id) {
+  var t = id ? CFG.tipos.find(function (x) { return x.id == id; }) : null;
+  document.getElementById('cfgTipoId').value    = t ? t.id : '';
+  document.getElementById('cfgTipoNome').value  = t ? t.nome : '';
+  document.getElementById('cfgTipoDesc').value  = t ? (t.descricao || '') : '';
+  document.getElementById('cfgTipoOrdem').value = t ? t.ordem : (CFG.tipos.length + 1);
+  document.getElementById('cfgTipoAtivo').checked = t ? t.ativo : true;
+  document.getElementById('cfgTipoTitulo').textContent = t ? 'Editar Tipo' : 'Novo Tipo de Consulta';
+  abrirModal('cfgModalTipo');
+};
+
+window.cfgSalvarTipo = async function () {
+  var nome = document.getElementById('cfgTipoNome').value.trim();
+  if (!nome) {
+    Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#0dcaf0' });
+    return;
+  }
+  var id = document.getElementById('cfgTipoId').value;
+  var body = {
+    nome: nome,
+    descricao: document.getElementById('cfgTipoDesc').value.trim() || null,
+    ordem: parseInt(document.getElementById('cfgTipoOrdem').value) || 1,
+    ativo: document.getElementById('cfgTipoAtivo').checked,
+  };
+  var r = id
+    ? await cfgApi({ action: 'tipo', id: id }, 'PATCH', body)
+    : await cfgApi({ action: 'tipo' }, 'POST', body);
+  if (r && r.sucesso === false) {
+    Swal.fire({ icon: 'error', title: 'Erro', text: r.erro || 'Falha ao salvar.', confirmButtonColor: '#dc3545' });
+    return;
+  }
+  fecharModal('cfgModalTipo');
+  await cfgCarregarTipos();
+};
+
+window.cfgExcluirTipo = async function (id) {
+  var conf = await Swal.fire({
+    icon: 'warning', title: 'Excluir tipo?',
+    text: 'Os vínculos de componentes deste tipo também serão removidos.',
+    showCancelButton: true, confirmButtonText: 'Excluir',
+    confirmButtonColor: '#dc3545', cancelButtonText: 'Cancelar',
+  });
+  if (!conf.isConfirmed) return;
+  await cfgApi({ action: 'tipo', id: id }, 'DELETE');
+  await cfgCarregarTipos();
+};
+
+/* ════════════════════════════════════════════════════════════════
+   COMPONENTES
+════════════════════════════════════════════════════════════════ */
+async function cfgCarregarComponentes(secao) {
+  secao = secao || CFG.secaoAtual;
+  try {
+    var data = await cfgApi({ action: 'componentes', secao: secao });
+    CFG.componentes[secao] = Array.isArray(data) ? data : [];
+    if (secao === CFG.secaoAtual) cfgRenderComponentes();
+  } catch (e) { console.error('cfgCarregarComponentes', e); }
+}
+
+window.cfgMudarSecao = function (secao) {
+  CFG.secaoAtual = secao;
+  ['SINAIS_VITAIS', 'HDA'].forEach(function (s) {
+    var el = document.getElementById('sTab-' + s);
+    if (el) el.classList.toggle('active', s === secao);
+  });
+  var descs = {
+    SINAIS_VITAIS: 'Campos do bloco Sinais Vitais — ícone, valor padrão e unidade.',
+    HDA: 'Campos do bloco História da Doença Atual.',
+  };
+  var descEl = document.getElementById('cfgSecaoDesc');
+  if (descEl) descEl.textContent = descs[secao] || '';
+
+  if (!(CFG.componentes[secao] || []).length) {
+    cfgCarregarComponentes(secao);
+  } else {
+    cfgRenderComponentes();
+  }
+};
+
+function cfgRenderComponentes() {
+  var lista = CFG.componentes[CFG.secaoAtual] || [];
+  var tbody = document.getElementById('cfgListaComp');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">'
+      + '<i class="bi bi-grid fs-3 d-block mb-2 opacity-25"></i>'
+      + 'Nenhum componente nesta seção. Clique em <strong>Novo Componente</strong>.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function (c) {
+    return '<tr>'
+      + '<td class="text-center text-muted">' + c.ordem + '</td>'
+      + '<td class="text-center"><i class="bi ' + esc(c.icone || 'bi-circle') + ' fs-5"></i></td>'
+      + '<td><strong>' + esc(c.nome) + '</strong></td>'
+      + '<td class="text-muted">' + esc(c.valor_default || '—') + '</td>'
+      + '<td class="text-muted">' + esc(c.unidade || '—') + '</td>'
+      + '<td>'
+        + '<button class="btn btn-sm btn-outline-secondary border-0 py-0 me-1" '
+          + 'onclick="cfgAbrirModalComp(' + c.id + ')" title="Editar">'
+          + '<i class="bi bi-pencil"></i></button>'
+        + '<button class="btn btn-sm btn-outline-danger border-0 py-0" '
+          + 'onclick="cfgExcluirComp(' + c.id + ')" title="Excluir">'
+          + '<i class="bi bi-trash"></i></button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+window.cfgAbrirModalComp = function (id) {
+  var lista = CFG.componentes[CFG.secaoAtual] || [];
+  var c = id ? lista.find(function (x) { return x.id == id; }) : null;
+  document.getElementById('cfgCompId').value      = c ? c.id : '';
+  document.getElementById('cfgCompSecao').value   = CFG.secaoAtual;
+  document.getElementById('cfgCompNome').value    = c ? c.nome : '';
+  document.getElementById('cfgCompIcone').value   = c ? (c.icone || 'bi-circle') : 'bi-circle';
+  document.getElementById('cfgCompDefault').value = c ? (c.valor_default || '') : '';
+  document.getElementById('cfgCompUnidade').value = c ? (c.unidade || '') : '';
+  document.getElementById('cfgCompOrdem').value   = c ? c.ordem : (lista.length + 1);
+  document.getElementById('cfgCompTitulo').textContent = c ? 'Editar Componente' : 'Novo Componente';
+  cfgAtualizarIcoPreview();
+  abrirModal('cfgModalComp');
+};
+
+window.cfgAtualizarIcoPreview = function () {
+  var ico = (document.getElementById('cfgCompIcone').value || 'bi-circle').trim();
+  var prev = document.getElementById('cfgCompIcoPreview');
+  if (prev) prev.className = 'bi ' + ico + ' fs-5';
+};
+
+window.cfgSalvarComp = async function () {
+  var nome = document.getElementById('cfgCompNome').value.trim();
+  if (!nome) {
+    Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#198754' });
+    return;
+  }
+  var id    = document.getElementById('cfgCompId').value;
+  var secao = document.getElementById('cfgCompSecao').value;
+  var body  = {
+    nome: nome,
+    secao: secao,
+    icone: document.getElementById('cfgCompIcone').value.trim() || 'bi-circle',
+    valor_default: document.getElementById('cfgCompDefault').value.trim() || null,
+    unidade: document.getElementById('cfgCompUnidade').value.trim() || null,
+    ordem: parseInt(document.getElementById('cfgCompOrdem').value) || 1,
+  };
+  var r = id
+    ? await cfgApi({ action: 'componente', id: id }, 'PATCH', body)
+    : await cfgApi({ action: 'componente' }, 'POST', body);
+  if (r && r.sucesso === false) {
+    Swal.fire({ icon: 'error', title: 'Erro', text: r.erro || 'Falha ao salvar.', confirmButtonColor: '#dc3545' });
+    return;
+  }
+  fecharModal('cfgModalComp');
+  await cfgCarregarComponentes(secao);
+};
+
+window.cfgExcluirComp = async function (id) {
+  var conf = await Swal.fire({
+    icon: 'warning', title: 'Excluir componente?',
+    showCancelButton: true, confirmButtonText: 'Excluir',
+    confirmButtonColor: '#dc3545', cancelButtonText: 'Cancelar',
+  });
+  if (!conf.isConfirmed) return;
+  await cfgApi({ action: 'componente', id: id }, 'DELETE');
+  await cfgCarregarComponentes(CFG.secaoAtual);
+};
+
+/* ════════════════════════════════════════════════════════════════
+   VINCULAR COMPONENTES AO TIPO
+════════════════════════════════════════════════════════════════ */
+window.cfgAbrirVincular = async function (tipoId) {
+  var tipo = CFG.tipos.find(function (t) { return t.id == tipoId; });
+  if (!tipo) return;
+  CFG.vincTipoId = tipoId;
+  document.getElementById('cfgVincTipoNome').textContent = tipo.nome;
+
+  // Garante componentes carregados
+  if (!CFG.componentes.SINAIS_VITAIS.length) await cfgCarregarComponentes('SINAIS_VITAIS');
+  if (!CFG.componentes.HDA.length)           await cfgCarregarComponentes('HDA');
+
+  // Carrega vínculos existentes para este tipo
+  var vincData = await cfgApi({ action: 'tipo_componentes', tipo_id: tipoId });
+  CFG.vinculos = Array.isArray(vincData) ? vincData : [];
+
+  cfgRenderVincList('SINAIS_VITAIS', 'cfgVincListaSV');
+  cfgRenderVincList('HDA', 'cfgVincListaHDA');
+  abrirModal('cfgModalVincular');
+};
+
+function cfgRenderVincList(secao, containerId) {
+  var comps = CFG.componentes[secao] || [];
+  var container = document.getElementById(containerId);
+  if (!comps.length) {
+    container.innerHTML = '<p class="text-muted small p-3 mb-0">'
+      + 'Nenhum componente cadastrado para esta seção. '
+      + 'Cadastre primeiro na aba <strong>Componentes</strong>.</p>';
+    return;
+  }
+  container.innerHTML = comps.map(function (c) {
+    var vinc = CFG.vinculos.find(function (v) { return v.componente_id == c.id; });
+    var ativo = vinc ? vinc.ativo !== false : false;
+    var ordem = vinc ? (vinc.ordem || c.ordem) : c.ordem;
+    return '<div class="vinc-row' + (ativo ? '' : ' inativo') + '">'
+      + '<div style="width:38px">'
+        + '<input type="checkbox" class="form-check-input vinc-ativo" data-cid="' + c.id
+        + '" ' + (ativo ? 'checked' : '') + ' onchange="cfgVincToggle(this)">'
+      + '</div>'
+      + '<div style="width:28px" class="text-center">'
+        + '<i class="bi ' + esc(c.icone || 'bi-circle') + '"></i>'
+      + '</div>'
+      + '<div class="flex-grow-1"><strong>' + esc(c.nome) + '</strong>'
+        + (c.unidade ? ' <small class="text-muted">(' + esc(c.unidade) + ')</small>' : '')
+        + (c.valor_default ? '<br><small class="text-muted">Padrão: ' + esc(c.valor_default) + '</small>' : '')
+      + '</div>'
+      + '<div>'
+        + '<label class="form-label small mb-0 me-1">Ordem</label>'
+        + '<input type="number" class="form-control form-control-sm vinc-ordem" '
+          + 'data-cid="' + c.id + '" value="' + ordem + '" min="1" style="width:60px">'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+window.cfgVincToggle = function (checkbox) {
+  var row = checkbox.closest('.vinc-row');
+  if (row) row.classList.toggle('inativo', !checkbox.checked);
+};
+
+window.cfgSalvarVinculos = async function () {
+  var tipoId = CFG.vincTipoId;
+  var allComps = (CFG.componentes.SINAIS_VITAIS || []).concat(CFG.componentes.HDA || []);
+
+  var promises = allComps.map(async function (c) {
+    var ativoEl = document.querySelector('.vinc-ativo[data-cid="' + c.id + '"]');
+    var ordemEl = document.querySelector('.vinc-ordem[data-cid="' + c.id + '"]');
+    if (!ativoEl) return;
+
+    var ativo = ativoEl.checked;
+    var ordem = parseInt(ordemEl ? ordemEl.value : c.ordem) || c.ordem;
+    var existente = CFG.vinculos.find(function (v) { return v.componente_id == c.id; });
+
+    if (existente && existente.id) {
+      return cfgApi({ action: 'vincular', id: existente.id }, 'PATCH', { ativo: ativo, ordem: ordem });
+    } else if (ativo) {
+      return cfgApi({ action: 'vincular' }, 'POST',
+        { tipo_id: tipoId, componente_id: c.id, ativo: true, ordem: ordem });
+    }
+  });
+
+  await Promise.all(promises);
+  fecharModal('cfgModalVincular');
+  Swal.fire({ icon: 'success', title: 'Configuração salva!', timer: 1300, showConfirmButton: false });
+};
+
+/* ════════════════════════════════════════════════════════════════
+   MEDICAMENTOS
+════════════════════════════════════════════════════════════════ */
+async function cfgCarregarMeds() {
+  try {
+    var data = await cfgApi({ action: 'medicamentos' });
+    CFG.meds = Array.isArray(data) ? data : [];
+    cfgRenderMeds(CFG.meds);
+  } catch (e) { console.error('cfgCarregarMeds', e); }
+}
+
+function cfgRenderMeds(lista) {
+  var tbody = document.getElementById('cfgListaMeds');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">'
+      + '<i class="bi bi-capsule fs-3 d-block mb-2 opacity-25"></i>'
+      + 'Nenhum medicamento cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function (m) {
+    var favs    = Array.isArray(m.favorito_tipos) ? m.favorito_tipos : [];
+    var favHtml = favs.map(function (tid) {
+      var t = CFG.tipos.find(function (x) { return x.id == tid; });
+      return t ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle badge-tipo">'
+               + esc(t.nome) + '</span>' : '';
+    }).filter(Boolean).join(' ');
+    return '<tr>'
+      + '<td><strong>' + esc(m.nome) + '</strong></td>'
+      + '<td class="text-muted">' + esc(m.dose || '—') + '</td>'
+      + '<td class="text-muted small" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(m.posologia || '') + '">'
+        + esc(m.posologia || '—') + '</td>'
+      + '<td>' + (m.categoria ? '<span class="badge bg-light text-dark border">' + esc(m.categoria) + '</span>' : '—') + '</td>'
+      + '<td>' + (favHtml || '<span class="text-muted small">—</span>') + '</td>'
+      + '<td>'
+        + '<button class="btn btn-sm btn-outline-secondary border-0 py-0 me-1" '
+          + 'onclick="cfgAbrirModalMed(' + m.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>'
+        + '<button class="btn btn-sm btn-outline-danger border-0 py-0" '
+          + 'onclick="cfgExcluirMed(' + m.id + ')" title="Excluir"><i class="bi bi-trash"></i></button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+window.cfgFiltrarMeds = function (v) {
+  var t = v.toLowerCase();
+  cfgRenderMeds(CFG.meds.filter(function (m) {
+    return !t
+      || (m.nome || '').toLowerCase().includes(t)
+      || (m.categoria || '').toLowerCase().includes(t);
+  }));
+};
+
+function cfgRenderFavTipos(containerId, favAtual) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  if (!CFG.tipos.length) {
+    container.innerHTML = '<span class="text-muted small">Nenhum tipo cadastrado.</span>';
+    return;
+  }
+  container.innerHTML = CFG.tipos.filter(function (t) { return t.ativo; }).map(function (t) {
+    var checked = Array.isArray(favAtual) && favAtual.indexOf(t.id) !== -1;
+    return '<div class="form-check form-check-inline">'
+      + '<input class="form-check-input fav-tipo-check" type="checkbox" '
+        + 'id="fav-' + containerId + '-' + t.id + '" value="' + t.id + '" ' + (checked ? 'checked' : '') + '>'
+      + '<label class="form-check-label small" for="fav-' + containerId + '-' + t.id + '">'
+        + esc(t.nome) + '</label>'
+      + '</div>';
+  }).join('');
+}
+
+window.cfgAbrirModalMed = function (id) {
+  var m = id ? CFG.meds.find(function (x) { return x.id == id; }) : null;
+  document.getElementById('cfgMedId').value        = m ? m.id : '';
+  document.getElementById('cfgMedNome').value      = m ? m.nome : '';
+  document.getElementById('cfgMedDose').value      = m ? (m.dose || '') : '';
+  document.getElementById('cfgMedPosologia').value = m ? (m.posologia || '') : '';
+  document.getElementById('cfgMedCategoria').value = m ? (m.categoria || '') : '';
+  document.getElementById('cfgMedTitulo').textContent = m ? 'Editar Medicamento' : 'Novo Medicamento';
+  cfgRenderFavTipos('cfgMedFavTipos', m ? (m.favorito_tipos || []) : []);
+  abrirModal('cfgModalMed');
+};
+
+window.cfgSalvarMed = async function () {
+  var nome = document.getElementById('cfgMedNome').value.trim();
+  if (!nome) {
+    Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#0d6efd' });
+    return;
+  }
+  var id   = document.getElementById('cfgMedId').value;
+  var favs = Array.from(document.querySelectorAll('#cfgMedFavTipos .fav-tipo-check:checked'))
+               .map(function (el) { return parseInt(el.value); });
+  var body = {
+    nome: nome,
+    dose: document.getElementById('cfgMedDose').value.trim() || null,
+    posologia: document.getElementById('cfgMedPosologia').value.trim() || null,
+    categoria: document.getElementById('cfgMedCategoria').value.trim() || null,
+    favorito_tipos: favs,
+  };
+  var r = id
+    ? await cfgApi({ action: 'medicamento', id: id }, 'PATCH', body)
+    : await cfgApi({ action: 'medicamento' }, 'POST', body);
+  if (r && r.sucesso === false) {
+    Swal.fire({ icon: 'error', title: 'Erro', text: r.erro || 'Falha ao salvar.', confirmButtonColor: '#dc3545' });
+    return;
+  }
+  fecharModal('cfgModalMed');
+  await cfgCarregarMeds();
+};
+
+window.cfgExcluirMed = async function (id) {
+  var conf = await Swal.fire({
+    icon: 'warning', title: 'Excluir medicamento?',
+    showCancelButton: true, confirmButtonText: 'Excluir',
+    confirmButtonColor: '#dc3545', cancelButtonText: 'Cancelar',
+  });
+  if (!conf.isConfirmed) return;
+  await cfgApi({ action: 'medicamento', id: id }, 'DELETE');
+  await cfgCarregarMeds();
+};
+
+/* ════════════════════════════════════════════════════════════════
+   EXAMES
+════════════════════════════════════════════════════════════════ */
+async function cfgCarregarExames() {
+  try {
+    var data = await cfgApi({ action: 'exames' });
+    CFG.exames = Array.isArray(data) ? data : [];
+    cfgRenderExames(CFG.exames);
+  } catch (e) { console.error('cfgCarregarExames', e); }
+}
+
+function cfgRenderExames(lista) {
+  var tbody = document.getElementById('cfgListaExames');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-5">'
+      + '<i class="bi bi-microscope fs-3 d-block mb-2 opacity-25"></i>'
+      + 'Nenhum exame cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function (e) {
+    var favs    = Array.isArray(e.favorito_tipos) ? e.favorito_tipos : [];
+    var favHtml = favs.map(function (tid) {
+      var t = CFG.tipos.find(function (x) { return x.id == tid; });
+      return t ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle badge-tipo">'
+               + esc(t.nome) + '</span>' : '';
+    }).filter(Boolean).join(' ');
+    return '<tr>'
+      + '<td><strong>' + esc(e.nome) + '</strong></td>'
+      + '<td>' + (e.grupo ? '<span class="badge bg-light text-dark border">' + esc(e.grupo) + '</span>' : '—') + '</td>'
+      + '<td>' + (favHtml || '<span class="text-muted small">—</span>') + '</td>'
+      + '<td>'
+        + '<button class="btn btn-sm btn-outline-secondary border-0 py-0 me-1" '
+          + 'onclick="cfgAbrirModalExame(' + e.id + ')" title="Editar"><i class="bi bi-pencil"></i></button>'
+        + '<button class="btn btn-sm btn-outline-danger border-0 py-0" '
+          + 'onclick="cfgExcluirExame(' + e.id + ')" title="Excluir"><i class="bi bi-trash"></i></button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+window.cfgFiltrarExames = function (v) {
+  var t = v.toLowerCase();
+  cfgRenderExames(CFG.exames.filter(function (e) {
+    return !t
+      || (e.nome || '').toLowerCase().includes(t)
+      || (e.grupo || '').toLowerCase().includes(t);
+  }));
+};
+
+window.cfgAbrirModalExame = function (id) {
+  var ex = id ? CFG.exames.find(function (x) { return x.id == id; }) : null;
+  document.getElementById('cfgExameId').value    = ex ? ex.id : '';
+  document.getElementById('cfgExameNome').value  = ex ? ex.nome : '';
+  document.getElementById('cfgExameGrupo').value = ex ? (ex.grupo || '') : '';
+  document.getElementById('cfgExameTitulo').textContent = ex ? 'Editar Exame' : 'Novo Exame';
+  cfgRenderFavTipos('cfgExameFavTipos', ex ? (ex.favorito_tipos || []) : []);
+  abrirModal('cfgModalExame');
+};
+
+window.cfgSalvarExame = async function () {
+  var nome = document.getElementById('cfgExameNome').value.trim();
+  if (!nome) {
+    Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#dc3545' });
+    return;
+  }
+  var id   = document.getElementById('cfgExameId').value;
+  var favs = Array.from(document.querySelectorAll('#cfgExameFavTipos .fav-tipo-check:checked'))
+               .map(function (el) { return parseInt(el.value); });
+  var body = {
+    nome: nome,
+    grupo: document.getElementById('cfgExameGrupo').value.trim() || null,
+    favorito_tipos: favs,
+  };
+  var r = id
+    ? await cfgApi({ action: 'exame', id: id }, 'PATCH', body)
+    : await cfgApi({ action: 'exame' }, 'POST', body);
+  if (r && r.sucesso === false) {
+    Swal.fire({ icon: 'error', title: 'Erro', text: r.erro || 'Falha ao salvar.', confirmButtonColor: '#dc3545' });
+    return;
+  }
+  fecharModal('cfgModalExame');
+  await cfgCarregarExames();
+};
+
+window.cfgExcluirExame = async function (id) {
+  var conf = await Swal.fire({
+    icon: 'warning', title: 'Excluir exame?',
+    showCancelButton: true, confirmButtonText: 'Excluir',
+    confirmButtonColor: '#dc3545', cancelButtonText: 'Cancelar',
+  });
+  if (!conf.isConfirmed) return;
+  await cfgApi({ action: 'exame', id: id }, 'DELETE');
+  await cfgCarregarExames();
+};
+
+/* ════════════════════════════════════════════════════════════════
+   ÍCONE PICKER
+════════════════════════════════════════════════════════════════ */
+var ICONES = [
+  'bi-heart-pulse','bi-activity','bi-thermometer','bi-thermometer-half','bi-thermometer-low',
+  'bi-droplet','bi-droplet-half','bi-droplet-fill','bi-lungs','bi-lungs-fill',
+  'bi-eye','bi-eye-fill','bi-ear','bi-ear-fill','bi-person-standing',
+  'bi-bandaid','bi-bandaid-fill','bi-hospital','bi-hospital-fill','bi-capsule',
+  'bi-capsule-pill','bi-clipboard2-pulse','bi-clipboard2-pulse-fill','bi-stethoscope','bi-syringe',
+  'bi-scissors','bi-clipboard-heart','bi-clipboard-heart-fill','bi-heart','bi-heart-fill',
+  'bi-pulse','bi-graph-up','bi-graph-up-arrow','bi-graph-down','bi-bar-chart',
+  'bi-bar-chart-fill','bi-speedometer','bi-speedometer2','bi-rulers','bi-weight',
+  'bi-clock','bi-clock-fill','bi-calendar','bi-calendar-check','bi-journal-text',
+  'bi-journal-medical','bi-chat-text','bi-chat-text-fill','bi-file-medical','bi-file-text',
+  'bi-person','bi-person-fill','bi-people','bi-person-badge','bi-person-check',
+  'bi-microscope','bi-search','bi-flask','bi-flask-fill','bi-virus',
+  'bi-virus2','bi-radioactive','bi-brightness-high','bi-moon','bi-sun',
+  'bi-plus-circle','bi-plus-square','bi-dash-circle','bi-x-circle','bi-check-circle',
+  'bi-exclamation-triangle','bi-info-circle','bi-question-circle','bi-shield','bi-shield-check',
+  'bi-lightning','bi-lightning-fill','bi-fire','bi-snow','bi-wind',
+  'bi-arrow-up','bi-arrow-down','bi-arrow-left-right','bi-arrows-expand','bi-fullscreen',
+];
+
+window.cfgAbrirIconePicker = function () {
+  document.getElementById('cfgIconeBusca').value = '';
+  cfgRenderIconeGrid('');
+  abrirModal('cfgModalIcone');
+};
+
+function cfgRenderIconeGrid(filtro) {
+  var selecionado = (document.getElementById('cfgCompIcone').value || '').trim();
+  var lista = filtro
+    ? ICONES.filter(function (i) { return i.replace('bi-','').includes(filtro.toLowerCase()); })
+    : ICONES;
+  var grid = document.getElementById('cfgIconeGrid');
+  grid.innerHTML = lista.map(function (ico) {
+    return '<div class="icon-cell' + (ico === selecionado ? ' selected' : '') + '" '
+      + 'onclick="cfgSelecionarIcone(\'' + ico + '\')">'
+      + '<i class="bi ' + ico + '"></i>'
+      + '<span>' + ico.replace('bi-', '') + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+window.cfgFiltrarIcones = function (v) { cfgRenderIconeGrid(v); };
+
+window.cfgSelecionarIcone = function (ico) {
+  document.getElementById('cfgCompIcone').value = ico;
+  cfgAtualizarIcoPreview();
+  fecharModal('cfgModalIcone');
+  setTimeout(function () { abrirModal('cfgModalComp'); }, 200);
+};
+
+/* ════════════════════════════════════════════════════════════════
+   SQL
+════════════════════════════════════════════════════════════════ */
+window.cfgMostrarSQL = function () {
+  document.getElementById('cfgSQLContent').textContent = `-- config_atendimento — Execute no SQL Editor do Supabase (apenas uma vez)
+
+-- 1. Tipos de consulta
+CREATE TABLE IF NOT EXISTS config_tipos_consulta (
+  id          bigserial PRIMARY KEY,
+  nome        text NOT NULL,
+  descricao   text,
+  ativo       boolean DEFAULT true,
+  ordem       int DEFAULT 1,
+  created_at  timestamptz DEFAULT now()
+);
+
+-- 2. Catálogo de componentes (Sinais Vitais, HDA…)
+CREATE TABLE IF NOT EXISTS config_componentes (
+  id            bigserial PRIMARY KEY,
+  nome          text NOT NULL,
+  secao         text NOT NULL
+                  CHECK (secao IN ('SINAIS_VITAIS','HDA')),
+  icone         text DEFAULT 'bi-circle',
+  valor_default text,
+  unidade       text,
+  ordem         int DEFAULT 1,
+  created_at    timestamptz DEFAULT now()
+);
+
+-- 3. Vínculo tipo ↔ componente
+CREATE TABLE IF NOT EXISTS config_tipo_componentes (
+  id            bigserial PRIMARY KEY,
+  tipo_id       bigint NOT NULL
+                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
+  componente_id bigint NOT NULL
+                  REFERENCES config_componentes(id) ON DELETE CASCADE,
+  ativo         boolean DEFAULT true,
+  ordem         int DEFAULT 1,
+  UNIQUE (tipo_id, componente_id)
+);
+
+-- 4. Catálogo de medicamentos
+CREATE TABLE IF NOT EXISTS config_medicamentos (
+  id              bigserial PRIMARY KEY,
+  nome            text NOT NULL,
+  dose            text,
+  posologia       text,
+  categoria       text,
+  favorito_tipos  jsonb DEFAULT '[]',
+  created_at      timestamptz DEFAULT now()
+);
+
+-- 5. Catálogo de exames
+CREATE TABLE IF NOT EXISTS config_exames (
+  id              bigserial PRIMARY KEY,
+  nome            text NOT NULL,
+  grupo           text,
+  favorito_tipos  jsonb DEFAULT '[]',
+  created_at      timestamptz DEFAULT now()
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_tipo_comp_tipo  ON config_tipo_componentes(tipo_id);
+CREATE INDEX IF NOT EXISTS idx_tipo_comp_comp  ON config_tipo_componentes(componente_id);
+CREATE INDEX IF NOT EXISTS idx_meds_nome       ON config_medicamentos(nome);
+CREATE INDEX IF NOT EXISTS idx_exames_nome     ON config_exames(nome);
+CREATE INDEX IF NOT EXISTS idx_exames_grupo    ON config_exames(grupo);`;
+  abrirModal('cfgModalSQL');
+};
+
+/* ════════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════════ */
+async function cfgInit() {
+  // Carrega tipos primeiro (necessário para favoritos)
+  await cfgCarregarTipos();
+
+  // Carrega a seção ativa de componentes
+  await cfgCarregarComponentes('SINAIS_VITAIS');
+
+  // Carrega meds e exames em paralelo
+  cfgCarregarMeds();
+  cfgCarregarExames();
+
+  // Lazy load ao trocar de aba
+  var tabs = document.getElementById('cfgTabs');
+  if (tabs) {
+    tabs.addEventListener('shown.bs.tab', function (e) {
+      var target = e.target.getAttribute('data-bs-target');
+      if (target === '#cfgTabMeds'   && !CFG.meds.length)   cfgCarregarMeds();
+      if (target === '#cfgTabExames' && !CFG.exames.length) cfgCarregarExames();
+    });
+  }
+}
+
+// Expõe inicializador para o dashboard
+window.inicializarPaginaConfigAtendimento = cfgInit;
+
+cfgInit();
+})();
+</script>
