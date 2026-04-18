@@ -83,41 +83,79 @@
 
 /* ── Área de impressão A4 ─────────────────────────────────────── */
 #atestPrintArea {
-  display: none; /* Só aparece no print ou via JS */
-  font-family: 'Times New Roman', serif;
-  font-size: 12pt; /* Aumentei um pouco para leitura */
-  line-height: 1.6;
-  color: #000;
+    display: none;
+    font-family: 'Times New Roman', serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
 }
 
 .a4-page {
-  width: 210mm;
-  height: 297mm; /* Altura fixa para permitir centralização vertical */
-  padding: 20mm;
-  box-sizing: border-box;
-  background: #fff;
-  margin: 0 auto;
-  
-  /* Centralização Vertical do conteúdo */
-  display: flex;
-  flex-direction: column;
-  justify-content: center; /* Centraliza o bloco do meio verticalmente */
-  text-align: center; /* Centraliza textos por padrão (Topo e Título) */
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm 25mm; /* Margens laterais maiores para elegância */
+    box-sizing: border-box;
+    background: #fff;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Estilo para o corpo do texto (onde vai o "A paciente...") */
-.atest-corpo {
-  margin: 40px 0;
-  text-align: justify; /* Texto justificado como na sua planilha */
-  text-indent: 50px;    /* Recuo na primeira linha para ficar elegante */
-  font-size: 13pt;
+/* Centraliza apenas o cabeçalho e o título */
+.atest-header, .atest-titulo {
+    text-align: center;
+    width: 100%;
+}
+
+.atest-header {
+    margin-bottom: 40px; /* Espaço após o nome do médico */
 }
 
 .atest-titulo {
-  font-size: 18pt;
-  font-weight: bold;
-  text-decoration: underline;
-  margin: 30px 0;
+    font-size: 16pt;
+    font-weight: bold;
+    text-decoration: underline;
+    margin-bottom: 60px; /* Espaço generoso antes de começar o texto */
+    text-transform: uppercase;
+}
+
+/* O Corpo deve ser Justificado (alinhado dos dois lados) */
+.atest-corpo {
+    text-align: justify;
+    text-justify: inter-word;
+    text-indent: 50px; /* Recuo de parágrafo igual à sua planilha */
+    flex-grow: 1;      /* Faz o corpo ocupar o espaço necessário */
+    margin-bottom: 50px;
+}
+
+/* Assinatura centralizada horizontalmente no final do documento */
+.atest-assinatura-container {
+    text-align: center;
+    margin-top: auto; /* Empurra a assinatura para baixo, mas antes do rodapé */
+    padding-bottom: 60px;
+}
+
+.atest-assinatura-linha {
+    border-top: 1px solid #000;
+    width: 250px;
+    margin: 0 auto;
+    padding-top: 5px;
+}
+
+/* ── Print adjustments ────────────────────────────────────────── */
+@media print {
+    body * { visibility: hidden !important; }
+    #atestPrintArea, #atestPrintArea * { visibility: visible !important; }
+    #atestPrintArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: block !important;
+    }
+    .a4-page {
+        border: none;
+        box-shadow: none;
+    }
 }
 </style>
 
