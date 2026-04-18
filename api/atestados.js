@@ -67,11 +67,24 @@ export default async function handler(req, res) {
 
       if (action === 'buscar_paciente' && termo) {
         const t = termo.trim();
-        // Remove qualquer pontuação para comparar com CPFs armazenados com ou sem formatação
+        // Versão sem qualquer pontuação (para CPFs armazenados sem formatação)
         const tLimpo = t.replace(/[.\-\/\s]/g, '');
-        // Busca por: nome (case insensitive), pcod exato, CPF com pontuação original, CPF sem pontuação
+        // Versão sem pontos (CPF digitado como "263.659.458-25" → busca "263659458-25" também)
+        const tSemPonto = t.replace(/\./g, '');
+
+        // IMPORTANTE: não usar encodeURIComponent aqui — o sb() já lida com a URL.
+        // encodeURIComponent codifica '-' como %2D e ' ' como %20, quebrando o ilike do PostgREST.
+        let orParts = [
+          `Nome.ilike.*${t}*`,
+          `pcod.eq.${t}`,
+          `Documento.ilike.*${t}*`,
+        ];
+        // Adiciona variações limpas apenas se forem diferentes do original
+        if (tLimpo !== t)     orParts.push(`Documento.ilike.*${tLimpo}*`);
+        if (tSemPonto !== t && tSemPonto !== tLimpo) orParts.push(`Documento.ilike.*${tSemPonto}*`);
+
         const { ok, data } = await sb(
-          `pacientes?or=(Nome.ilike.*${encodeURIComponent(t)}*,pcod.eq.${encodeURIComponent(t)},Documento.ilike.*${encodeURIComponent(t)}*,Documento.ilike.*${encodeURIComponent(tLimpo)}*)&limit=15&select=pcod,Nome,Documento,Data_Nascimento,Celular`
+          `pacientes?or=(${orParts.join(',')})&limit=15&select=pcod,Nome,Documento,Data_Nascimento,Celular`
         );
         return res.status(200).json(ok ? data || [] : []);
       }
