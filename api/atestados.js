@@ -35,7 +35,10 @@ export default async function handler(req, res) {
     if (method === 'GET') {
 
       if (action === 'profissionais') {
-        const { ok, data } = await sb('profissionais?order=nome.asc&select=id_profissional,nome');
+        // Tabela: usuarios | filtra apenas quem tem tem_agenda = 'SIM' ou perfil MEDICO
+        const { ok, data } = await sb(
+          `usuarios?or=(tem_agenda.eq.SIM,perfil.eq.MEDICO)&order=nome.asc&select=id_profissional,nome,especialidade,crm`
+        );
         return res.status(200).json(ok ? data || [] : []);
       }
 
