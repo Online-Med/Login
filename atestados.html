@@ -1,0 +1,126 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><i class="bi bi-house-door-fill me-1"></i>INÍCIO</li>
+            <li class="breadcrumb-item">Documentos</li>
+            <li class="breadcrumb-item active fw-bold text-primary">EMISSÃO DE ATESTADO</li>
+        </ol>
+    </nav>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary px-4" onclick="carregarConteudo('inicio.html')">Cancelar</button>
+        <button type="button" class="btn btn-primary px-4 shadow-sm" onclick="gerarAtestado()">
+            <i class="bi bi-printer me-1"></i>Imprimir Atestado
+        </button>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 text-primary"><i class="bi bi-file-earmark-medical me-2"></i>Informações do Atestado</h5>
+    </div>
+    <div class="card-body p-4">
+        <form id="formAtestado">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold text-secondary">Nome do Paciente</label>
+                    <input type="text" class="form-control" id="at_paciente" placeholder="Nome completo">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-secondary">Convênio</label>
+                    <select class="form-select" id="comboConvenios">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+
+                <hr class="my-4 text-light">
+
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-secondary">Data de Início</label>
+                    <input type="date" class="form-control" id="at_data_inicio">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-secondary">Dias de Afastamento</label>
+                    <input type="number" class="form-control" id="at_dias" min="1" value="1">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-secondary">CID (Opcional)</label>
+                    <input type="text" class="form-control" id="at_cid" placeholder="Ex: Z00">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-secondary">Horário da Consulta</label>
+                    <input type="time" class="form-control" id="at_hora">
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-bold text-secondary">Observações / Recomendações</label>
+                    <textarea class="form-control" id="at_obs" rows="3" placeholder="Ex: Repouso absoluto, evitar esforços físicos..."></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Reaproveitando a sua função de convênios para manter o padrão
+async function carregarConveniosAtestado() {
+    const combo = document.getElementById('comboConvenios');
+    try {
+        const resp = await fetch('/api/convenios');
+        const json = await resp.json();
+        
+        if (json.sucesso && json.dados) {
+            combo.innerHTML = '<option value="">Selecione...</option>';
+            json.dados.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.CONVENIO;
+                combo.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error("Erro ao carregar convênios:", e);
+        combo.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
+
+function gerarAtestado() {
+    const dados = {
+        paciente: document.getElementById('at_paciente').value,
+        convenio: document.getElementById('comboConvenios').selectedOptions[0].text,
+        data: document.getElementById('at_data_inicio').value,
+        dias: document.getElementById('at_dias').value,
+        cid: document.getElementById('at_cid').value
+    };
+
+    if (!dados.paciente) {
+        return Swal.fire('Aviso', 'Por favor, informe o nome do paciente.', 'warning');
+    }
+
+    Swal.fire({
+        title: 'Gerando documento...',
+        html: 'Preparando impressão do atestado.',
+        timer: 1500,
+        didOpen: () => { Swal.showLoading(); }
+    }).then(() => {
+        console.log("Dados para o atestado:", dados);
+        // Aqui você pode disparar a lógica de PDF ou Janela de Impressão
+        window.print(); 
+    });
+}
+
+// Inicialização
+document.getElementById('at_data_inicio').valueAsDate = new Date();
+carregarConveniosAtestado();
+</script>
+
+<style>
+    @media print {
+        /* Esconde tudo exceto o que for necessário para o atestado na hora de imprimir */
+        body * { visibility: hidden; }
+        .card, .card * { visibility: visible; }
+        .card { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+        .btn, .breadcrumb, .card-header { display: none !important; }
+    }
+</style>
