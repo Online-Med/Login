@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     // ─── GET ─────────────────────────────────────────────────────
     if (method === 'GET') {
 
-      if (action === 'usuarios') {
+      if (action === 'profissionais') {
         const { ok, data } = await sb('usuarios?order=nome.asc&select=id_profissional,nome');
         return res.status(200).json(ok ? data || [] : []);
       }
