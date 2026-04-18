@@ -68,6 +68,54 @@
 }
 .btn-remove-row:hover { background:#fff0f0; border-radius:4px; }
 
+/* ── Tipo badge no header ── */
+.tipo-badge {
+  background:rgba(255,255,255,.22); border-radius:20px;
+  padding:2px 10px; font-size:.75rem; font-weight:600;
+  cursor:pointer; border:1px solid rgba(255,255,255,.3);
+  transition:background .15s;
+}
+.tipo-badge:hover { background:rgba(255,255,255,.35); }
+
+/* ── Vitais dinâmicos ── */
+.vitais-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px;
+}
+.vital-item label { font-size:.74rem; font-weight:700; color:#6c757d; margin-bottom:3px; display:block; }
+
+/* ── Autocomplete dropdown ── */
+.at-dropdown {
+  position:absolute; z-index:1080; background:#fff;
+  border:1px solid #dee2e6; border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+  max-height:230px; overflow-y:auto; min-width:280px; left:0; top:100%;
+}
+.at-dropdown .dd-item {
+  padding:8px 12px; cursor:pointer; font-size:.8rem; border-bottom:1px solid #f5f5f5;
+  display:flex; flex-direction:column; gap:2px;
+}
+.at-dropdown .dd-item:last-child { border-bottom:none; }
+.at-dropdown .dd-item:hover { background:#f0f4ff; }
+.at-dropdown .dd-item .dd-nome { font-weight:600; color:#212529; }
+.at-dropdown .dd-item .dd-sub  { font-size:.72rem; color:#6c757d; }
+.at-dropdown .dd-item .dd-fav  { font-size:.7rem; color:#f59e0b; }
+.at-dropdown .dd-sep {
+  padding:4px 12px; font-size:.68rem; text-transform:uppercase;
+  letter-spacing:.05em; color:#adb5bd; background:#f8f9fa;
+  border-bottom:1px solid #dee2e6; border-top:1px solid #dee2e6;
+}
+.at-input-wrap { position:relative; }
+
+/* ── Modal tipo consulta ── */
+.tipo-card {
+  cursor:pointer; border:2px solid #dee2e6; border-radius:10px;
+  padding:14px 16px; transition:all .15s; background:#fff;
+}
+.tipo-card:hover { border-color:#6f42c1; background:#f9f0ff; }
+.tipo-card.selected { border-color:#6f42c1; background:#f0e6ff; }
+.tipo-card .tc-nome { font-weight:700; font-size:.9rem; color:#212529; }
+.tipo-card .tc-desc { font-size:.75rem; color:#6c757d; margin-top:2px; }
+
 /* Footer */
 #atendFooter {
   position:sticky; bottom:0; background:#fff;
@@ -89,6 +137,9 @@
       <div style="font-size:.72rem;opacity:.85" id="atendSubtitulo"></div>
     </div>
     <div class="ms-auto d-flex align-items-center gap-3">
+      <span id="atendTipoBadge" class="tipo-badge d-none" onclick="atendTrocarTipo()" title="Clique para trocar o tipo de consulta">
+        <i class="bi bi-tag-fill"></i> <span id="atendTipoNome">—</span>
+      </span>
       <span id="atendTimer"><i class="bi bi-stopwatch"></i> 00:00</span>
       <span class="badge bg-primary" style="font-size:.7rem">Em Atendimento</span>
     </div>
@@ -131,38 +182,10 @@
         <div class="at-section">
           <div class="at-section-hd"><i class="bi bi-heart-pulse-fill text-danger"></i> Sinais Vitais</div>
           <div class="at-section-body">
-            <div class="vitais-grid">
-              <div class="vital-item">
-                <label><i class="bi bi-activity"></i> Pressão Arterial</label>
-                <input type="text" class="form-control form-control-sm" id="vPA" placeholder="120/80 mmHg">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-heart-fill text-danger"></i> Freq. Cardíaca</label>
-                <input type="number" class="form-control form-control-sm" id="vFC" placeholder="bpm" min="30" max="250">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-lungs-fill"></i> Freq. Resp.</label>
-                <input type="number" class="form-control form-control-sm" id="vFR" placeholder="irpm" min="8" max="60">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-thermometer-half text-warning"></i> Temperatura</label>
-                <input type="number" class="form-control form-control-sm" id="vTemp" placeholder="°C" min="34" max="42" step=".1">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-droplet-fill text-primary"></i> Sat. O₂</label>
-                <input type="number" class="form-control form-control-sm" id="vSat" placeholder="%" min="50" max="100">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-person-fill"></i> Peso (kg)</label>
-                <input type="number" class="form-control form-control-sm" id="vPeso" placeholder="kg" min="1" max="300" step=".1">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-rulers"></i> Altura (cm)</label>
-                <input type="number" class="form-control form-control-sm" id="vAltura" placeholder="cm" min="30" max="250">
-              </div>
-              <div class="vital-item">
-                <label><i class="bi bi-droplet-fill text-warning"></i> Glicemia</label>
-                <input type="number" class="form-control form-control-sm" id="vGlicemia" placeholder="mg/dL">
+            <div class="vitais-grid" id="vitaisGrid">
+              <div class="text-muted small text-center py-2" style="grid-column:1/-1">
+                <div class="spinner-border spinner-border-sm text-danger me-1"></div>
+                Aguardando tipo de consulta...
               </div>
             </div>
           </div>
@@ -241,6 +264,17 @@
             </button>
           </div>
           <div class="at-section-body">
+            <!-- Campo de busca no catálogo -->
+            <div class="at-input-wrap mb-3" id="prescBuscaWrap">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="prescBusca"
+                       placeholder="Buscar medicamento no catálogo..."
+                       oninput="atBuscarMed(this.value)" onfocus="atBuscarMed(this.value)"
+                       autocomplete="off">
+              </div>
+              <div class="at-dropdown d-none" id="prescDrop"></div>
+            </div>
             <div id="prescList"></div>
             <div class="text-muted small text-center py-1" id="prescEmpty">
               <i class="bi bi-capsule-pill"></i> Nenhuma prescrição
@@ -251,15 +285,26 @@
         <!-- Exames -->
         <div class="at-section">
           <div class="at-section-hd">
-            <i class="bi bi-file-earmark-medical text-warning"></i> Solicitação de Exames
+            <i class="bi bi-microscope text-warning"></i> Exames
             <button class="btn btn-warning btn-sm ms-auto py-0 px-2 text-dark" onclick="atAddExame()" style="font-size:.72rem">
               <i class="bi bi-plus"></i> Add
             </button>
           </div>
           <div class="at-section-body">
+            <!-- Campo de busca no catálogo -->
+            <div class="at-input-wrap mb-3" id="exameBuscaWrap">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="exameBusca"
+                       placeholder="Buscar exame no catálogo..."
+                       oninput="atBuscarExame(this.value)" onfocus="atBuscarExame(this.value)"
+                       autocomplete="off">
+              </div>
+              <div class="at-dropdown d-none" id="exameDrop"></div>
+            </div>
             <div id="exameList"></div>
             <div class="text-muted small text-center py-1" id="exameEmpty">
-              <i class="bi bi-file-earmark-medical"></i> Nenhum exame solicitado
+              <i class="bi bi-microscope"></i> Nenhum exame solicitado
             </div>
           </div>
         </div>
@@ -297,6 +342,37 @@
     </button>
   </div>
 
+<!-- Modal: Selecionar Tipo de Consulta -->
+<div class="modal fade" id="atModalTipo" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#6f42c1,#4361ee)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-tag-fill"></i> Qual o tipo desta consulta?
+        </h6>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          Selecione o tipo para carregar os campos configurados (sinais vitais, componentes, favoritos).
+        </p>
+        <div id="atTipoList" class="d-grid gap-2">
+          <div class="text-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2"></div>Carregando tipos...
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2 d-flex justify-content-between">
+        <button class="btn btn-link btn-sm text-muted text-decoration-none p-0"
+                onclick="atPularTipo()">Pular (sem tipo específico)</button>
+        <button class="btn btn-sm text-white" id="atBtnConfTipo" style="background:#6f42c1;border-color:#6f42c1;opacity:.5"
+                disabled onclick="atConfirmarTipo()">
+          <i class="bi bi-check-circle"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /atendWrap -->
 
 
@@ -307,11 +383,23 @@ var AT = {
   agId:       null,
   atId:       null,
   agData:     null,
-  pacData:    null,  // dados do paciente carregados do banco
+  pacData:    null,
   presc:      [],
   exames:     [],
   timerInterval: null,
-  horaInicio:    new Date()
+  horaInicio:    new Date(),
+  // Config tipo de consulta
+  tipoId:         null,
+  tipoNome:       null,
+  componentesSV:  [],    // componentes Sinais Vitais do tipo
+  componentesHDA: [],    // componentes HDA do tipo
+  medsConfig:     [],    // catálogo de medicamentos
+  examesConfig:   [],    // catálogo de exames
+  tiposConfig:    [],    // lista de tipos cadastrados
+  vitaisData:     {},    // valores dos vitais: { "cID": valor }
+  prescBuscaTmr:  null,
+  exameBuscaTmr:  null,
+  tipoSelecionado: null, // id no modal antes de confirmar
 };
 
 /* ── API helpers ── */
@@ -333,6 +421,15 @@ async function apiAg(params, method, body) {
   if(body) opts.body = JSON.stringify(body);
   var r = await fetch('/api/agenda?'+qs, opts);
   return r.json();
+}
+async function cfgApi(params) {
+  var qs = Object.entries(params||{}).map(function(p){
+    return p[0]+'='+encodeURIComponent(p[1]);
+  }).join('&');
+  try {
+    var r = await fetch('/api/config_atendimento?'+qs);
+    return r.json();
+  } catch(e) { return []; }
 }
 
 /* ── Timer ── */
@@ -440,15 +537,14 @@ function _preencherForm(r) {
   _set('atCID',        r.cid);
   _set('atConduta',    r.conduta);
   _set('atObs',        r.observacoes);
+  // Vitais dinâmicos
   if(r.vitais) {
-    _set('vPA',       r.vitais.pressao_arterial);
-    _set('vFC',       r.vitais.frequencia_cardiaca);
-    _set('vFR',       r.vitais.frequencia_respiratoria);
-    _set('vTemp',     r.vitais.temperatura);
-    _set('vSat',      r.vitais.saturacao);
-    _set('vPeso',     r.vitais.peso);
-    _set('vAltura',   r.vitais.altura);
-    _set('vGlicemia', r.vitais.glicemia);
+    AT.vitaisData = r.vitais;
+    // Preenche campos já renderizados (se o grid já foi carregado)
+    Object.keys(r.vitais).forEach(function(key) {
+      var el = document.getElementById('vComp_' + key.replace(/^c/, ''));
+      if(el) el.value = r.vitais[key];
+    });
   }
   AT.presc  = r.prescricoes       || [];
   AT.exames = r.exames_solicitados || [];
@@ -461,15 +557,28 @@ function _set(id, val) {
   if(el && val != null && val !== '') el.value = val;
 }
 
-/* ── Prescrições ── */
-window.atAddPresc = function() {
-  AT.presc.push({ medicamento:'', dosagem:'', posologia:'', duracao:'' });
+/* ══════════════════════════════════════════════════════════════
+   PRESCRIÇÕES — com catálogo
+══════════════════════════════════════════════════════════════ */
+window.atAddPresc = function(med) {
+  // med pode vir pré-preenchido do catálogo
+  AT.presc.push({
+    medicamento: med ? med.nome  : '',
+    dosagem:     med ? (med.dose || '') : '',
+    posologia:   med ? (med.posologia || '') : '',
+    duracao: ''
+  });
   _renderPresc();
+  // Limpa e fecha o campo de busca
+  var inp = document.getElementById('prescBusca');
+  if(inp) inp.value = '';
+  _fecharDrop('prescDrop');
   setTimeout(function(){
     var inputs = document.querySelectorAll('#prescList .presc-row input');
     if(inputs.length) inputs[inputs.length - 4].focus();
   }, 50);
 };
+
 function _renderPresc() {
   var list = document.getElementById('prescList');
   var empty = document.getElementById('prescEmpty');
@@ -496,15 +605,79 @@ function _renderPresc() {
 window.atUpdPresc = function(i,c,v){ if(AT.presc[i]) AT.presc[i][c]=v; };
 window.atDelPresc = function(i){ AT.presc.splice(i,1); _renderPresc(); };
 
-/* ── Exames ── */
-window.atAddExame = function() {
-  AT.exames.push({ exame:'', observacao:'' });
+/* Busca no catálogo de medicamentos */
+window.atBuscarMed = function(v) {
+  if(AT.prescBuscaTmr) clearTimeout(AT.prescBuscaTmr);
+  AT.prescBuscaTmr = setTimeout(function() {
+    var drop = document.getElementById('prescDrop');
+    var lista = AT.medsConfig || [];
+    var tipoId = AT.tipoId;
+    var termo = (v||'').toLowerCase().trim();
+
+    // Favoritos do tipo atual
+    var favs = lista.filter(function(m){
+      return Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1
+        && (!termo || m.nome.toLowerCase().includes(termo));
+    });
+    // Demais que batem na busca
+    var outros = lista.filter(function(m){
+      if(!termo) return false; // sem busca não mostra todos
+      var ehFav = Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1;
+      return !ehFav && m.nome.toLowerCase().includes(termo);
+    });
+
+    if(!favs.length && !outros.length) {
+      drop.innerHTML = '<div class="dd-item text-muted">Nenhum resultado'
+        + (termo ? '' : ' — digite para buscar')+'</div>';
+    } else {
+      var html = '';
+      if(favs.length) {
+        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos deste tipo</div>';
+        html += favs.map(function(m){ return _medDropItem(m); }).join('');
+      }
+      if(outros.length) {
+        html += '<div class="dd-sep">Catálogo</div>';
+        html += outros.map(function(m){ return _medDropItem(m); }).join('');
+      }
+      // Opção de adicionar manualmente
+      if(termo) {
+        html += '<div class="dd-sep"></div>'
+          + '<div class="dd-item" onclick="atAddPresc({nome:\''+esc(termo)+'\',dose:\'\',posologia:\'\'})">'
+          + '<span class="dd-nome"><i class="bi bi-plus-circle text-primary"></i> Adicionar "'+esc(termo)+'" manualmente</span></div>';
+      }
+      drop.innerHTML = html;
+    }
+    drop.classList.remove('d-none');
+  }, 250);
+};
+
+function _medDropItem(m) {
+  return '<div class="dd-item" onclick=\'atAddPresc('+JSON.stringify({
+    nome: m.nome, dose: m.dose||'', posologia: m.posologia||''
+  }).replace(/'/g,'&#39;')+'\')'
+    + '><span class="dd-nome">'+esc(m.nome)+'</span>'
+    + '<span class="dd-sub">'+(m.dose||'')+(m.posologia?' · '+m.posologia:'')+'</span></div>';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EXAMES — com catálogo
+══════════════════════════════════════════════════════════════ */
+window.atAddExame = function(exame) {
+  AT.exames.push({
+    exame: exame ? exame.nome : '',
+    grupo: exame ? (exame.grupo || '') : '',
+    observacao: ''
+  });
   _renderExames();
+  var inp = document.getElementById('exameBusca');
+  if(inp) inp.value = '';
+  _fecharDrop('exameDrop');
   setTimeout(function(){
     var inputs = document.querySelectorAll('#exameList .exam-row input');
     if(inputs.length) inputs[inputs.length - 2].focus();
   }, 50);
 };
+
 function _renderExames() {
   var list = document.getElementById('exameList');
   var empty = document.getElementById('exameEmpty');
@@ -513,10 +686,13 @@ function _renderExames() {
   list.innerHTML = AT.exames.map(function(e, i){
     return '<div class="exam-row">'
       +'<div class="flex-grow-1">'
-        +'<input type="text" class="form-control form-control-sm mb-1" placeholder="Nome do exame *"'
-          +' value="'+esc(e.exame)+'" oninput="atUpdExame('+i+',\'exame\',this.value)">'
+        +'<div class="d-flex gap-1 align-items-center mb-1">'
+          +'<input type="text" class="form-control form-control-sm" placeholder="Nome do exame *"'
+            +' value="'+esc(e.exame)+'" oninput="atUpdExame('+i+',\'exame\',this.value)">'
+          +(e.grupo?'<span class="badge bg-light text-dark border" style="font-size:.6rem;white-space:nowrap">'+esc(e.grupo)+'</span>':'')
+        +'</div>'
         +'<input type="text" class="form-control form-control-sm" placeholder="Observação (opcional)"'
-          +' value="'+esc(e.observacao)+'" oninput="atUpdExame('+i+',\'observacao\',this.value)">'
+          +' value="'+esc(e.observacao||'')+'" oninput="atUpdExame('+i+',\'observacao\',this.value)">'
       +'</div>'
       +'<button class="btn-remove-row" onclick="atDelExame('+i+')"><i class="bi bi-trash3"></i></button>'
       +'</div>';
@@ -525,16 +701,88 @@ function _renderExames() {
 window.atUpdExame = function(i,c,v){ if(AT.exames[i]) AT.exames[i][c]=v; };
 window.atDelExame = function(i){ AT.exames.splice(i,1); _renderExames(); };
 
+/* Busca no catálogo de exames */
+window.atBuscarExame = function(v) {
+  if(AT.exameBuscaTmr) clearTimeout(AT.exameBuscaTmr);
+  AT.exameBuscaTmr = setTimeout(function() {
+    var drop = document.getElementById('exameDrop');
+    var lista = AT.examesConfig || [];
+    var tipoId = AT.tipoId;
+    var termo = (v||'').toLowerCase().trim();
+
+    var favs = lista.filter(function(e){
+      return Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1
+        && (!termo || e.nome.toLowerCase().includes(termo));
+    });
+    var outros = lista.filter(function(e){
+      if(!termo) return false;
+      var ehFav = Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1;
+      return !ehFav && (e.nome.toLowerCase().includes(termo) || (e.grupo||'').toLowerCase().includes(termo));
+    });
+
+    if(!favs.length && !outros.length) {
+      drop.innerHTML = '<div class="dd-item text-muted">Nenhum resultado'+(termo?'':' — favoritos para este tipo aparecerão aqui')+'</div>';
+    } else {
+      var html = '';
+      if(favs.length) {
+        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos deste tipo</div>';
+        html += favs.map(function(e){ return _exameDropItem(e); }).join('');
+      }
+      if(outros.length) {
+        html += '<div class="dd-sep">Catálogo</div>';
+        html += outros.map(function(e){ return _exameDropItem(e); }).join('');
+      }
+      if(termo) {
+        html += '<div class="dd-sep"></div>'
+          + '<div class="dd-item" onclick="atAddExame({nome:\''+esc(termo)+'\',grupo:\'\'})">'
+          + '<span class="dd-nome"><i class="bi bi-plus-circle text-warning"></i> Solicitar "'+esc(termo)+'" manualmente</span></div>';
+      }
+      drop.innerHTML = html;
+    }
+    drop.classList.remove('d-none');
+  }, 250);
+};
+
+function _exameDropItem(e) {
+  return '<div class="dd-item" onclick=\'atAddExame('+JSON.stringify({
+    nome: e.nome, grupo: e.grupo||''
+  }).replace(/'/g,'&#39;')+'\')'
+    + '><span class="dd-nome">'+esc(e.nome)+'</span>'
+    + (e.grupo?'<span class="dd-sub">'+esc(e.grupo)+'</span>':'')+'</div>';
+}
+
+function _fecharDrop(id) {
+  var d = document.getElementById(id);
+  if(d) d.classList.add('d-none');
+}
+
+// Fecha dropdowns ao clicar fora
+document.addEventListener('click', function(e) {
+  ['prescDrop','exameDrop'].forEach(function(id) {
+    var d = document.getElementById(id);
+    var w = d && d.closest('.at-input-wrap');
+    if(d && w && !w.contains(e.target)) d.classList.add('d-none');
+  });
+});
+
 /* ── Coletar dados do formulário ── */
 function _coletarDados(status) {
   var ag = AT.agData || {};
+  // Coleta vitais dinâmicos
+  var vitais = {};
+  AT.componentesSV.forEach(function(c) {
+    var el = document.getElementById('vComp_' + c.id);
+    if(el && el.value.trim() !== '') vitais['c' + c.id] = el.value.trim();
+  });
   return {
     agenda_id:             AT.agId,
-    paciente_id:           ag.paciente_id || null,     // ← PCOD
+    paciente_id:           ag.paciente_id || null,
     paciente_nome:         ag.paciente_nome || '',
     id_profissional:       ag.id_profissional || null,
     data_atendimento:      ag.data_agenda || new Date().toISOString().split('T')[0],
     hora_inicio:           AT.horaInicio.toISOString(),
+    tipo_consulta_id:      AT.tipoId || null,
+    tipo_consulta_nome:    AT.tipoNome || null,
     queixa_principal:      _val('atQueixa'),
     historia_doenca_atual: _val('atHDA'),
     antecedentes:          _val('atAntecedentes'),
@@ -543,19 +791,11 @@ function _coletarDados(status) {
     cid:                   (_val('atCID')||'').toUpperCase(),
     conduta:               _val('atConduta'),
     observacoes:           _val('atObs'),
-    vitais: {
-      pressao_arterial:        _val('vPA')       || null,
-      frequencia_cardiaca:     _num('vFC'),
-      frequencia_respiratoria: _num('vFR'),
-      temperatura:             _num('vTemp'),
-      saturacao:               _num('vSat'),
-      peso:                    _num('vPeso'),
-      altura:                  _num('vAltura'),
-      glicemia:                _num('vGlicemia')
-    },
-    prescricoes:        AT.presc.filter(function(p){ return p.medicamento.trim(); }),
-    exames_solicitados: AT.exames.filter(function(e){ return e.exame.trim(); }),
-    status:             status || 'ABERTO'
+    vitais:                Object.keys(vitais).length ? vitais : null,
+    vitais_meta:           AT.componentesSV.map(function(c){ return {id:c.id,nome:c.nome,icone:c.icone,unidade:c.unidade}; }),
+    prescricoes:           AT.presc.filter(function(p){ return p.medicamento.trim(); }),
+    exames_solicitados:    AT.exames.filter(function(e){ return e.exame.trim(); }),
+    status:                status || 'ABERTO'
   };
 }
 function _val(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
@@ -629,10 +869,153 @@ window.atendVerProntuario = function() {
   if(typeof carregarConteudo === 'function') carregarConteudo('prontuario.html');
 };
 
+/* ══════════════════════════════════════════════════════════════
+   TIPO DE CONSULTA
+══════════════════════════════════════════════════════════════ */
+async function _mostrarModalTipo() {
+  try {
+    var tipos = await cfgApi({ action: 'tipos' });
+    AT.tiposConfig = Array.isArray(tipos) ? tipos.filter(function(t){ return t.ativo; }) : [];
+  } catch(e) { AT.tiposConfig = []; }
+
+  var list = document.getElementById('atTipoList');
+  if(!AT.tiposConfig.length) {
+    list.innerHTML = '<div class="alert alert-warning small py-2">'
+      + '<i class="bi bi-exclamation-triangle"></i> Nenhum tipo cadastrado. '
+      + 'Configure em <strong>Menu → Config Atendimento</strong>.</div>';
+    abrirModal('atModalTipo');
+    return;
+  }
+  list.innerHTML = AT.tiposConfig.map(function(t) {
+    return '<div class="tipo-card" data-tid="'+t.id+'" onclick="atSelecionarTipo('+t.id+')">'
+      + '<div class="tc-nome"><i class="bi bi-tag-fill me-2" style="color:#6f42c1"></i>' + esc(t.nome) + '</div>'
+      + (t.descricao ? '<div class="tc-desc">'+esc(t.descricao)+'</div>' : '')
+      + '</div>';
+  }).join('');
+  abrirModal('atModalTipo');
+}
+
+window.atSelecionarTipo = function(id) {
+  AT.tipoSelecionado = id;
+  document.querySelectorAll('.tipo-card').forEach(function(c) {
+    c.classList.toggle('selected', parseInt(c.dataset.tid) === id);
+  });
+  var btn = document.getElementById('atBtnConfTipo');
+  if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
+};
+
+window.atConfirmarTipo = async function() {
+  if(!AT.tipoSelecionado) return;
+  fecharModal('atModalTipo');
+  await _carregarConfigTipo(AT.tipoSelecionado);
+};
+
+window.atPularTipo = function() {
+  fecharModal('atModalTipo');
+  _renderVitaisDefault();
+};
+
+window.atendTrocarTipo = async function() {
+  AT.tipoSelecionado = AT.tipoId;
+  // Marca o atual como selecionado ao reabrir
+  await _mostrarModalTipo();
+  if(AT.tipoId) {
+    setTimeout(function(){ atSelecionarTipo(AT.tipoId); }, 100);
+  }
+};
+
+async function _carregarConfigTipo(tipoId) {
+  AT.tipoId = tipoId;
+  var tipo = AT.tiposConfig.find(function(t){ return t.id == tipoId; });
+  AT.tipoNome = tipo ? tipo.nome : null;
+
+  // Atualiza badge no header
+  var badge = document.getElementById('atendTipoBadge');
+  var nome = document.getElementById('atendTipoNome');
+  if(badge && AT.tipoNome) {
+    nome.textContent = AT.tipoNome;
+    badge.classList.remove('d-none');
+  }
+
+  // Carrega componentes e catálogos em paralelo
+  try {
+    var [vincs, meds, exames] = await Promise.all([
+      cfgApi({ action: 'tipo_componentes', tipo_id: tipoId }),
+      cfgApi({ action: 'medicamentos' }),
+      cfgApi({ action: 'exames' }),
+    ]);
+
+    var vincAtivos = (Array.isArray(vincs) ? vincs : []).filter(function(v){ return v.ativo !== false; });
+    AT.componentesSV  = vincAtivos.filter(function(v){ return v.componente && v.componente.secao === 'SINAIS_VITAIS'; })
+                                  .sort(function(a,b){ return (a.ordem||99) - (b.ordem||99); })
+                                  .map(function(v){ return v.componente; });
+    AT.componentesHDA = vincAtivos.filter(function(v){ return v.componente && v.componente.secao === 'HDA'; })
+                                  .sort(function(a,b){ return (a.ordem||99) - (b.ordem||99); })
+                                  .map(function(v){ return v.componente; });
+    AT.medsConfig   = Array.isArray(meds)   ? meds   : [];
+    AT.examesConfig = Array.isArray(exames) ? exames : [];
+  } catch(e) {
+    AT.componentesSV = []; AT.componentesHDA = [];
+    AT.medsConfig = []; AT.examesConfig = [];
+  }
+
+  _renderVitaisDinamicos();
+
+  // Re-preenche vitais se já havia dados carregados
+  if(AT.vitaisData && Object.keys(AT.vitaisData).length) {
+    Object.keys(AT.vitaisData).forEach(function(key) {
+      var el = document.getElementById('vComp_' + key.replace(/^c/, ''));
+      if(el) el.value = AT.vitaisData[key];
+    });
+  }
+}
+
+function _renderVitaisDinamicos() {
+  var grid = document.getElementById('vitaisGrid');
+  if(!grid) return;
+  var comps = AT.componentesSV;
+  if(!comps.length) {
+    grid.innerHTML = '<div class="text-muted small text-center py-2" style="grid-column:1/-1">'
+      + '<i class="bi bi-info-circle me-1"></i>'
+      + (AT.tipoId ? 'Nenhum componente de Sinais Vitais configurado para este tipo.'
+                   : 'Tipo de consulta não selecionado.')
+      + '</div>';
+    return;
+  }
+  grid.innerHTML = comps.map(function(c) {
+    var placeholder = (c.valor_default || '') + (c.unidade ? ' ' + c.unidade : '');
+    var isText = !c.unidade || c.unidade.indexOf('/') !== -1; // PA tem barra → texto
+    var tipo = isText ? 'text' : 'number';
+    return '<div class="vital-item">'
+      + '<label><i class="bi ' + esc(c.icone || 'bi-circle') + '"></i> ' + esc(c.nome)
+        + (c.unidade ? ' <small class="text-muted fw-normal">('+esc(c.unidade)+')</small>' : '')
+        + '</label>'
+      + '<input type="' + tipo + '" class="form-control form-control-sm" '
+        + 'id="vComp_' + c.id + '" placeholder="' + esc(placeholder||'—') + '" '
+        + 'oninput="AT.vitaisData[\'c'+c.id+'\']=this.value">'
+      + '</div>';
+  }).join('');
+}
+
+function _renderVitaisDefault() {
+  var grid = document.getElementById('vitaisGrid');
+  if(grid) grid.innerHTML = '<div class="text-muted small text-center py-2" style="grid-column:1/-1">'
+    + '<i class="bi bi-info-circle me-1"></i>Nenhum tipo selecionado — '
+    + '<a href="#" onclick="atendTrocarTipo();return false">selecionar tipo</a>.</div>';
+}
+
 /* ── Utilitário ── */
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _val(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
+function _num(id){ var v=_val(id); return v?parseFloat(v):null; }
+function _set(id, val) {
+  var el = document.getElementById(id);
+  if(el && val != null && val !== '') el.value = val;
+}
 
-/* ── INICIALIZAÇÃO ── */
+/* ══════════════════════════════════════════════════════════════
+   INICIALIZAÇÃO
+══════════════════════════════════════════════════════════════ */
 async function inicializarAtendimento() {
   AT.agId   = window._atendimentoAgendaId   || null;
   AT.agData = window._atendimentoAgendaData || null;
@@ -644,7 +1027,7 @@ async function inicializarAtendimento() {
 
   var ag = AT.agData;
 
-  // Carrega dados do paciente (se tem PCOD)
+  // Carrega dados do paciente
   var pac = null;
   if(ag && ag.paciente_id) {
     pac = await _carregarPaciente(ag.paciente_id);
@@ -655,7 +1038,7 @@ async function inicializarAtendimento() {
   AT.horaInicio = new Date();
   _iniciarTimer(AT.horaInicio);
 
-  // Busca atendimento existente para este slot (rascunho salvo)
+  // Busca atendimento existente (rascunho)
   try {
     var existente = await apiAt({action:'get', agenda_id: AT.agId});
     if(existente && existente.id) {
@@ -663,10 +1046,18 @@ async function inicializarAtendimento() {
       if(existente.hora_inicio) AT.horaInicio = new Date(existente.hora_inicio);
       _iniciarTimer(AT.horaInicio);
       _preencherForm(existente);
+      // Se tinha tipo salvo, carrega direto sem perguntar
+      if(existente.tipo_consulta_id) {
+        var tiposSalvos = await cfgApi({ action: 'tipos' });
+        AT.tiposConfig = Array.isArray(tiposSalvos) ? tiposSalvos.filter(function(t){ return t.ativo; }) : [];
+        await _carregarConfigTipo(existente.tipo_consulta_id);
+        return;
+      }
     }
-  } catch(e) {
-    // Atendimento novo — tudo bem
-  }
+  } catch(e) { /* novo atendimento */ }
+
+  // Pergunta o tipo
+  await _mostrarModalTipo();
 }
 
 window.inicializarPaginaAtendimento = inicializarAtendimento;
