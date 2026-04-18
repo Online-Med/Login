@@ -1,0 +1,361 @@
+<!-- config_atestados.html — Configuração de Atestados por Profissional -->
+<style>
+#cfgAtToolbar {
+  background:#fff; border-bottom:1px solid #e9ecef;
+  padding:8px 16px; display:flex; align-items:center; gap:10px;
+}
+#cfgAtToolbar h5 { margin:0; font-size:.95rem; }
+
+.cfgat-table { width:100%; font-size:.82rem; border-collapse:collapse; }
+.cfgat-table th {
+  background:#f8f9fa; font-size:.72rem; text-transform:uppercase;
+  letter-spacing:.04em; color:#6c757d; padding:7px 10px;
+  border-bottom:2px solid #dee2e6;
+}
+.cfgat-table td { padding:8px 10px; border-bottom:1px solid #f2f2f2; vertical-align:middle; }
+
+.tipo-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:600;
+  border:1px solid currentColor;
+}
+.var-chip {
+  display:inline-block; font-size:.68rem; background:#e8eeff; color:#3b5bdb;
+  border-radius:4px; padding:1px 6px; font-family:monospace; cursor:pointer;
+  margin:2px; border:1px solid #c5cef5;
+}
+.var-chip:hover { background:#3b5bdb; color:#fff; }
+#cfgAtSQLContent {
+  font-size:.72rem; white-space:pre; background:#1e1e2e; color:#cdd6f4;
+  border-radius:8px; padding:14px 16px; max-height:400px; overflow-y:auto;
+}
+</style>
+
+<div id="cfgAtToolbar">
+  <h5><i class="bi bi-file-earmark-medical text-primary"></i> Config Atestados</h5>
+  <div class="ms-auto d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" onclick="cfgAtSQL()">
+      <i class="bi bi-database"></i> SQL
+    </button>
+  </div>
+</div>
+
+<div class="container-fluid p-3">
+
+  <!-- Seleção de profissional -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+      <label class="form-label mb-0 fw-bold small">Profissional:</label>
+      <select class="form-select form-select-sm" id="cfgAtProf" style="max-width:260px"
+              onchange="cfgAtCarregar()">
+        <option value="">Selecione...</option>
+      </select>
+      <button class="btn btn-sm btn-primary" onclick="cfgAtSalvar()" id="cfgAtBtnSalvar" disabled>
+        <i class="bi bi-cloud-check"></i> Salvar configurações
+      </button>
+      <span id="cfgAtMsg" class="text-success small d-none">
+        <i class="bi bi-check-circle-fill"></i> Salvo!
+      </span>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs" id="cfgAtTabs">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#cfgAtTabGeral">
+        <i class="bi bi-person-badge text-primary"></i> Dados do Profissional
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#cfgAtTabCorpos">
+        <i class="bi bi-file-text text-success"></i> Corpos dos Atestados
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content mt-3">
+
+    <!-- ── ABA: DADOS GERAIS ─── -->
+    <div class="tab-pane fade show active" id="cfgAtTabGeral">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Linha 1 do Topo (Nome do médico)</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_topo1"
+                     placeholder="Dr. Francesco Zanotto">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Linha 2 do Topo (Especialidade)</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_topo2"
+                     placeholder="Ginecologia &amp; Obstetrícia">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Título do Atestado</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_titulo"
+                     placeholder="ATESTADO MÉDICO">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Cidade (para data)</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_cidade"
+                     placeholder="São Paulo">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Assinatura — Linha 1</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_assinatura1"
+                     placeholder="Dr. Francesco Zanotto">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Assinatura — Linha 2 (CRM)</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_assinatura2"
+                     placeholder="CRM 34.582">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label small fw-bold">Rodapé — Linha 1 (Endereço)</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_rodape1"
+                     placeholder="Rua Cerqueira Cesar, 359 – Santo Amaro –">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Rodapé — Linha 2 (Cidade/Fone)</label>
+              <input type="text" class="form-control form-control-sm" id="cfgAt_rodape2"
+                     placeholder="São Paulo - CEP 04750-080 - FONE: 5687-4410">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ABA: CORPOS ─────── -->
+    <div class="tab-pane fade" id="cfgAtTabCorpos">
+      <div class="alert alert-info py-2 small mb-3">
+        <i class="bi bi-info-circle"></i>
+        Use as variáveis abaixo clicando nelas para inserir no ponto do cursor.
+        Elas serão substituídas pelos dados reais na hora de emitir o atestado.
+      </div>
+      <div class="mb-3">
+        <span class="fw-bold small me-2">Variáveis disponíveis:</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{nome_paciente}')">{nome_paciente}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{data}')">{data}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{hora_inicial}')">{hora_inicial}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{hora_final}')">{hora_final}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{quant_dias}')">{quant_dias}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{dias_extenso}')">{dias_extenso}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{dias}')">{dias}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{semanas}')">{semanas}</span>
+        <span class="var-chip" onclick="cfgAtInserirVar('{nome_acompanhante}')">{nome_acompanhante}</span>
+      </div>
+
+      <div id="cfgAtCorposLista"></div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div>
+
+
+<!-- Modal: SQL -->
+<div class="modal fade" id="cfgAtModalSQL" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title mb-0"><i class="bi bi-database-fill-gear text-primary"></i> SQL — Execute no Supabase</h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          Execute este SQL no <strong>SQL Editor</strong> do Supabase antes de usar os atestados.
+        </div>
+        <pre id="cfgAtSQLContent"></pre>
+        <button class="btn btn-sm btn-outline-secondary mt-2"
+                onclick="navigator.clipboard.writeText(document.getElementById('cfgAtSQLContent').textContent)
+                  .then(()=>Swal.fire({icon:'success',title:'Copiado!',timer:900,showConfirmButton:false}))">
+          <i class="bi bi-clipboard"></i> Copiar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+'use strict';
+
+// ── Tipos de atestado ──────────────────────────────────────────
+var TIPOS = [
+  { id:'periodo_repouso',   label:'Período c/ Repouso',  chave:'atestado_corpo_periodo_repouso',
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} e deverá permanecer o resto do dia em repouso.' },
+  { id:'periodo_s_repouso', label:'Período s/ Repouso',  chave:'atestado_corpo_periodo_s_repouso',
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data}.' },
+  { id:'horas',             label:'Horas',               chave:'atestado_corpo_horas',
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} das {hora_inicial} às {hora_final}.' },
+  { id:'dia',               label:'Dia',                 chave:'atestado_corpo_dia',
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} e orientei-a a permanecer o dia de hoje em repouso.' },
+  { id:'acompanhante',      label:'Acompanhante',        chave:'atestado_corpo_acompanhante',
+    default:'O(A) {nome_acompanhante} compareceu neste serviço acompanhando a paciente {nome_paciente} em consulta médica no dia {data}.' },
+  { id:'dias',              label:'Dias',                chave:'atestado_corpo_dias',
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} e orientei-a a permanecer em repouso por {quant_dias} ({dias_extenso}) dias.' },
+  { id:'licenca',           label:'Licença',             chave:'atestado_corpo_licenca',
+    default:'A paciente {nome_paciente}, encontra-se com {semanas} semanas de gestação.\nDeve, a partir da presente data, ser afastada do trabalho e obter a Licença Maternidade por {dias} dias.' },
+];
+
+var CFG = { profId: null, dados: {}, campoFocado: null };
+
+// ── API ──────────────────────────────────────────────────────
+async function api(params, method, body) {
+  var qs = Object.entries(params||{}).map(p => p[0]+'='+encodeURIComponent(p[1])).join('&');
+  var opts = { method: method||'GET', headers:{'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/atestados?'+qs, opts);
+  return r.json();
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Profissionais ─────────────────────────────────────────────
+async function cfgAtInit() {
+  try {
+    var data = await api({action:'profissionais'});
+    var sel = document.getElementById('cfgAtProf');
+    (Array.isArray(data)?data:[]).forEach(function(p){
+      var o = document.createElement('option');
+      o.value = p.id_profissional; o.textContent = p.nome;
+      sel.appendChild(o);
+    });
+  } catch(e){ console.error(e); }
+  _renderCorpos();
+}
+
+window.cfgAtCarregar = async function() {
+  var pid = document.getElementById('cfgAtProf').value;
+  if(!pid) return;
+  CFG.profId = pid;
+  document.getElementById('cfgAtBtnSalvar').disabled = false;
+  try {
+    CFG.dados = await api({action:'config', id_profissional:pid});
+  } catch(e){ CFG.dados = {}; }
+  _preencherCampos();
+};
+
+function _preencherCampos() {
+  var d = CFG.dados || {};
+  ['topo1','topo2','titulo','cidade','assinatura1','assinatura2','rodape1','rodape2'].forEach(function(k){
+    var el = document.getElementById('cfgAt_'+k);
+    if(el) el.value = d['atestado_'+k] || '';
+  });
+  TIPOS.forEach(function(t){
+    var ta = document.getElementById('corpo_'+t.id);
+    if(ta) ta.value = d[t.chave] || t.default;
+  });
+}
+
+function _renderCorpos() {
+  var container = document.getElementById('cfgAtCorposLista');
+  container.innerHTML = TIPOS.map(function(t){
+    return '<div class="card border-0 shadow-sm mb-3">'
+      +'<div class="card-header bg-white py-2 d-flex align-items-center gap-2">'
+        +'<span class="fw-bold small"><i class="bi bi-file-text text-success me-1"></i>'+esc(t.label)+'</span>'
+        +'<code class="small text-muted ms-2">'+esc(t.chave)+'</code>'
+      +'</div>'
+      +'<div class="card-body py-2">'
+        +'<textarea class="form-control form-control-sm" id="corpo_'+t.id+'" rows="4" '
+          +'style="font-size:.83rem;line-height:1.55" '
+          +'onfocus="CFG.campoFocado=this" onclick="CFG.campoFocado=this">'
+          +esc(t.default)
+        +'</textarea>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Inserir variável no cursor ────────────────────────────────
+window.cfgAtInserirVar = function(v) {
+  var ta = CFG.campoFocado;
+  if(!ta) {
+    Swal.fire({icon:'info',title:'Selecione um campo',
+      text:'Clique dentro do corpo do atestado desejado antes de inserir a variável.',
+      confirmButtonColor:'#0d6efd'});
+    return;
+  }
+  var s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.substring(0,s) + v + ta.value.substring(e);
+  ta.selectionStart = ta.selectionEnd = s + v.length;
+  ta.focus();
+};
+window.CFG = CFG; // expõe para onclick inline
+
+// ── Salvar ────────────────────────────────────────────────────
+window.cfgAtSalvar = async function() {
+  if(!CFG.profId) return;
+  var pid = parseInt(CFG.profId);
+  var registros = [];
+
+  // Geral
+  ['topo1','topo2','titulo','cidade','assinatura1','assinatura2','rodape1','rodape2'].forEach(function(k){
+    var el = document.getElementById('cfgAt_'+k);
+    if(el) registros.push({
+      mascara:'mascara_por_profissional',
+      chave_config:'atestado_'+k,
+      id_profissional:pid,
+      valor: el.value.trim()
+    });
+  });
+
+  // Corpos
+  TIPOS.forEach(function(t){
+    var ta = document.getElementById('corpo_'+t.id);
+    if(ta) registros.push({
+      mascara:'tipo_atestado',
+      chave_config: t.chave,
+      id_profissional: pid,
+      valor: ta.value
+    });
+  });
+
+  try {
+    var r = await api({action:'salvar_config'}, 'POST', registros);
+    if(r && r.sucesso === false) throw new Error(r.erro);
+    var msg = document.getElementById('cfgAtMsg');
+    msg.classList.remove('d-none');
+    setTimeout(function(){ msg.classList.add('d-none'); }, 3000);
+  } catch(e) {
+    Swal.fire({icon:'error',title:'Erro ao salvar',text:e.message,confirmButtonColor:'#dc3545'});
+  }
+};
+
+// ── SQL ───────────────────────────────────────────────────────
+window.cfgAtSQL = function() {
+  document.getElementById('cfgAtSQLContent').textContent = `-- Execute no SQL Editor do Supabase
+
+-- 1. Tabela de configurações (caso não exista)
+CREATE TABLE IF NOT EXISTS configuracoes (
+  id             bigserial,
+  mascara        text NOT NULL,
+  chave_config   text NOT NULL,
+  id_profissional int NOT NULL,
+  valor          text,
+  updated_at     timestamptz DEFAULT now(),
+  PRIMARY KEY (mascara, chave_config, id_profissional)
+);
+CREATE INDEX IF NOT EXISTS idx_config_prof ON configuracoes(id_profissional);
+
+-- 2. Tabela de atestados gerados
+CREATE TABLE IF NOT EXISTS atestados (
+  id               bigserial PRIMARY KEY,
+  id_profissional  int,
+  paciente_id      text,
+  paciente_nome    text,
+  tipo_atestado    text,
+  corpo_renderizado text,
+  variaveis        jsonb DEFAULT '{}',
+  cid              text,
+  data_emissao     date,
+  hora_emissao     text,
+  created_at       timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_atestados_pac ON atestados(paciente_id);
+CREATE INDEX IF NOT EXISTS idx_atestados_prof ON atestados(id_profissional);`;
+  abrirModal('cfgAtModalSQL');
+};
+
+window.inicializarPaginaConfigAtestados = cfgAtInit;
+cfgAtInit();
+})();
+</script>
