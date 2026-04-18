@@ -193,6 +193,8 @@ async function cancelarUsuario() {
     const id = document.getElementById('u_id').value;
     const nomeAtual = document.getElementById('u_nome').value;
 
+    console.log(!window.ehEdicaoUsuario,"fora do if - ID:", id);
+
     // Se for um novo registro e o nome ainda for o de reserva, deleta a linha
     if (!window.ehEdicaoUsuario && id && nomeAtual.includes("NOVO USUÁRIO")) {
         console.log("Cancelando reserva vazia ID:", id);
@@ -201,9 +203,10 @@ async function cancelarUsuario() {
         } catch (e) {
             console.error("Erro ao deletar reserva:", e);
         }
-        console.log(!window.ehEdicaoUsuario,"fora do if - ID:", id);
+        
     }
-
+    
+    
     window.ehEdicaoUsuario = false;
     carregarConteudo('usuarios.html');
 }
