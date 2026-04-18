@@ -1,6 +1,6 @@
 // api/atestados.js
 //
-// GET  ?action=usuarios                          → lista usuarios
+// GET  ?action=profissionais                     → lista profissionais
 // GET  ?action=config&id_profissional=X          → toda config do profissional (chave→valor)
 // GET  ?action=get&id=X                          → atestado por ID
 // GET  ?action=lista&paciente_id=X               → histórico de atestados do paciente
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     if (method === 'GET') {
 
       if (action === 'profissionais') {
-        const { ok, data } = await sb('usuarios?order=nome.asc&select=id_profissional,nome');
+        const { ok, data } = await sb('profissionais?order=nome.asc&select=id_profissional,nome');
         return res.status(200).json(ok ? data || [] : []);
       }
 
@@ -64,10 +64,11 @@ export default async function handler(req, res) {
 
       if (action === 'buscar_paciente' && termo) {
         const t = termo.trim();
-        const tLimpo = t.replace(/\./g, '').replace(/-/g, '').replace(/\//g, '');
-        // Busca por nome (case insensitive), pcod exato, cpf com/sem pontuação
+        // Remove qualquer pontuação para comparar com CPFs armazenados com ou sem formatação
+        const tLimpo = t.replace(/[.\-\/\s]/g, '');
+        // Busca por: nome (case insensitive), pcod exato, CPF com pontuação original, CPF sem pontuação
         const { ok, data } = await sb(
-          `pacientes?or=(Nome.ilike.*${t}*,pcod.eq.${t},Documento.ilike.*${tLimpo}*)&limit=15&select=pcod,Nome,Documento,Data_Nascimento,Celular`
+          `pacientes?or=(Nome.ilike.*${encodeURIComponent(t)}*,pcod.eq.${encodeURIComponent(t)},Documento.ilike.*${encodeURIComponent(t)}*,Documento.ilike.*${encodeURIComponent(tLimpo)}*)&limit=15&select=pcod,Nome,Documento,Data_Nascimento,Celular`
         );
         return res.status(200).json(ok ? data || [] : []);
       }
