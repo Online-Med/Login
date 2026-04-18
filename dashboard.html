@@ -178,7 +178,16 @@ html += `
     }
   }
 
-
+// Função global para abrir modais do Bootstrap 5
+window.abrirModal = function(idModal) {
+    const elemento = document.getElementById(idModal);
+    if (elemento) {
+        const meuModal = new bootstrap.Modal(elemento);
+        meuModal.show();
+    } else {
+        console.error("Modal não encontrado: " + idModal);
+    }
+};
 
   
   function fazerLogout() {
