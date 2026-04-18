@@ -67,26 +67,48 @@ export default async function handler(req, res) {
 
       if (action === 'buscar_paciente' && termo) {
         const t = termo.trim();
-        // Versão sem qualquer pontuação (para CPFs armazenados sem formatação)
+        // Versão sem qualquer pontuação (263.659.458-25 → 26365945825)
         const tLimpo = t.replace(/[.\-\/\s]/g, '');
-        // Versão sem pontos (CPF digitado como "263.659.458-25" → busca "263659458-25" também)
+        // Versão sem pontos mas mantendo hífen (263.659.458-25 → 263659458-25)
         const tSemPonto = t.replace(/\./g, '');
 
-        // IMPORTANTE: não usar encodeURIComponent aqui — o sb() já lida com a URL.
-        // encodeURIComponent codifica '-' como %2D e ' ' como %20, quebrando o ilike do PostgREST.
-        let orParts = [
-          `Nome.ilike.*${t}*`,
-          `pcod.eq.${t}`,
-          `Documento.ilike.*${t}*`,
-        ];
-        // Adiciona variações limpas apenas se forem diferentes do original
-        if (tLimpo !== t)     orParts.push(`Documento.ilike.*${tLimpo}*`);
-        if (tSemPonto !== t && tSemPonto !== tLimpo) orParts.push(`Documento.ilike.*${tSemPonto}*`);
+        try {
+          // Queries individuais (sem or() que tem problemas com pontuação na URL)
+          // rodam em paralelo para não atrasar a resposta
+          const promises = [
+            // 1. Busca por nome (case insensitive, parcial)
+            sb(`pacientes?Nome=ilike.*${t}*&limit=10&select=pcod,Nome,Documento,Data_Nascimento,Celular`),
+            // 2. Busca por CPF exatamente como digitado
+            sb(`pacientes?Documento=ilike.*${t}*&limit=10&select=pcod,Nome,Documento,Data_Nascimento,Celular`),
+          ];
 
-        const { ok, data } = await sb(
-          `pacientes?or=(${orParts.join(',')})&limit=15&select=pcod,Nome,Documento,Data_Nascimento,Celular`
-        );
-        return res.status(200).json(ok ? data || [] : []);
+          // 3. CPF sem pontuação (só adiciona se for diferente do original)
+          if (tLimpo !== t) {
+            promises.push(sb(`pacientes?Documento=ilike.*${tLimpo}*&limit=10&select=pcod,Nome,Documento,Data_Nascimento,Celular`));
+          }
+          // 4. CPF sem ponto mas com hífen
+          if (tSemPonto !== t && tSemPonto !== tLimpo) {
+            promises.push(sb(`pacientes?Documento=ilike.*${tSemPonto}*&limit=10&select=pcod,Nome,Documento,Data_Nascimento,Celular`));
+          }
+          // 5. Busca por pcod exato (só números)
+          if (/^\d+$/.test(t)) {
+            promises.push(sb(`pacientes?pcod=eq.${t}&limit=5&select=pcod,Nome,Documento,Data_Nascimento,Celular`));
+          }
+
+          const results = await Promise.all(promises);
+
+          // Mescla e deduplica por pcod
+          const mapa = new Map();
+          results.forEach(({ ok, data }) => {
+            if (ok && Array.isArray(data)) {
+              data.forEach(p => { if (p.pcod) mapa.set(String(p.pcod), p); });
+            }
+          });
+
+          return res.status(200).json(Array.from(mapa.values()).slice(0, 15));
+        } catch (e) {
+          return res.status(200).json([]);
+        }
       }
 
       return res.status(400).json({ erro: 'Parâmetro action inválido.' });
