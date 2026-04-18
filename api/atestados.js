@@ -1,6 +1,6 @@
 // api/atestados.js
 //
-// GET  ?action=profissionais                     → lista profissionais
+// GET  ?action=usuarios                          → lista usuarios
 // GET  ?action=config&id_profissional=X          → toda config do profissional (chave→valor)
 // GET  ?action=get&id=X                          → atestado por ID
 // GET  ?action=lista&paciente_id=X               → histórico de atestados do paciente
@@ -34,8 +34,8 @@ export default async function handler(req, res) {
     // ─── GET ─────────────────────────────────────────────────────
     if (method === 'GET') {
 
-      if (action === 'profissionais') {
-        const { ok, data } = await sb('profissionais?order=nome.asc&select=id_profissional,nome');
+      if (action === 'usuarios') {
+        const { ok, data } = await sb('usuarios?order=nome.asc&select=id_profissional,nome');
         return res.status(200).json(ok ? data || [] : []);
       }
 
