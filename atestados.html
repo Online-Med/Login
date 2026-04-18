@@ -1,126 +1,771 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><i class="bi bi-house-door-fill me-1"></i>INÍCIO</li>
-            <li class="breadcrumb-item">Documentos</li>
-            <li class="breadcrumb-item active fw-bold text-primary">EMISSÃO DE ATESTADO</li>
-        </ol>
-    </nav>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-secondary px-4" onclick="carregarConteudo('inicio.html')">Cancelar</button>
-        <button type="button" class="btn btn-primary px-4 shadow-sm" onclick="gerarAtestado()">
-            <i class="bi bi-printer me-1"></i>Imprimir Atestado
-        </button>
-    </div>
-</div>
-
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white py-3">
-        <h5 class="mb-0 text-primary"><i class="bi bi-file-earmark-medical me-2"></i>Informações do Atestado</h5>
-    </div>
-    <div class="card-body p-4">
-        <form id="formAtestado">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <label class="form-label fw-bold text-secondary">Nome do Paciente</label>
-                    <input type="text" class="form-control" id="at_paciente" placeholder="Nome completo">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold text-secondary">Convênio</label>
-                    <select class="form-select" id="comboConvenios">
-                        <option value="">Carregando...</option>
-                    </select>
-                </div>
-
-                <hr class="my-4 text-light">
-
-                <div class="col-md-3">
-                    <label class="form-label fw-bold text-secondary">Data de Início</label>
-                    <input type="date" class="form-control" id="at_data_inicio">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold text-secondary">Dias de Afastamento</label>
-                    <input type="number" class="form-control" id="at_dias" min="1" value="1">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold text-secondary">CID (Opcional)</label>
-                    <input type="text" class="form-control" id="at_cid" placeholder="Ex: Z00">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold text-secondary">Horário da Consulta</label>
-                    <input type="time" class="form-control" id="at_hora">
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label fw-bold text-secondary">Observações / Recomendações</label>
-                    <textarea class="form-control" id="at_obs" rows="3" placeholder="Ex: Repouso absoluto, evitar esforços físicos..."></textarea>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-// Reaproveitando a sua função de convênios para manter o padrão
-async function carregarConveniosAtestado() {
-    const combo = document.getElementById('comboConvenios');
-    try {
-        const resp = await fetch('/api/convenios');
-        const json = await resp.json();
-        
-        if (json.sucesso && json.dados) {
-            combo.innerHTML = '<option value="">Selecione...</option>';
-            json.dados.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.CONVENIO;
-                combo.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        console.error("Erro ao carregar convênios:", e);
-        combo.innerHTML = '<option value="">Erro ao carregar</option>';
-    }
-}
-
-function gerarAtestado() {
-    const dados = {
-        paciente: document.getElementById('at_paciente').value,
-        convenio: document.getElementById('comboConvenios').selectedOptions[0].text,
-        data: document.getElementById('at_data_inicio').value,
-        dias: document.getElementById('at_dias').value,
-        cid: document.getElementById('at_cid').value
-    };
-
-    if (!dados.paciente) {
-        return Swal.fire('Aviso', 'Por favor, informe o nome do paciente.', 'warning');
-    }
-
-    Swal.fire({
-        title: 'Gerando documento...',
-        html: 'Preparando impressão do atestado.',
-        timer: 1500,
-        didOpen: () => { Swal.showLoading(); }
-    }).then(() => {
-        console.log("Dados para o atestado:", dados);
-        // Aqui você pode disparar a lógica de PDF ou Janela de Impressão
-        window.print(); 
-    });
-}
-
-// Inicialização
-document.getElementById('at_data_inicio').valueAsDate = new Date();
-carregarConveniosAtestado();
-</script>
-
+<!-- atestados.html — Emissão de Atestados Médicos -->
 <style>
-    @media print {
-        /* Esconde tudo exceto o que for necessário para o atestado na hora de imprimir */
-        body * { visibility: hidden; }
-        .card, .card * { visibility: visible; }
-        .card { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
-        .btn, .breadcrumb, .card-header { display: none !important; }
-    }
+/* ── Toolbar ──────────────────────────────────────────────────── */
+#atestToolbar {
+  background:#fff; border-bottom:1px solid #e9ecef;
+  padding:8px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+#atestToolbar h5 { margin:0; font-size:.95rem; }
+
+/* ── Tabs de tipo ─────────────────────────────────────────────── */
+.atest-tab-btn {
+  padding:7px 14px; font-size:.8rem; border:none; background:none;
+  color:#6c757d; border-bottom:3px solid transparent; cursor:pointer;
+  white-space:nowrap; transition:all .15s; font-weight:500;
+}
+.atest-tab-btn.active {
+  color:#0d6efd; border-bottom-color:#0d6efd; background:#f0f4ff;
+  border-radius:6px 6px 0 0;
+}
+.atest-tab-btn:hover:not(.active) { color:#495057; background:#f8f9fa; }
+
+/* ── Autocomplete paciente ────────────────────────────────────── */
+.at-pac-drop {
+  position:absolute; z-index:1080; background:#fff;
+  border:1px solid #dee2e6; border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+  max-height:220px; overflow-y:auto; min-width:320px; left:0; top:100%;
+}
+.at-pac-drop .dd-item {
+  padding:8px 12px; cursor:pointer; font-size:.8rem; border-bottom:1px solid #f5f5f5;
+}
+.at-pac-drop .dd-item:hover { background:#f0f4ff; }
+.at-pac-drop .dd-item:last-child { border-bottom:none; }
+.at-pac-drop .dd-nome { font-weight:600; }
+.at-pac-drop .dd-sub  { font-size:.72rem; color:#6c757d; }
+.at-pac-wrap { position:relative; }
+
+/* ── Preview do atestado ──────────────────────────────────────── */
+#atestPreviewBox {
+  background:#fff; border:1px solid #dee2e6; border-radius:8px;
+  padding:24px 32px; min-height:400px; font-family:'Times New Roman',serif;
+  font-size:12pt; line-height:1.6; box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+.prev-topo1   { font-weight:700; font-size:11pt; color:#1a1a2e; }
+.prev-topo2   { font-size:10pt; color:#333; font-style:italic; }
+.prev-linha   { border-bottom:2px solid #3b5bdb; margin:4px 0 20px; }
+.prev-titulo  { text-align:center; font-weight:700; font-size:14pt; margin:30px 0 24px; letter-spacing:.08em; }
+.prev-data    { margin-bottom:28px; font-size:11pt; }
+.prev-corpo   { text-indent:3em; margin-bottom:30px; font-size:11pt; line-height:1.8; white-space:pre-wrap; }
+.prev-assin   { text-align:center; margin-top:60px; margin-bottom:4px; }
+.prev-assin-linha { border-top:1px solid #333; width:240px; margin:0 auto 6px; }
+.prev-assin-nome  { font-weight:700; font-size:10pt; }
+.prev-assin-crm   { font-size:10pt; }
+.prev-cid     { font-size:9.5pt; color:#444; text-align:center; margin-top:6px; }
+.prev-rodape  { margin-top:24px; padding-top:10px; border-top:1px solid #dee2e6; font-size:9pt; text-align:center; color:#555; }
+.prev-corte   { border-top:2px dashed #aaa; margin:28px 0; text-align:center; }
+.prev-corte span { background:#fff; padding:0 10px; font-size:.72rem; color:#aaa; position:relative; top:-1px; }
+
+/* ── Variáveis não preenchidas: destaque ─────────────────────── */
+.var-vazia { background:#fff3cd; color:#664d03; border-radius:3px; padding:0 3px; }
+
+/* ── Print ─────────────────────────────────────────────────────── */
+@media print {
+  body * { visibility:hidden !important; }
+  #atestPrintArea, #atestPrintArea * { visibility:visible !important; }
+  #atestPrintArea {
+    position:fixed; left:0; top:0; width:100%; height:auto;
+    background:#fff;
+  }
+  .no-print { display:none !important; }
+}
+
+/* ── Área de impressão A4 ─────────────────────────────────────── */
+#atestPrintArea {
+  display:none;
+  font-family:'Times New Roman',serif;
+  font-size:11pt; line-height:1.6; color:#000;
+}
+.a4-page {
+  width:210mm; min-height:297mm; padding:18mm 20mm 14mm;
+  box-sizing:border-box; background:#fff; margin:0 auto;
+  page-break-after:always;
+}
+.a4-copy + .a4-copy { border-top:2px dashed #bbb; padding-top:10mm; margin-top:10mm; }
 </style>
+
+
+<!-- ═══ TOOLBAR ═══════════════════════════════════════════════════ -->
+<div id="atestToolbar">
+  <h5><i class="bi bi-file-earmark-medical text-primary"></i> Atestados</h5>
+  <select class="form-select form-select-sm" id="atestProf" style="max-width:220px"
+          onchange="atestCarregarProf()">
+    <option value="">Selecionar profissional...</option>
+  </select>
+</div>
+
+<!-- ═══ CONTEÚDO PRINCIPAL ═══════════════════════════════════════ -->
+<div class="container-fluid p-3" id="atestMain">
+
+  <!-- Tabs de tipo de atestado -->
+  <div class="d-flex border-bottom mb-3 overflow-auto" id="atestTabBar" style="gap:2px"></div>
+
+  <div class="row g-3">
+
+    <!-- COLUNA ESQUERDA: formulário -->
+    <div class="col-lg-5">
+
+      <!-- Paciente -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white py-2 small fw-bold">
+          <i class="bi bi-person-search text-info"></i> Paciente
+        </div>
+        <div class="card-body py-3 px-3">
+          <div class="at-pac-wrap">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" id="atestBuscaPac"
+                     placeholder="Nome, PCOD ou CPF..."
+                     oninput="atestBuscarPac(this.value)" autocomplete="off">
+              <button class="btn btn-outline-secondary" onclick="atestLimparPac()">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+            <div class="at-pac-drop d-none" id="atestPacDrop"></div>
+          </div>
+          <div id="atestPacInfo" class="mt-2 d-none">
+            <div class="d-flex align-items-center gap-2 p-2 bg-light rounded">
+              <i class="bi bi-person-check-fill text-success fs-5"></i>
+              <div>
+                <div class="fw-bold small" id="atestPacNome">—</div>
+                <div class="text-muted" style="font-size:.72rem" id="atestPacSub">—</div>
+              </div>
+              <input type="hidden" id="atestPacId">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos dinâmicos do tipo selecionado -->
+      <div class="card border-0 shadow-sm mb-3" id="atestCamposCard">
+        <div class="card-header bg-white py-2 small fw-bold">
+          <i class="bi bi-sliders text-success"></i> <span id="atestCamposTitulo">Preencher campos</span>
+        </div>
+        <div class="card-body py-3 px-3" id="atestCampos">
+          <div class="text-muted small text-center py-3">
+            Selecione um tipo de atestado acima.
+          </div>
+        </div>
+      </div>
+
+      <!-- CID -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white py-2 small fw-bold">
+          <i class="bi bi-hospital text-danger"></i> CID (opcional)
+        </div>
+        <div class="card-body py-2 px-3">
+          <div class="at-pac-wrap">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text" style="font-size:.72rem">CID-10</span>
+              <input type="text" class="form-control form-control-sm" id="atestCidBusca"
+                     placeholder="Buscar por código ou descrição..."
+                     oninput="atestBuscarCID(this.value)" autocomplete="off">
+              <button class="btn btn-outline-secondary btn-sm" onclick="atestLimparCID()" title="Limpar CID">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+            <div class="at-pac-drop d-none" id="atestCidDrop"></div>
+          </div>
+          <div id="atestCidInfo" class="mt-2 d-none">
+            <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle" id="atestCidTag">—</span>
+            <input type="hidden" id="atestCidCod">
+          </div>
+          <div class="form-text small mt-1">Se informado, aparece no rodapé do atestado.</div>
+        </div>
+      </div>
+
+      <!-- Botões -->
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary flex-grow-1" onclick="atestGerar()">
+          <i class="bi bi-eye-fill"></i> Gerar Preview
+        </button>
+        <button class="btn btn-success" onclick="atestImprimir()" id="atestBtnImprimir" disabled>
+          <i class="bi bi-printer-fill"></i> Imprimir
+        </button>
+        <button class="btn btn-outline-secondary" onclick="atestSalvar()" id="atestBtnSalvar" disabled>
+          <i class="bi bi-cloud-arrow-up"></i>
+        </button>
+      </div>
+
+    </div><!-- /col-lg-5 -->
+
+    <!-- COLUNA DIREITA: preview -->
+    <div class="col-lg-7">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="small fw-bold text-muted"><i class="bi bi-eye me-1"></i> Preview do Atestado</span>
+        <span class="badge bg-light text-muted border" id="atestPreviewTipo">—</span>
+      </div>
+      <div id="atestPreviewBox">
+        <div class="text-muted text-center py-5">
+          <i class="bi bi-file-earmark-medical fs-1 d-block mb-2 opacity-25"></i>
+          Preencha os campos e clique em <strong>Gerar Preview</strong>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /row -->
+</div><!-- /container -->
+
+
+<!-- ═══ ÁREA DE IMPRESSÃO A4 ══════════════════════════════════════ -->
+<div id="atestPrintArea"></div>
+
+
+<!-- ═══ SCRIPT ════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+// ── Tipos de atestado ──────────────────────────────────────────
+var TIPOS = [
+  {
+    id:'periodo_repouso', label:'Período c/ Repouso', cor:'#6f42c1',
+    chave:'atestado_corpo_periodo_repouso',
+    vars:['nome_paciente','data'],
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} e deverá permanecer o resto do dia em repouso.'
+  },
+  {
+    id:'periodo_s_repouso', label:'Período s/ Repouso', cor:'#0d6efd',
+    chave:'atestado_corpo_periodo_s_repouso',
+    vars:['nome_paciente','data'],
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data}.'
+  },
+  {
+    id:'horas', label:'Horas', cor:'#198754',
+    chave:'atestado_corpo_horas',
+    vars:['nome_paciente','data','hora_inicial','hora_final'],
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} das {hora_inicial} às {hora_final}.'
+  },
+  {
+    id:'dia', label:'Dia', cor:'#0891b2',
+    chave:'atestado_corpo_dia',
+    vars:['nome_paciente','data'],
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} e orientei-a a permanecer o dia de hoje em repouso.'
+  },
+  {
+    id:'acompanhante', label:'Acompanhante', cor:'#d97706',
+    chave:'atestado_corpo_acompanhante',
+    vars:['nome_acompanhante','nome_paciente','data'],
+    default:'O(A) {nome_acompanhante} compareceu neste serviço acompanhando a paciente {nome_paciente} em consulta médica no dia {data}.'
+  },
+  {
+    id:'dias', label:'Dias', cor:'#dc3545',
+    chave:'atestado_corpo_dias',
+    vars:['nome_paciente','data','quant_dias'],
+    default:'A paciente {nome_paciente}, compareceu neste serviço para consulta médica no dia {data} e orientei-a a permanecer em repouso por {quant_dias} ({dias_extenso}) dias.'
+  },
+  {
+    id:'licenca', label:'Licença', cor:'#7c3aed',
+    chave:'atestado_corpo_licenca',
+    vars:['nome_paciente','semanas','dias'],
+    default:'A paciente {nome_paciente}, encontra-se com {semanas} semanas de gestação.\nDeve, a partir da presente data, ser afastada do trabalho e obter a Licença Maternidade por {dias} dias.'
+  },
+];
+
+// ── Configurações de campos por variável ───────────────────────
+var VAR_CFG = {
+  nome_paciente:    { label:'Nome do Paciente',    tipo:'text',  info:'preenchido na busca acima' },
+  data:             { label:'Data',                tipo:'date',  default: function(){ return _hoje(); } },
+  hora_inicial:     { label:'Hora Inicial',        tipo:'time',  default: function(){ return _horaChegada(); } },
+  hora_final:       { label:'Hora Final',          tipo:'time',  default: function(){ return _proximaHoraCheia(); } },
+  quant_dias:       { label:'Quantidade de Dias',  tipo:'number',default:'1' },
+  dias_extenso:     { label:'Dias por Extenso',    tipo:'text',  default:'(preenchido automaticamente)' },
+  dias:             { label:'Dias (Licença)',      tipo:'number',default:'120' },
+  semanas:          { label:'Semanas de Gestação', tipo:'number',default:'39' },
+  nome_acompanhante:{ label:'Nome do Acompanhante',tipo:'text',  default:'' },
+};
+
+// ── Estado ────────────────────────────────────────────────────
+var AT = {
+  profId:    null,
+  cfg:       {},           // config do profissional
+  tipoAtual: null,
+  pacData:   null,
+  cidCod:    null,
+  cidDesc:   null,
+  gerado:    null,         // HTML do preview atual
+  buscarPacTmr: null,
+  buscarCidTmr: null,
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function api(params, method, body) {
+  var qs = Object.entries(params||{}).map(p=>p[0]+'='+encodeURIComponent(p[1])).join('&');
+  var opts = { method:method||'GET', headers:{'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  var r = await fetch('/api/atestados?'+qs, opts);
+  return r.json();
+}
+
+function _hoje(){ return new Date().toISOString().split('T')[0]; }
+
+function _horaChegada() {
+  // Tenta pegar a hora de chegada da agenda em memória
+  var ag = window._atendimentoAgendaData;
+  if(ag && ag.hora_chegada) {
+    var d = new Date(ag.hora_chegada);
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  var now = new Date();
+  return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+}
+
+function _proximaHoraCheia() {
+  var now = new Date();
+  now.setMinutes(0,0,0);
+  now.setHours(now.getHours()+1);
+  return String(now.getHours()).padStart(2,'0')+':00';
+}
+
+function _dataBR(iso) {
+  if(!iso) return '';
+  var p = iso.split('-');
+  if(p.length < 3) return iso;
+  return p[2]+'/'+p[1]+'/'+p[0];
+}
+
+function _dataExtenso(iso) {
+  if(!iso) return '';
+  var d = new Date(iso+'T12:00:00');
+  var meses = ['janeiro','fevereiro','março','abril','maio','junho',
+               'julho','agosto','setembro','outubro','novembro','dezembro'];
+  return d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+}
+
+function _diasPorExtenso(n) {
+  n = parseInt(n);
+  if(isNaN(n)) return '';
+  var unid = ['','um','dois','três','quatro','cinco','seis','sete','oito','nove',
+              'dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete',
+              'dezoito','dezenove'];
+  var dez  = ['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+  var cent = ['','cem','duzentos','trezentos','quatrocentos','quinhentos',
+              'seiscentos','setecentos','oitocentos','novecentos'];
+  if(n < 20) return unid[n] || String(n);
+  if(n < 100){
+    var t = dez[Math.floor(n/10)]; var u = unid[n%10];
+    return t + (u ? ' e '+u : '');
+  }
+  if(n === 100) return 'cem';
+  if(n < 1000){
+    var c = cent[Math.floor(n/100)]; var r = n%100;
+    return c + (r ? ' e '+_diasPorExtenso(r) : '');
+  }
+  return String(n);
+}
+
+// ── Profissionais ─────────────────────────────────────────────
+async function atestInit() {
+  try {
+    var profs = await api({action:'profissionais'});
+    var sel = document.getElementById('atestProf');
+    (Array.isArray(profs)?profs:[]).forEach(function(p){
+      var o = document.createElement('option');
+      o.value = p.id_profissional; o.textContent = p.nome;
+      sel.appendChild(o);
+    });
+    // Se veio de atendimento, pré-seleciona
+    var agData = window._atendimentoAgendaData;
+    if(agData && agData.id_profissional) {
+      sel.value = agData.id_profissional;
+      await atestCarregarProf();
+    }
+  } catch(e){ console.error(e); }
+  _renderTabs();
+}
+
+window.atestCarregarProf = async function() {
+  var pid = document.getElementById('atestProf').value;
+  if(!pid) return;
+  AT.profId = pid;
+  try {
+    AT.cfg = await api({action:'config', id_profissional:pid});
+  } catch(e){ AT.cfg = {}; }
+  // Se veio de atendimento, pré-preenche paciente
+  var agData = window._atendimentoAgendaData;
+  if(agData && agData.paciente_nome) {
+    AT.pacData = { pcod: agData.paciente_id, Nome: agData.paciente_nome };
+    _mostrarPacSelecionado(AT.pacData);
+  }
+};
+
+// ── Tabs ──────────────────────────────────────────────────────
+function _renderTabs() {
+  var bar = document.getElementById('atestTabBar');
+  bar.innerHTML = TIPOS.map(function(t){
+    return '<button class="atest-tab-btn" data-tid="'+t.id+'" '
+      +'style="border-bottom-color:transparent" '
+      +'onclick="atestSelecionarTipo(\''+t.id+'\')">'
+      +'<span style="color:'+t.cor+'">●</span> '+esc(t.label)
+      +'</button>';
+  }).join('');
+}
+
+window.atestSelecionarTipo = function(tid) {
+  AT.tipoAtual = TIPOS.find(function(t){ return t.id === tid; }) || null;
+  document.querySelectorAll('.atest-tab-btn').forEach(function(btn){
+    var ativo = btn.dataset.tid === tid;
+    btn.classList.toggle('active', ativo);
+    if(ativo) btn.style.borderBottomColor = AT.tipoAtual.cor;
+    else btn.style.borderBottomColor = 'transparent';
+  });
+  if(AT.tipoAtual) {
+    document.getElementById('atestCamposTitulo').textContent = AT.tipoAtual.label;
+    _renderCampos(AT.tipoAtual);
+  }
+};
+
+// ── Campos dinâmicos ──────────────────────────────────────────
+function _renderCampos(tipo) {
+  var container = document.getElementById('atestCampos');
+  var vars = (tipo.vars||[]).filter(function(v){ return v !== 'nome_paciente' && v !== 'dias_extenso'; });
+  if(!vars.length) {
+    container.innerHTML = '<div class="text-muted small">Nenhum campo adicional para este tipo.</div>';
+    return;
+  }
+  container.innerHTML = vars.map(function(v){
+    var cfg = VAR_CFG[v] || { label:v, tipo:'text', default:'' };
+    var defVal = typeof cfg.default === 'function' ? cfg.default() : (cfg.default||'');
+    return '<div class="mb-3">'
+      +'<label class="form-label small fw-bold">'+esc(cfg.label)+'</label>'
+      +(cfg.info ? '<div class="form-text small mb-1 text-muted">'+esc(cfg.info)+'</div>' : '')
+      +'<input type="'+cfg.tipo+'" class="form-control form-control-sm" '
+        +'id="campo_'+v+'" value="'+esc(defVal)+'">'
+      +'</div>';
+  }).join('');
+
+  // Se tem quant_dias, atualiza dias_extenso em tempo real
+  var qdEl = document.getElementById('campo_quant_dias');
+  if(qdEl) {
+    qdEl.addEventListener('input', function(){
+      var el = document.getElementById('campo_dias_extenso');
+      if(el) el.value = _diasPorExtenso(this.value);
+    });
+  }
+}
+
+// ── Busca de paciente ─────────────────────────────────────────
+window.atestBuscarPac = function(v) {
+  if(AT.buscarPacTmr) clearTimeout(AT.buscarPacTmr);
+  var drop = document.getElementById('atestPacDrop');
+  if(!v || v.length < 2) { drop.classList.add('d-none'); return; }
+  AT.buscarPacTmr = setTimeout(async function(){
+    try {
+      var data = await api({action:'buscar_paciente', termo:v});
+      var pacs = Array.isArray(data) ? data : [];
+      if(!pacs.length) {
+        drop.innerHTML = '<div class="dd-item text-muted">Nenhum paciente encontrado</div>';
+      } else {
+        drop.innerHTML = pacs.map(function(p){
+          var nasc = p.Data_Nascimento ? p.Data_Nascimento.split('T')[0].split('-').reverse().join('/') : '';
+          return '<div class="dd-item" onclick=\'atestSelecionarPac('+JSON.stringify(p).replace(/'/g,'&#39;')+'\')'
+            + '><div class="dd-nome">'+esc(p.Nome||'')+'</div>'
+            + '<div class="dd-sub">'+(p.pcod?'PCOD: '+p.pcod:'')+' '+(p.Documento?'· CPF: '+p.Documento:'')+' '+(nasc?'· Nasc: '+nasc:'')+'</div></div>';
+        }).join('');
+      }
+      drop.classList.remove('d-none');
+    } catch(e){ drop.classList.add('d-none'); }
+  }, 350);
+};
+
+window.atestSelecionarPac = function(p) {
+  AT.pacData = p;
+  _mostrarPacSelecionado(p);
+  document.getElementById('atestBuscaPac').value = p.Nome||'';
+  document.getElementById('atestPacDrop').classList.add('d-none');
+};
+
+function _mostrarPacSelecionado(p) {
+  var nasc = p.Data_Nascimento ? p.Data_Nascimento.split('T')[0].split('-').reverse().join('/') : '';
+  document.getElementById('atestPacNome').textContent = p.Nome||'—';
+  document.getElementById('atestPacSub').textContent = [p.pcod?'PCOD '+p.pcod:'', p.Documento?'CPF: '+p.Documento:'', nasc?'Nasc: '+nasc:''].filter(Boolean).join(' · ');
+  document.getElementById('atestPacId').value = p.pcod||'';
+  document.getElementById('atestPacInfo').classList.remove('d-none');
+}
+
+window.atestLimparPac = function() {
+  AT.pacData = null;
+  document.getElementById('atestBuscaPac').value = '';
+  document.getElementById('atestPacInfo').classList.add('d-none');
+  document.getElementById('atestPacDrop').classList.add('d-none');
+  document.getElementById('atestPacId').value = '';
+};
+
+// Fecha dropdown ao clicar fora
+document.addEventListener('click', function(e){
+  var wrap = document.querySelector('.at-pac-wrap');
+  if(wrap && !wrap.contains(e.target)) {
+    var d = document.getElementById('atestPacDrop');
+    if(d) d.classList.add('d-none');
+  }
+  var cidWrap = document.getElementById('atestCidBusca');
+  if(cidWrap && !cidWrap.contains(e.target)) {
+    var cd = document.getElementById('atestCidDrop');
+    if(cd) cd.classList.add('d-none');
+  }
+});
+
+// ── CID (busca na tabela cid) ─────────────────────────────────
+window.atestBuscarCID = function(v) {
+  if(AT.buscarCidTmr) clearTimeout(AT.buscarCidTmr);
+  var drop = document.getElementById('atestCidDrop');
+  if(!v || v.length < 2) { drop.classList.add('d-none'); return; }
+  AT.buscarCidTmr = setTimeout(async function(){
+    try {
+      // Adapte o endpoint conforme a tabela CID do seu banco
+      var r = await fetch('/api/cid?busca='+encodeURIComponent(v)+'&limit=10');
+      var data = await r.json();
+      var lista = Array.isArray(data) ? data : [];
+      if(!lista.length) {
+        drop.innerHTML='<div class="dd-item text-muted">Nenhum CID encontrado</div>';
+      } else {
+        drop.innerHTML = lista.map(function(c){
+          var cod = c.codigo||c.Codigo||c.cid||'';
+          var desc= c.descricao||c.Descricao||c.nome||'';
+          return '<div class="dd-item" onclick="atestSelecionarCID(\''+esc(cod)+'\',\''+esc(desc)+'\')">'
+            +'<span class="fw-bold me-1">'+esc(cod)+'</span><span class="text-muted">'+esc(desc)+'</span></div>';
+        }).join('');
+      }
+      drop.classList.remove('d-none');
+    } catch(e){ drop.classList.add('d-none'); }
+  }, 350);
+};
+
+window.atestSelecionarCID = function(cod, desc) {
+  AT.cidCod = cod; AT.cidDesc = desc;
+  document.getElementById('atestCidBusca').value = cod + ' — ' + desc;
+  document.getElementById('atestCidCod').value = cod;
+  document.getElementById('atestCidTag').textContent = 'CID-10: ' + cod + ' — ' + desc;
+  document.getElementById('atestCidInfo').classList.remove('d-none');
+  document.getElementById('atestCidDrop').classList.add('d-none');
+};
+
+window.atestLimparCID = function() {
+  AT.cidCod = null; AT.cidDesc = null;
+  document.getElementById('atestCidBusca').value = '';
+  document.getElementById('atestCidCod').value = '';
+  document.getElementById('atestCidInfo').classList.add('d-none');
+  document.getElementById('atestCidDrop').classList.add('d-none');
+};
+
+// ── Resolver variáveis no template ────────────────────────────
+function _resolverVars(corpo, previewMode) {
+  var valores = {};
+
+  // Paciente
+  valores['nome_paciente'] = AT.pacData ? (AT.pacData.Nome||'').toUpperCase() : null;
+
+  // Data
+  var dataEl = document.getElementById('campo_data');
+  var dataVal = dataEl ? dataEl.value : _hoje();
+  valores['data'] = _dataBR(dataVal);
+
+  // Hora inicial
+  var hiEl = document.getElementById('campo_hora_inicial');
+  if(hiEl) valores['hora_inicial'] = hiEl.value;
+
+  // Hora final
+  var hfEl = document.getElementById('campo_hora_final');
+  if(hfEl) valores['hora_final'] = hfEl.value;
+
+  // Dias (com extenso)
+  var qdEl = document.getElementById('campo_quant_dias');
+  if(qdEl) {
+    var qd = qdEl.value;
+    valores['quant_dias'] = qd;
+    valores['dias_extenso'] = _diasPorExtenso(qd);
+  }
+
+  // Dias licença
+  var dEl = document.getElementById('campo_dias');
+  if(dEl) valores['dias'] = dEl.value;
+
+  // Semanas
+  var swEl = document.getElementById('campo_semanas');
+  if(swEl) valores['semanas'] = swEl.value;
+
+  // Acompanhante
+  var aEl = document.getElementById('campo_nome_acompanhante');
+  if(aEl) valores['nome_acompanhante'] = aEl.value;
+
+  // Substitui no corpo
+  var resultado = corpo;
+  Object.keys(valores).forEach(function(v){
+    var val = valores[v];
+    var re = new RegExp('\\{'+v+'\\}', 'g');
+    if(previewMode && (val === null || val === undefined || val === '')) {
+      resultado = resultado.replace(re, '<span class="var-vazia">{'+v+'}</span>');
+    } else {
+      resultado = resultado.replace(re, esc(val||''));
+    }
+  });
+
+  return { texto: resultado, valores: valores };
+}
+
+// ── Montar HTML do atestado ───────────────────────────────────
+function _htmlAtestado(tipo, corpo, opts) {
+  var c = AT.cfg;
+  opts = opts || {};
+  var topo1    = c.atestado_topo1    || '';
+  var topo2    = c.atestado_topo2    || '';
+  var titulo   = c.atestado_titulo   || 'ATESTADO MÉDICO';
+  var cidade   = c.atestado_cidade   || 'São Paulo';
+  var assin1   = c.atestado_assinatura1 || '';
+  var assin2   = c.atestado_assinatura2 || '';
+  var rodape1  = c.atestado_rodape1  || '';
+  var rodape2  = c.atestado_rodape2  || '';
+
+  var dataStr = '';
+  var dataEl = document.getElementById('campo_data');
+  var dataVal = dataEl ? dataEl.value : _hoje();
+  if(dataVal) dataStr = esc(cidade) + ', ' + _dataExtenso(dataVal) + '.';
+
+  var cidHtml = '';
+  if(AT.cidCod) cidHtml = '<div class="'+opts.cidClass+' prev-cid">CID-10: '+esc(AT.cidCod)+' – '+esc(AT.cidDesc||'')+'</div>';
+
+  return (topo1?'<div class="'+(opts.topo1Class||'prev-topo1')+'">'+esc(topo1)+'</div>':'')
+    +(topo2?'<div class="'+(opts.topo2Class||'prev-topo2')+'">'+esc(topo2)+'</div>':'')
+    +'<div class="'+(opts.linhaClass||'prev-linha')+'"></div>'
+    +'<div class="'+(opts.tituloClass||'prev-titulo')+'">'+esc(titulo)+'</div>'
+    +(dataStr?'<div class="'+(opts.dataClass||'prev-data')+'">'+dataStr+'</div>':'')
+    +'<div class="'+(opts.corpoClass||'prev-corpo')+'">'+corpo+'</div>'
+    +'<div class="'+(opts.assinClass||'prev-assin')+'">'
+      +'<div class="'+(opts.assinLinhaClass||'prev-assin-linha')+'"></div>'
+      +(assin1?'<div class="'+(opts.assinNomeClass||'prev-assin-nome')+'">'+esc(assin1)+'</div>':'')
+      +(assin2?'<div class="'+(opts.assinCrmClass||'prev-assin-crm')+'">'+esc(assin2)+'</div>':'')
+    +'</div>'
+    +cidHtml
+    +(rodape1||rodape2
+      ? '<div class="'+(opts.rodapeClass||'prev-rodape')+'">'
+          +(rodape1?esc(rodape1)+'<br>':'')+esc(rodape2||'')
+        +'</div>'
+      : '');
+}
+
+// ── Gerar Preview ─────────────────────────────────────────────
+window.atestGerar = function() {
+  if(!AT.tipoAtual) {
+    Swal.fire({icon:'warning',title:'Selecione um tipo',text:'Clique em uma das abas acima para escolher o tipo de atestado.',confirmButtonColor:'#0d6efd'});
+    return;
+  }
+  if(!AT.profId) {
+    Swal.fire({icon:'warning',title:'Selecione o profissional',confirmButtonColor:'#0d6efd'});
+    return;
+  }
+
+  // Corpo configurado ou padrão
+  var corpoTpl = AT.cfg[AT.tipoAtual.chave] || AT.tipoAtual.default;
+  var { texto, valores } = _resolverVars(corpoTpl, true);
+
+  var htmlInterno = _htmlAtestado(AT.tipoAtual, texto, {});
+  document.getElementById('atestPreviewBox').innerHTML = htmlInterno;
+  document.getElementById('atestPreviewTipo').textContent = AT.tipoAtual.label;
+
+  AT.gerado = { texto: texto, valores: valores, corpoTpl: corpoTpl };
+  document.getElementById('atestBtnImprimir').disabled = false;
+  document.getElementById('atestBtnSalvar').disabled = false;
+};
+
+// ── Imprimir ──────────────────────────────────────────────────
+window.atestImprimir = function() {
+  if(!AT.gerado) { atestGerar(); return; }
+
+  var corpoTpl = AT.gerado.corpoTpl;
+  var { texto: corpo } = _resolverVars(corpoTpl, false);
+
+  // Dois copias na mesma folha A4 (cópia do médico + cópia do paciente)
+  var paginaHtml = '<div class="a4-page">'
+    + _htmlAtestadoPrint(corpo)
+    + '<div class="prev-corte"><span>recorte aqui</span></div>'
+    + _htmlAtestadoPrintMini(corpo)
+    + '</div>';
+
+  var area = document.getElementById('atestPrintArea');
+  area.innerHTML = paginaHtml;
+  area.style.display = 'block';
+
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      area.style.display = 'none';
+      area.innerHTML = '';
+    }, 500);
+  }, 150);
+};
+
+function _htmlAtestadoPrint(corpo) {
+  var c = AT.cfg;
+  var cidade = c.atestado_cidade || 'São Paulo';
+  var dataEl = document.getElementById('campo_data');
+  var dataVal = dataEl ? dataEl.value : _hoje();
+  var dataStr = cidade + ', ' + _dataExtenso(dataVal) + '.';
+
+  return '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.6">'
+    +(c.atestado_topo1?'<div style="font-weight:700;font-size:11pt">'+esc(c.atestado_topo1)+'</div>':'')
+    +(c.atestado_topo2?'<div style="font-size:10pt;font-style:italic">'+esc(c.atestado_topo2)+'</div>':'')
+    +'<div style="border-bottom:2px solid #3b5bdb;margin:4pt 0 20pt"></div>'
+    +'<div style="text-align:center;font-weight:700;font-size:14pt;letter-spacing:.06em;margin:32pt 0 24pt">'+esc(c.atestado_titulo||'ATESTADO MÉDICO')+'</div>'
+    +'<div style="margin-bottom:24pt;font-size:11pt">'+esc(dataStr)+'</div>'
+    +'<div style="text-indent:3em;margin-bottom:28pt;font-size:11pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
+    +(AT.cidCod?'<div style="font-size:9.5pt;text-align:center;margin-bottom:8pt">CID-10: '+esc(AT.cidCod)+' – '+esc(AT.cidDesc||'')+'</div>':'')
+    +'<div style="text-align:center;margin-top:60pt">'
+      +'<div style="border-top:1px solid #333;width:240pt;margin:0 auto 6pt"></div>'
+      +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:10pt">'+esc(c.atestado_assinatura1)+'</div>':'')
+      +(c.atestado_assinatura2?'<div style="font-size:10pt">'+esc(c.atestado_assinatura2)+'</div>':'')
+    +'</div>'
+    +((c.atestado_rodape1||c.atestado_rodape2)
+      ?'<div style="margin-top:20pt;padding-top:8pt;border-top:1px solid #aaa;font-size:8.5pt;text-align:center;color:#444">'
+        +(c.atestado_rodape1?esc(c.atestado_rodape1)+'<br>':'')
+        +esc(c.atestado_rodape2||'')
+      +'</div>':'')
+    +'</div>';
+}
+
+function _htmlAtestadoPrintMini(corpo) {
+  // Versão condensada para segunda cópia (canhoto)
+  var c = AT.cfg;
+  return '<div style="font-family:\'Times New Roman\',serif;font-size:9.5pt;line-height:1.5;padding-top:6pt">'
+    +(c.atestado_topo1?'<div style="font-weight:700">'+esc(c.atestado_topo1)+'</div>':'')
+    +'<div style="border-bottom:1px solid #3b5bdb;margin:3pt 0 8pt"></div>'
+    +'<div style="font-weight:700;font-size:10pt;text-align:center;margin-bottom:10pt">'+esc(c.atestado_titulo||'ATESTADO MÉDICO')+'</div>'
+    +'<div style="text-indent:2em;line-height:1.6;white-space:pre-wrap">'+esc(corpo)+'</div>'
+    +'<div style="text-align:center;margin-top:20pt">'
+      +'<div style="border-top:1px solid #333;width:160pt;margin:0 auto 4pt"></div>'
+      +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:9pt">'+esc(c.atestado_assinatura1)+'</div>':'')
+      +(c.atestado_assinatura2?'<div style="font-size:9pt">'+esc(c.atestado_assinatura2)+'</div>':'')
+    +'</div>'
+    +'</div>';
+}
+
+// ── Salvar no banco ───────────────────────────────────────────
+window.atestSalvar = async function() {
+  if(!AT.gerado || !AT.profId) return;
+  var dataEl = document.getElementById('campo_data');
+  var corpo = AT.gerado.corpoTpl;
+  var { texto: corpoRend } = _resolverVars(corpo, false);
+  try {
+    var r = await api({action:'gerar'}, 'POST', {
+      id_profissional:  parseInt(AT.profId),
+      paciente_id:      AT.pacData ? AT.pacData.pcod : null,
+      paciente_nome:    AT.pacData ? AT.pacData.Nome : null,
+      tipo_atestado:    AT.tipoAtual ? AT.tipoAtual.id : null,
+      corpo_renderizado: corpoRend,
+      variaveis:        AT.gerado.valores,
+      cid:              AT.cidCod||null,
+      data_emissao:     dataEl ? dataEl.value : _hoje(),
+    });
+    if(r && r.sucesso === false) throw new Error(r.erro);
+    Swal.fire({icon:'success',title:'Atestado salvo!',timer:1300,showConfirmButton:false});
+  } catch(e){
+    Swal.fire({icon:'error',title:'Erro ao salvar',text:e.message,confirmButtonColor:'#dc3545'});
+  }
+};
+
+// ── Init ──────────────────────────────────────────────────────
+window.inicializarPaginaAtestados = atestInit;
+atestInit();
+})();
+</script>
