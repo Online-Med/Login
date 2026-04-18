@@ -201,6 +201,7 @@ async function cancelarUsuario() {
         } catch (e) {
             console.error("Erro ao deletar reserva:", e);
         }
+        console.log(!window.ehEdicaoUsuario,"fora do if - ID:", id);
     }
 
     window.ehEdicaoUsuario = false;
