@@ -65,9 +65,10 @@
   #atestPrintArea, #atestPrintArea * { visibility:visible !important; }
   #atestPrintArea {
     position:fixed; left:0; top:0; width:100%; height:auto;
-    background:#fff;
+    background:#fff; margin:0; padding:0;
   }
   .no-print { display:none !important; }
+  @page { size:A4; margin:18mm 20mm 14mm; }
 }
 
 /* ── Área de impressão A4 ─────────────────────────────────────── */
@@ -79,9 +80,7 @@
 .a4-page {
   width:210mm; min-height:297mm; padding:18mm 20mm 14mm;
   box-sizing:border-box; background:#fff; margin:0 auto;
-  page-break-after:always;
 }
-.a4-copy + .a4-copy { border-top:2px dashed #bbb; padding-top:10mm; margin-top:10mm; }
 </style>
 
 
@@ -278,12 +277,13 @@ var VAR_CFG = {
 // ── Estado ────────────────────────────────────────────────────
 var AT = {
   profId:    null,
-  cfg:       {},           // config do profissional
+  cfg:       {},
   tipoAtual: null,
   pacData:   null,
+  pacsList:  [],          // cache da última busca de pacientes
   cidCod:    null,
   cidDesc:   null,
-  gerado:    null,         // HTML do preview atual
+  gerado:    null,
   buscarPacTmr: null,
   buscarCidTmr: null,
 };
@@ -458,16 +458,30 @@ window.atestBuscarPac = function(v) {
       if(!pacs.length) {
         drop.innerHTML = '<div class="dd-item text-muted">Nenhum paciente encontrado</div>';
       } else {
-        drop.innerHTML = pacs.map(function(p){
+        // Salva lista no estado para acessar por índice (evita problema com JSON no onclick)
+        AT.pacsList = pacs;
+        drop.innerHTML = pacs.map(function(p, idx){
           var nasc = p.Data_Nascimento ? p.Data_Nascimento.split('T')[0].split('-').reverse().join('/') : '';
-          return '<div class="dd-item" onclick=\'atestSelecionarPac('+JSON.stringify(p).replace(/'/g,'&#39;')+'\')'
-            + '><div class="dd-nome">'+esc(p.Nome||'')+'</div>'
-            + '<div class="dd-sub">'+(p.pcod?'PCOD: '+p.pcod:'')+' '+(p.Documento?'· CPF: '+p.Documento:'')+' '+(nasc?'· Nasc: '+nasc:'')+'</div></div>';
+          return '<div class="dd-item" onclick="atestSelecionarPacIdx('+idx+')">'
+            + '<div class="dd-nome">'+esc(p.Nome||'')+'</div>'
+            + '<div class="dd-sub">'
+              +(p.pcod?'PCOD: '+p.pcod:'')
+              +(p.Documento?' · CPF: '+p.Documento:'')
+              +(nasc?' · Nasc: '+nasc:'')
+            +'</div>'
+            +'</div>';
         }).join('');
       }
       drop.classList.remove('d-none');
-    } catch(e){ drop.classList.add('d-none'); }
+    } catch(e){ console.error('busca pac',e); drop.classList.add('d-none'); }
   }, 350);
+};
+
+// Seleção por índice (seguro — sem JSON no onclick)
+window.atestSelecionarPacIdx = function(idx) {
+  var p = AT.pacsList && AT.pacsList[idx];
+  if(!p) return;
+  atestSelecionarPac(p);
 };
 
 window.atestSelecionarPac = function(p) {
@@ -671,17 +685,13 @@ window.atestGerar = function() {
 
 // ── Imprimir ──────────────────────────────────────────────────
 window.atestImprimir = function() {
-  if(!AT.gerado) { atestGerar(); return; }
+  if(!AT.gerado) { atestGerar(); setTimeout(atestImprimir, 300); return; }
 
   var corpoTpl = AT.gerado.corpoTpl;
   var { texto: corpo } = _resolverVars(corpoTpl, false);
 
-  // Dois copias na mesma folha A4 (cópia do médico + cópia do paciente)
-  var paginaHtml = '<div class="a4-page">'
-    + _htmlAtestadoPrint(corpo)
-    + '<div class="prev-corte"><span>recorte aqui</span></div>'
-    + _htmlAtestadoPrintMini(corpo)
-    + '</div>';
+  // Página A4 única — atestado completo
+  var paginaHtml = '<div class="a4-page">' + _htmlAtestadoPrint(corpo) + '</div>';
 
   var area = document.getElementById('atestPrintArea');
   area.innerHTML = paginaHtml;
@@ -692,7 +702,7 @@ window.atestImprimir = function() {
     setTimeout(function(){
       area.style.display = 'none';
       area.innerHTML = '';
-    }, 500);
+    }, 800);
   }, 150);
 };
 
@@ -721,22 +731,6 @@ function _htmlAtestadoPrint(corpo) {
         +(c.atestado_rodape1?esc(c.atestado_rodape1)+'<br>':'')
         +esc(c.atestado_rodape2||'')
       +'</div>':'')
-    +'</div>';
-}
-
-function _htmlAtestadoPrintMini(corpo) {
-  // Versão condensada para segunda cópia (canhoto)
-  var c = AT.cfg;
-  return '<div style="font-family:\'Times New Roman\',serif;font-size:9.5pt;line-height:1.5;padding-top:6pt">'
-    +(c.atestado_topo1?'<div style="font-weight:700">'+esc(c.atestado_topo1)+'</div>':'')
-    +'<div style="border-bottom:1px solid #3b5bdb;margin:3pt 0 8pt"></div>'
-    +'<div style="font-weight:700;font-size:10pt;text-align:center;margin-bottom:10pt">'+esc(c.atestado_titulo||'ATESTADO MÉDICO')+'</div>'
-    +'<div style="text-indent:2em;line-height:1.6;white-space:pre-wrap">'+esc(corpo)+'</div>'
-    +'<div style="text-align:center;margin-top:20pt">'
-      +'<div style="border-top:1px solid #333;width:160pt;margin:0 auto 4pt"></div>'
-      +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:9pt">'+esc(c.atestado_assinatura1)+'</div>':'')
-      +(c.atestado_assinatura2?'<div style="font-size:9pt">'+esc(c.atestado_assinatura2)+'</div>':'')
-    +'</div>'
     +'</div>';
 }
 
