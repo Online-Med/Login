@@ -2,9 +2,14 @@
 <style>
 #cfgAtToolbar {
   background:#fff; border-bottom:1px solid #e9ecef;
-  padding:8px 16px; display:flex; align-items:center; gap:10px;
+  padding:8px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  min-width:0; overflow:hidden;
 }
-#cfgAtToolbar h5 { margin:0; font-size:.95rem; }
+#cfgAtToolbar h5 { margin:0; font-size:.95rem; white-space:nowrap; }
+
+/* Impede que este fragmento empurre o sidebar */
+#cfgAtToolbar,
+.container-fluid { max-width:100%; overflow-x:hidden; }
 
 .cfgat-table { width:100%; font-size:.82rem; border-collapse:collapse; }
 .cfgat-table th {
