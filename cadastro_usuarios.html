@@ -193,10 +193,10 @@ async function cancelarUsuario() {
     const id = document.getElementById('u_id').value;
     const nomeAtual = document.getElementById('u_nome').value;
 
-    console.log(!window.ehEdicaoUsuario,"fora do if - ID:", id , "  nome " , nomeAtual);
+    //console.log(!window.ehEdicaoUsuario,"fora do if - ID:", id , "  nome " , nomeAtual);
 
     // Se for um novo registro e o nome ainda for o de reserva, deleta a linha
-    if (!window.ehEdicaoUsuario && id && nomeAtual.includes("")) {
+    if (!window.ehEdicaoUsuario && id ) {
         console.log("Cancelando reserva vazia ID:", id);
         try {
             await fetch(`/api/usuarios?id=${id}`, { method: 'DELETE' });
