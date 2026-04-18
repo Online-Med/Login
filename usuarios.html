@@ -15,6 +15,7 @@
                     <th>Perfil</th>
                     <th>Especialidade</th>
                     <th>Agenda?</th>
+                    <th>crm?</th>
                     <th class="text-center">Ações</th>
                 </tr>
             </thead>
@@ -39,6 +40,7 @@ async function carregarUsuarios() {
                 <td><span class="badge bg-info">${u.perfil}</span></td>
                 <td>${u.especialidade || '-'}</td>
                 <td>${u.tem_agenda}</td>
+                <td>${u.crm}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary" onclick="editarUsuario(${u.id_profissional})">
                         <i class="bi bi-pencil"></i>
