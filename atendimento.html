@@ -400,6 +400,8 @@ var AT = {
   prescBuscaTmr:  null,
   exameBuscaTmr:  null,
   tipoSelecionado: null, // id no modal antes de confirmar
+  _medDropList:   [],    // cache para seleção por índice
+  _exameDropList: [],    // cache para seleção por índice
 };
 
 /* ── API helpers ── */
@@ -614,49 +616,57 @@ window.atBuscarMed = function(v) {
     var tipoId = AT.tipoId;
     var termo = (v||'').toLowerCase().trim();
 
-    // Favoritos do tipo atual
     var favs = lista.filter(function(m){
       return Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1
         && (!termo || m.nome.toLowerCase().includes(termo));
     });
-    // Demais que batem na busca
     var outros = lista.filter(function(m){
-      if(!termo) return false; // sem busca não mostra todos
+      if(!termo) return false;
       var ehFav = Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1;
       return !ehFav && m.nome.toLowerCase().includes(termo);
     });
 
-    if(!favs.length && !outros.length) {
-      drop.innerHTML = '<div class="dd-item text-muted">Nenhum resultado'
-        + (termo ? '' : ' — digite para buscar')+'</div>';
+    AT._medDropList = favs.concat(outros);
+
+    if(!AT._medDropList.length) {
+      drop.innerHTML = '<div class="dd-item text-muted">'
+        + (termo ? 'Nenhum resultado' : 'Favoritos deste tipo aparecerão aqui') + '</div>';
     } else {
       var html = '';
+      var idx = 0;
       if(favs.length) {
         html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos deste tipo</div>';
-        html += favs.map(function(m){ return _medDropItem(m); }).join('');
+        favs.forEach(function(m){ html += _medDropItem(m, idx++); });
       }
       if(outros.length) {
         html += '<div class="dd-sep">Catálogo</div>';
-        html += outros.map(function(m){ return _medDropItem(m); }).join('');
+        outros.forEach(function(m){ html += _medDropItem(m, idx++); });
       }
-      // Opção de adicionar manualmente
       if(termo) {
         html += '<div class="dd-sep"></div>'
-          + '<div class="dd-item" onclick="atAddPresc({nome:\''+esc(termo)+'\',dose:\'\',posologia:\'\'})">'
+          + '<div class="dd-item" data-add-med="'+esc(termo)+'">'
           + '<span class="dd-nome"><i class="bi bi-plus-circle text-primary"></i> Adicionar "'+esc(termo)+'" manualmente</span></div>';
       }
       drop.innerHTML = html;
+      // Listener para "adicionar manualmente"
+      drop.querySelectorAll('[data-add-med]').forEach(function(el){
+        el.addEventListener('click', function(){ atAddPresc({ nome: el.dataset.addMed, dose:'', posologia:'' }); });
+      });
     }
     drop.classList.remove('d-none');
   }, 250);
 };
 
-function _medDropItem(m) {
-  return '<div class="dd-item" onclick=\'atAddPresc('+JSON.stringify({
-    nome: m.nome, dose: m.dose||'', posologia: m.posologia||''
-  }).replace(/'/g,'&#39;')+'\')'
-    + '><span class="dd-nome">'+esc(m.nome)+'</span>'
-    + '<span class="dd-sub">'+(m.dose||'')+(m.posologia?' · '+m.posologia:'')+'</span></div>';
+window.atAddPrescIdx = function(idx) {
+  var m = AT._medDropList && AT._medDropList[idx];
+  if(m) atAddPresc({ nome: m.nome, dose: m.dose||'', posologia: m.posologia||'' });
+};
+
+function _medDropItem(m, idx) {
+  return '<div class="dd-item" onclick="atAddPrescIdx('+idx+')">'
+    + '<span class="dd-nome">'+esc(m.nome)+'</span>'
+    + '<span class="dd-sub">'+(m.dose||'')+(m.posologia?' \xb7 '+m.posologia:'')+'</span>'
+    + '</div>';
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -720,36 +730,49 @@ window.atBuscarExame = function(v) {
       return !ehFav && (e.nome.toLowerCase().includes(termo) || (e.grupo||'').toLowerCase().includes(termo));
     });
 
-    if(!favs.length && !outros.length) {
-      drop.innerHTML = '<div class="dd-item text-muted">Nenhum resultado'+(termo?'':' — favoritos para este tipo aparecerão aqui')+'</div>';
+    AT._exameDropList = favs.concat(outros);
+
+    if(!AT._exameDropList.length) {
+      drop.innerHTML = '<div class="dd-item text-muted">'
+        + (termo ? 'Nenhum resultado' : 'Favoritos para este tipo aparecerão aqui') + '</div>';
     } else {
       var html = '';
+      var idx = 0;
       if(favs.length) {
         html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos deste tipo</div>';
-        html += favs.map(function(e){ return _exameDropItem(e); }).join('');
+        favs.forEach(function(e){ html += _exameDropItem(e, idx++); });
       }
       if(outros.length) {
         html += '<div class="dd-sep">Catálogo</div>';
-        html += outros.map(function(e){ return _exameDropItem(e); }).join('');
+        outros.forEach(function(e){ html += _exameDropItem(e, idx++); });
       }
       if(termo) {
         html += '<div class="dd-sep"></div>'
-          + '<div class="dd-item" onclick="atAddExame({nome:\''+esc(termo)+'\',grupo:\'\'})">'
+          + '<div class="dd-item" data-add-exame="'+esc(termo)+'">'
           + '<span class="dd-nome"><i class="bi bi-plus-circle text-warning"></i> Solicitar "'+esc(termo)+'" manualmente</span></div>';
       }
       drop.innerHTML = html;
+      drop.querySelectorAll('[data-add-exame]').forEach(function(el){
+        el.addEventListener('click', function(){ atAddExame({ nome: el.dataset.addExame, grupo:'' }); });
+      });
     }
     drop.classList.remove('d-none');
   }, 250);
 };
 
-function _exameDropItem(e) {
-  return '<div class="dd-item" onclick=\'atAddExame('+JSON.stringify({
-    nome: e.nome, grupo: e.grupo||''
-  }).replace(/'/g,'&#39;')+'\')'
-    + '><span class="dd-nome">'+esc(e.nome)+'</span>'
-    + (e.grupo?'<span class="dd-sub">'+esc(e.grupo)+'</span>':'')+'</div>';
+window.atAddExameIdx = function(idx) {
+  var e = AT._exameDropList && AT._exameDropList[idx];
+  if(e) atAddExame({ nome: e.nome, grupo: e.grupo||'' });
+};
+
+
+function _exameDropItem(e, idx) {
+  return '<div class="dd-item" onclick="atAddExameIdx('+idx+')">'
+    + '<span class="dd-nome">'+esc(e.nome)+'</span>'
+    + (e.grupo?'<span class="dd-sub">'+esc(e.grupo)+'</span>':'')
+    + '</div>';
 }
+
 
 function _fecharDrop(id) {
   var d = document.getElementById(id);
