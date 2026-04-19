@@ -180,13 +180,15 @@ html += `
 
 // Função global para abrir modais do Bootstrap 5
 window.abrirModal = function(idModal) {
-    const elemento = document.getElementById(idModal);
-    if (elemento) {
-        const meuModal = new bootstrap.Modal(elemento);
-        meuModal.show();
-    } else {
-        console.error("Modal não encontrado: " + idModal);
+    // Remove o foco do elemento atual ANTES de abrir — evita o erro aria-hidden
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
     }
+    const elemento = document.getElementById(idModal);
+    if (!elemento) { console.error("Modal não encontrado: " + idModal); return; }
+    const meuModal = bootstrap.Modal.getOrCreateInstance(elemento);
+    // Aguarda o blur propagar antes de exibir
+    setTimeout(function() { meuModal.show(); }, 10);
 };
 
 
