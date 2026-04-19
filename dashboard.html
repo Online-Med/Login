@@ -189,6 +189,28 @@ window.abrirModal = function(idModal) {
     }
 };
 
+
+  // Função global para fechar modais do Bootstrap 5
+window.fecharModal = function(idModal) {
+    const elemento = document.getElementById(idModal);
+    if (elemento) {
+        // Pega a instância existente do modal ou cria uma nova para poder fechar
+        const instancia = bootstrap.Modal.getOrCreateInstance(elemento);
+        instancia.hide();
+        
+        // Limpeza extra: remove o fundo escuro (backdrop) se ele travar
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    } else {
+        console.error("Modal não encontrado para fechar: " + idModal);
+    }
+};
+
   
   function fazerLogout() {
     localStorage.clear();
