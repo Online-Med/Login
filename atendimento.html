@@ -171,160 +171,21 @@
     </div>
   </div>
 
-  <!-- ── BODY ──────────────────────────────────────────────────── -->
+  <!-- ── BODY — blocos dinâmicos ─────────────────────────────── -->
   <div class="container-fluid p-3" style="max-height:calc(100vh - 195px);overflow-y:auto">
-    <div class="row g-3">
+    <div class="row g-3" id="atendBlocosRow">
 
-      <!-- COLUNA ESQUERDA -->
-      <div class="col-lg-8">
-
-        <!-- Sinais Vitais -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-heart-pulse-fill text-danger"></i> Sinais Vitais</div>
-          <div class="at-section-body">
-            <div class="vitais-grid" id="vitaisGrid">
-              <div class="text-muted small text-center py-2" style="grid-column:1/-1">
-                <div class="spinner-border spinner-border-sm text-danger me-1"></div>
-                Aguardando tipo de consulta...
-              </div>
-            </div>
-          </div>
+      <!-- COLUNA ESQUERDA — blocos renderizados dinamicamente -->
+      <div class="col-lg-8" id="atendColEsq">
+        <div class="text-center text-muted py-5">
+          <div class="spinner-border spinner-border-sm text-info me-2"></div>
+          Aguardando tipo de consulta...
         </div>
+      </div>
 
-        <!-- Anamnese -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-chat-left-text-fill text-info"></i> Anamnese</div>
-          <div class="at-section-body">
-            <div class="mb-3">
-              <label class="form-label small fw-bold">Queixa Principal <span class="text-danger">*</span></label>
-              <input type="text" class="form-control form-control-sm" id="atQueixa" placeholder="Motivo principal da consulta...">
-            </div>
-            <div class="mb-3">
-              <label class="form-label small fw-bold">História da Doença Atual (HDA)</label>
-              <textarea class="form-control form-control-sm" id="atHDA" rows="4"
-                placeholder="Início, evolução, fatores de melhora/piora, sintomas associados..."></textarea>
-            </div>
-            <div>
-              <label class="form-label small fw-bold">Antecedentes Pessoais / Familiares</label>
-              <textarea class="form-control form-control-sm" id="atAntecedentes" rows="3"
-                placeholder="Doenças preexistentes, cirurgias, alergias, medicações em uso, histórico familiar..."></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- Exame Físico -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-clipboard2-pulse-fill text-success"></i> Exame Físico</div>
-          <div class="at-section-body">
-            <textarea class="form-control form-control-sm" id="atExameFisico" rows="5"
-              placeholder="Inspeção geral, ausculta, palpação, percussão, neurológico..."></textarea>
-          </div>
-        </div>
-
-        <!-- Diagnóstico -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-journal-medical" style="color:#6f42c1"></i> Hipótese Diagnóstica</div>
-          <div class="at-section-body">
-            <div class="row g-3">
-              <div class="col-md-8">
-                <label class="form-label small fw-bold">Hipótese / Diagnóstico</label>
-                <textarea class="form-control form-control-sm" id="atDiagnostico" rows="3"
-                  placeholder="Hipótese diagnóstica principal e diferenciais..."></textarea>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label small fw-bold">CID-10</label>
-                <input type="text" class="form-control form-control-sm" id="atCID"
-                  placeholder="Ex: J00, K35.8..." style="text-transform:uppercase">
-                <div class="form-text small">Código do CID principal</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Conduta -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-check2-square text-success"></i> Conduta / Plano Terapêutico</div>
-          <div class="at-section-body">
-            <textarea class="form-control form-control-sm" id="atConduta" rows="4"
-              placeholder="Orientações, encaminhamentos, retorno, repouso, dieta, procedimentos..."></textarea>
-          </div>
-        </div>
-
-      </div><!-- /col-lg-8 -->
-
-      <!-- COLUNA DIREITA -->
-      <div class="col-lg-4">
-
-        <!-- Prescrições -->
-        <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-capsule-pill text-primary"></i> Prescrições
-            <button class="btn btn-primary btn-sm ms-auto py-0 px-2" onclick="atAddPresc()" style="font-size:.72rem">
-              <i class="bi bi-plus"></i> Add
-            </button>
-          </div>
-          <div class="at-section-body">
-            <!-- Campo de busca no catálogo -->
-            <div class="at-input-wrap mb-3" id="prescBuscaWrap">
-              <div class="input-group input-group-sm">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="prescBusca"
-                       placeholder="Buscar medicamento no catálogo..."
-                       oninput="atBuscarMed(this.value)" onfocus="atBuscarMed(this.value)"
-                       autocomplete="off">
-              </div>
-              <div class="at-dropdown d-none" id="prescDrop"></div>
-            </div>
-            <div id="prescList"></div>
-            <div class="text-muted small text-center py-1" id="prescEmpty">
-              <i class="bi bi-capsule-pill"></i> Nenhuma prescrição
-            </div>
-          </div>
-        </div>
-
-        <!-- Exames -->
-        <div class="at-section">
-          <div class="at-section-hd">
-            <i class="bi bi-microscope text-warning"></i> Exames
-            <button class="btn btn-warning btn-sm ms-auto py-0 px-2 text-dark" onclick="atAddExame()" style="font-size:.72rem">
-              <i class="bi bi-plus"></i> Add
-            </button>
-          </div>
-          <div class="at-section-body">
-            <!-- Campo de busca no catálogo -->
-            <div class="at-input-wrap mb-3" id="exameBuscaWrap">
-              <div class="input-group input-group-sm">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" id="exameBusca"
-                       placeholder="Buscar exame no catálogo..."
-                       oninput="atBuscarExame(this.value)" onfocus="atBuscarExame(this.value)"
-                       autocomplete="off">
-              </div>
-              <div class="at-dropdown d-none" id="exameDrop"></div>
-            </div>
-            <div id="exameList"></div>
-            <div class="text-muted small text-center py-1" id="exameEmpty">
-              <i class="bi bi-microscope"></i> Nenhum exame solicitado
-            </div>
-          </div>
-        </div>
-
-        <!-- Obs internas -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-sticky-fill text-secondary"></i> Observações Internas</div>
-          <div class="at-section-body">
-            <textarea class="form-control form-control-sm" id="atObs" rows="4"
-              placeholder="Notas internas, observações para próxima consulta..."></textarea>
-          </div>
-        </div>
-
-        <!-- Resumo agenda -->
-        <div class="at-section">
-          <div class="at-section-hd"><i class="bi bi-calendar-check text-info"></i> Dados do Agendamento</div>
-          <div class="at-section-body" id="atResumoDados" style="font-size:.82rem"></div>
-        </div>
-
-      </div><!-- /col-lg-4 -->
+      <!-- COLUNA DIREITA — blocos renderizados dinamicamente -->
+      <div class="col-lg-4" id="atendColDir">
+      </div>
 
     </div><!-- /row -->
   </div><!-- /container -->
@@ -563,7 +424,6 @@ function _set(id, val) {
    PRESCRIÇÕES — com catálogo
 ══════════════════════════════════════════════════════════════ */
 window.atAddPresc = function(med) {
-  // med pode vir pré-preenchido do catálogo
   AT.presc.push({
     medicamento: med ? med.nome  : '',
     dosagem:     med ? (med.dose || '') : '',
@@ -571,38 +431,48 @@ window.atAddPresc = function(med) {
     duracao: ''
   });
   _renderPresc();
-  // Limpa e fecha o campo de busca
   var inp = document.getElementById('prescBusca');
   if(inp) inp.value = '';
   _fecharDrop('prescDrop');
   setTimeout(function(){
-    var inputs = document.querySelectorAll('#prescList .presc-row input');
-    if(inputs.length) inputs[inputs.length - 4].focus();
+    // Foca no campo Medicamento da última linha
+    var rows = document.querySelectorAll('#prescList tr');
+    if(rows.length) {
+      var firstInput = rows[rows.length-1].querySelector('input');
+      if(firstInput) firstInput.focus();
+    }
   }, 50);
 };
 
 function _renderPresc() {
-  var list = document.getElementById('prescList');
+  var list  = document.getElementById('prescList');
   var empty = document.getElementById('prescEmpty');
-  if(!AT.presc.length) { list.innerHTML=''; empty.classList.remove('d-none'); return; }
-  empty.classList.add('d-none');
+  var table = document.getElementById('prescTable');
+  if(!list) return;
+  if(!AT.presc.length) {
+    list.innerHTML = '';
+    if(empty) empty.classList.remove('d-none');
+    if(table) table.style.display = 'none';
+    return;
+  }
+  if(empty) empty.classList.add('d-none');
+  if(table) table.style.display = '';
   list.innerHTML = AT.presc.map(function(p, i){
-    return '<div class="presc-row">'
-      +'<div class="flex-grow-1">'
-        +'<div class="mb-1"><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
-          +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+i+',\'medicamento\',this.value)"></div>'
-        +'<div class="row g-1">'
-          +'<div class="col-4"><input type="text" class="form-control form-control-sm" placeholder="Dose"'
-            +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+i+',\'dosagem\',this.value)"></div>'
-          +'<div class="col-5"><input type="text" class="form-control form-control-sm" placeholder="Posologia"'
-            +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+i+',\'posologia\',this.value)"></div>'
-          +'<div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Duração"'
-            +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+i+',\'duracao\',this.value)"></div>'
-        +'</div>'
-      +'</div>'
-      +'<button class="btn-remove-row" onclick="atDelPresc('+i+')"><i class="bi bi-trash3"></i></button>'
-      +'</div>';
-  }).join('<hr class="my-1">');
+    return '<tr>'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
+        +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+i+',\'medicamento\',this.value)"></td>'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="500mg"'
+        +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+i+',\'dosagem\',this.value)"></td>'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="1cp 8/8h"'
+        +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+i+',\'posologia\',this.value)"></td>'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="7d"'
+        +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+i+',\'duracao\',this.value)"></td>'
+      +'<td class="text-center">'
+        +'<button class="btn-remove-row p-0" onclick="atDelPresc('+i+')" title="Remover">'
+          +'<i class="bi bi-trash3"></i></button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
 }
 window.atUpdPresc = function(i,c,v){ if(AT.presc[i]) AT.presc[i][c]=v; };
 window.atDelPresc = function(i){ AT.presc.splice(i,1); _renderPresc(); };
@@ -952,39 +822,50 @@ async function _carregarConfigTipo(tipoId) {
   var tipo = AT.tiposConfig.find(function(t){ return t.id == tipoId; });
   AT.tipoNome = tipo ? tipo.nome : null;
 
-  // Atualiza badge no header
+  // Badge no header
   var badge = document.getElementById('atendTipoBadge');
-  var nome = document.getElementById('atendTipoNome');
+  var nomeEl = document.getElementById('atendTipoNome');
   if(badge && AT.tipoNome) {
-    nome.textContent = AT.tipoNome;
+    nomeEl.textContent = AT.tipoNome;
     badge.classList.remove('d-none');
   }
 
-  // Carrega componentes e catálogos em paralelo
+  // Carrega blocos + componentes + catálogos em paralelo
   try {
-    var [vincs, meds, exames] = await Promise.all([
+    var results = await Promise.all([
+      cfgApi({ action: 'blocos', tipo_id: tipoId }),
       cfgApi({ action: 'tipo_componentes', tipo_id: tipoId }),
       cfgApi({ action: 'medicamentos' }),
       cfgApi({ action: 'exames' }),
     ]);
 
-    var vincAtivos = (Array.isArray(vincs) ? vincs : []).filter(function(v){ return v.ativo !== false; });
-    AT.componentesSV  = vincAtivos.filter(function(v){ return v.componente && v.componente.secao === 'SINAIS_VITAIS'; })
-                                  .sort(function(a,b){ return (a.ordem||99) - (b.ordem||99); })
-                                  .map(function(v){ return v.componente; });
-    AT.componentesHDA = vincAtivos.filter(function(v){ return v.componente && v.componente.secao === 'HDA'; })
-                                  .sort(function(a,b){ return (a.ordem||99) - (b.ordem||99); })
-                                  .map(function(v){ return v.componente; });
-    AT.medsConfig   = Array.isArray(meds)   ? meds   : [];
-    AT.examesConfig = Array.isArray(exames) ? exames : [];
+    var blocos       = Array.isArray(results[0]) ? results[0] : [];
+    var vincAtivos   = (Array.isArray(results[1]) ? results[1] : []).filter(function(v){ return v.ativo !== false; });
+    AT.medsConfig    = Array.isArray(results[2]) ? results[2] : [];
+    AT.examesConfig  = Array.isArray(results[3]) ? results[3] : [];
+
+    AT.componentesSV = vincAtivos
+      .filter(function(v){ return v.componente && v.componente.secao === 'SINAIS_VITAIS'; })
+      .sort(function(a,b){ return (a.ordem||99)-(b.ordem||99); })
+      .map(function(v){ return v.componente; });
+
+    AT.componentesHDA = vincAtivos
+      .filter(function(v){ return v.componente && v.componente.secao === 'HDA'; })
+      .sort(function(a,b){ return (a.ordem||99)-(b.ordem||99); })
+      .map(function(v){ return v.componente; });
+
+    // Se não há blocos configurados, usa defaults
+    AT.blocos = blocos.length ? blocos : _blocosDefault();
+
   } catch(e) {
-    AT.componentesSV = []; AT.componentesHDA = [];
+    console.error('_carregarConfigTipo', e);
+    AT.blocos = _blocosDefault();
     AT.medsConfig = []; AT.examesConfig = [];
   }
 
-  _renderVitaisDinamicos();
+  _renderBlocosAtendimento();
 
-  // Re-preenche vitais se já havia dados carregados
+  // Re-preenche vitais se havia rascunho
   if(AT.vitaisData && Object.keys(AT.vitaisData).length) {
     Object.keys(AT.vitaisData).forEach(function(key) {
       var el = document.getElementById('vComp_' + key.replace(/^c/, ''));
@@ -993,38 +874,194 @@ async function _carregarConfigTipo(tipoId) {
   }
 }
 
-function _renderVitaisDinamicos() {
-  var grid = document.getElementById('vitaisGrid');
-  if(!grid) return;
+function _blocosDefault() {
+  return [
+    { numero_bloco:1, nome:'Sinais Vitais',       tipo_conteudo:'SINAIS_VITAIS', ativo:true },
+    { numero_bloco:2, nome:'Anamnese',            tipo_conteudo:'ANAMNESE',      ativo:true },
+    { numero_bloco:3, nome:'Exame Físico',        tipo_conteudo:'EXAME_FISICO',  ativo:true },
+    { numero_bloco:4, nome:'Hipótese Diagnóstica',tipo_conteudo:'DIAGNOSTICO',   ativo:true },
+    { numero_bloco:5, nome:'Prescrições',         tipo_conteudo:'PRESCRICOES',   ativo:true },
+    { numero_bloco:6, nome:'Exames',              tipo_conteudo:'EXAMES',        ativo:true },
+  ];
+}
+
+// ── Mapa de ícones e cores por tipo de conteúdo ───────────────
+var BLOCO_META = {
+  SINAIS_VITAIS: { ico:'bi-heart-pulse-fill',    cor:'text-danger'  },
+  ANAMNESE:      { ico:'bi-chat-left-text-fill',  cor:'text-info'    },
+  EXAME_FISICO:  { ico:'bi-clipboard2-pulse-fill',cor:'text-success' },
+  DIAGNOSTICO:   { ico:'bi-journal-medical',      cor:'text-purple'  },
+  PRESCRICOES:   { ico:'bi-capsule-pill',         cor:'text-primary' },
+  EXAMES:        { ico:'bi-microscope',           cor:'text-warning' },
+  CONDUTA:       { ico:'bi-check2-square',        cor:'text-success' },
+  OBSERVACOES:   { ico:'bi-sticky-fill',          cor:'text-secondary'},
+  DADOS_AGENDA:  { ico:'bi-calendar-check',       cor:'text-info'    },
+  TEXTO_LIVRE:   { ico:'bi-fonts',                cor:'text-muted'   },
+};
+
+// ── Renderizar blocos ativos nas colunas ──────────────────────
+function _renderBlocosAtendimento() {
+  var colEsq = document.getElementById('atendColEsq');
+  var colDir  = document.getElementById('atendColDir');
+  if(!colEsq || !colDir) return;
+
+  var ativos = AT.blocos.filter(function(b){ return b.ativo !== false; })
+                        .sort(function(a,b){ return a.numero_bloco - b.numero_bloco; });
+
+  colEsq.innerHTML = '';
+  colDir.innerHTML = '';
+
+  // Divide: primeiros 2/3 na esquerda, último 1/3 na direita
+  var totalEsq = Math.ceil(ativos.length * 2 / 3);
+
+  ativos.forEach(function(bloco, idx) {
+    var html = _htmlBloco(bloco);
+    if(idx < totalEsq) {
+      colEsq.insertAdjacentHTML('beforeend', html);
+    } else {
+      colDir.insertAdjacentHTML('beforeend', html);
+    }
+  });
+
+  // Inicializa listeners de busca para Prescrições e Exames
+  var pb = document.getElementById('prescBusca');
+  if(pb) { pb.oninput = function(){ atBuscarMed(this.value); }; pb.onfocus = pb.oninput; }
+  var eb = document.getElementById('exameBusca');
+  if(eb) { eb.oninput = function(){ atBuscarExame(this.value); }; eb.onfocus = eb.oninput; }
+}
+
+function _htmlBloco(bloco) {
+  var tc   = bloco.tipo_conteudo || 'TEXTO_LIVRE';
+  var meta = BLOCO_META[tc] || { ico:'bi-grid', cor:'text-muted' };
+  var nome = esc(bloco.nome || tc);
+  var hd   = '<div class="at-section-hd"><i class="bi '+meta.ico+' '+meta.cor+'"></i> '+nome+'</div>';
+
+  var corpo = '';
+  switch(tc) {
+    case 'SINAIS_VITAIS':
+      corpo = '<div class="vitais-grid" id="vitaisGrid">'
+        + _htmlVitaisGrid()
+        + '</div>';
+      break;
+
+    case 'ANAMNESE':
+      corpo = '<div class="mb-3">'
+          +'<label class="form-label small fw-bold">Queixa Principal <span class="text-danger">*</span></label>'
+          +'<input type="text" class="form-control form-control-sm" id="atQueixa" placeholder="Motivo principal da consulta...">'
+        +'</div>'
+        +'<div class="mb-3">'
+          +'<label class="form-label small fw-bold">História da Doença Atual (HDA)</label>'
+          +'<textarea class="form-control form-control-sm" id="atHDA" rows="4" placeholder="Início, evolução, fatores de melhora/piora..."></textarea>'
+        +'</div>'
+        +'<div>'
+          +'<label class="form-label small fw-bold">Antecedentes Pessoais / Familiares</label>'
+          +'<textarea class="form-control form-control-sm" id="atAntecedentes" rows="3" placeholder="Doenças preexistentes, cirurgias, alergias..."></textarea>'
+        +'</div>';
+      break;
+
+    case 'EXAME_FISICO':
+      corpo = '<textarea class="form-control form-control-sm" id="atExameFisico" rows="5"'
+        +' placeholder="Inspeção geral, ausculta, palpação, percussão..."></textarea>';
+      break;
+
+    case 'DIAGNOSTICO':
+      corpo = '<div class="row g-3">'
+        +'<div class="col-md-8">'
+          +'<label class="form-label small fw-bold">Hipótese / Diagnóstico</label>'
+          +'<textarea class="form-control form-control-sm" id="atDiagnostico" rows="3" placeholder="Hipótese diagnóstica principal e diferenciais..."></textarea>'
+        +'</div>'
+        +'<div class="col-md-4">'
+          +'<label class="form-label small fw-bold">CID-10</label>'
+          +'<input type="text" class="form-control form-control-sm" id="atCID" placeholder="Ex: J00, K35.8..." style="text-transform:uppercase">'
+          +'<div class="form-text small">Código do CID principal</div>'
+        +'</div>'
+        +'</div>';
+      break;
+
+    case 'CONDUTA':
+      corpo = '<textarea class="form-control form-control-sm" id="atConduta" rows="4"'
+        +' placeholder="Orientações, encaminhamentos, retorno, repouso, dieta, procedimentos..."></textarea>';
+      break;
+
+    case 'PRESCRICOES':
+      corpo = '<div class="at-input-wrap mb-2">'
+          +'<div class="input-group input-group-sm">'
+            +'<span class="input-group-text"><i class="bi bi-search"></i></span>'
+            +'<input type="text" class="form-control" id="prescBusca" placeholder="Buscar medicamento..." autocomplete="off">'
+            +'<button class="btn btn-primary btn-sm" onclick="atAddPresc()" title="Adicionar manual"><i class="bi bi-plus"></i></button>'
+          +'</div>'
+          +'<div class="at-dropdown d-none" id="prescDrop"></div>'
+        +'</div>'
+        +'<div id="prescListWrap">'
+          +'<table class="table table-sm" id="prescTable" style="font-size:.78rem;display:none">'
+            +'<thead class="table-light"><tr>'
+              +'<th>Medicamento</th><th style="width:100px">Dose</th>'
+              +'<th style="width:130px">Posologia</th><th style="width:80px">Duração</th>'
+              +'<th style="width:32px"></th>'
+            +'</tr></thead>'
+            +'<tbody id="prescList"></tbody>'
+          +'</table>'
+          +'<div class="text-muted small text-center py-2" id="prescEmpty">'
+            +'<i class="bi bi-capsule-pill"></i> Nenhuma prescrição'
+          +'</div>'
+        +'</div>';
+      break;
+
+    case 'EXAMES':
+      corpo = '<div class="at-input-wrap mb-2">'
+          +'<div class="input-group input-group-sm">'
+            +'<span class="input-group-text"><i class="bi bi-search"></i></span>'
+            +'<input type="text" class="form-control" id="exameBusca" placeholder="Buscar exame..." autocomplete="off">'
+            +'<button class="btn btn-warning text-dark btn-sm" onclick="atAddExame()" title="Adicionar manual"><i class="bi bi-plus"></i></button>'
+          +'</div>'
+          +'<div class="at-dropdown d-none" id="exameDrop"></div>'
+        +'</div>'
+        +'<div id="exameList"></div>'
+        +'<div class="text-muted small text-center py-2" id="exameEmpty">'
+          +'<i class="bi bi-microscope"></i> Nenhum exame solicitado'
+        +'</div>';
+      break;
+
+    case 'OBSERVACOES':
+      corpo = '<textarea class="form-control form-control-sm" id="atObs" rows="4"'
+        +' placeholder="Notas internas, observações para próxima consulta..."></textarea>';
+      break;
+
+    case 'DADOS_AGENDA':
+      corpo = '<div id="atResumoDados" style="font-size:.82rem"></div>';
+      break;
+
+    default: // TEXTO_LIVRE
+      corpo = '<textarea class="form-control form-control-sm" id="atTexto_'+bloco.numero_bloco+'" rows="4"'
+        +' placeholder="'+nome+'..."></textarea>';
+  }
+
+  return '<div class="at-section">' + hd + '<div class="at-section-body">' + corpo + '</div></div>';
+}
+
+function _htmlVitaisGrid() {
   var comps = AT.componentesSV;
   if(!comps.length) {
-    grid.innerHTML = '<div class="text-muted small text-center py-2" style="grid-column:1/-1">'
-      + '<i class="bi bi-info-circle me-1"></i>'
-      + (AT.tipoId ? 'Nenhum componente de Sinais Vitais configurado para este tipo.'
-                   : 'Tipo de consulta não selecionado.')
-      + '</div>';
-    return;
+    return '<div class="text-muted small text-center py-2" style="grid-column:1/-1">'
+      +'<i class="bi bi-info-circle me-1"></i>Nenhum componente de Sinais Vitais configurado.</div>';
   }
-  grid.innerHTML = comps.map(function(c) {
-    var placeholder = (c.valor_default || '') + (c.unidade ? ' ' + c.unidade : '');
-    var isText = !c.unidade || c.unidade.indexOf('/') !== -1; // PA tem barra → texto
-    var tipo = isText ? 'text' : 'number';
+  return comps.map(function(c) {
+    var placeholder = (c.valor_default||'') + (c.unidade?' '+c.unidade:'');
+    var tipo = (!c.unidade || c.unidade.indexOf('/') !== -1) ? 'text' : 'number';
     return '<div class="vital-item">'
-      + '<label><i class="bi ' + esc(c.icone || 'bi-circle') + '"></i> ' + esc(c.nome)
-        + (c.unidade ? ' <small class="text-muted fw-normal">('+esc(c.unidade)+')</small>' : '')
-        + '</label>'
-      + '<input type="' + tipo + '" class="form-control form-control-sm" '
-        + 'id="vComp_' + c.id + '" placeholder="' + esc(placeholder||'—') + '" '
-        + 'oninput="AT.vitaisData[\'c'+c.id+'\']=this.value">'
-      + '</div>';
+      +'<label><i class="bi '+esc(c.icone||'bi-circle')+'"></i> '+esc(c.nome)
+        +(c.unidade?' <small class="text-muted fw-normal">('+esc(c.unidade)+')</small>':'')+'</label>'
+      +'<input type="'+tipo+'" class="form-control form-control-sm" id="vComp_'+c.id
+        +'" placeholder="'+esc(placeholder||'—')+'" oninput="AT.vitaisData[\'c'+c.id+'\']=this.value">'
+      +'</div>';
   }).join('');
 }
 
 function _renderVitaisDefault() {
-  var grid = document.getElementById('vitaisGrid');
-  if(grid) grid.innerHTML = '<div class="text-muted small text-center py-2" style="grid-column:1/-1">'
-    + '<i class="bi bi-info-circle me-1"></i>Nenhum tipo selecionado — '
-    + '<a href="#" onclick="atendTrocarTipo();return false">selecionar tipo</a>.</div>';
+  var g = document.getElementById('vitaisGrid');
+  if(g) g.innerHTML = '<div class="text-muted small text-center py-2" style="grid-column:1/-1">'
+    +'<i class="bi bi-info-circle me-1"></i>Tipo não selecionado — '
+    +'<a href="#" onclick="atendTrocarTipo();return false">selecionar tipo</a>.</div>';
 }
 
 /* ── Utilitário ── */
