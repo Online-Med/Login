@@ -1145,8 +1145,15 @@ window.cfgFiltrarIcones = function (v) { cfgRenderIconeGrid(v); };
 window.cfgSelecionarIcone = function (ico) {
   document.getElementById('cfgCompIcone').value = ico;
   cfgAtualizarIcoPreview();
+  // Aguarda o evento 'hidden.bs.modal' para só então reabrir cfgModalComp
+  // Isso evita o erro aria-hidden com foco preso entre os dois modais
+  var modalIcone = document.getElementById('cfgModalIcone');
+  function reabrirComp() {
+    modalIcone.removeEventListener('hidden.bs.modal', reabrirComp);
+    abrirModal('cfgModalComp');
+  }
+  modalIcone.addEventListener('hidden.bs.modal', reabrirComp);
   fecharModal('cfgModalIcone');
-  setTimeout(function () { abrirModal('cfgModalComp'); }, 200);
 };
 
 /* ════════════════════════════════════════════════════════════════
