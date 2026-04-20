@@ -7,6 +7,26 @@
 }
 #cfgToolbar h5 { margin:0; font-size:.95rem; }
 
+/* ── Bloco cards ──────────────────────────────────────────────── */
+.bloco-slot {
+  border:2px solid #dee2e6; border-radius:10px; padding:14px;
+  background:#fff; transition:all .15s; position:relative;
+}
+.bloco-slot.ativo { border-color:#6f42c1; background:#faf7ff; }
+.bloco-slot.inativo { opacity:.55; border-style:dashed; }
+.bloco-num {
+  position:absolute; top:-10px; left:14px;
+  background:#6f42c1; color:#fff; border-radius:20px;
+  font-size:.65rem; font-weight:700; padding:1px 9px; letter-spacing:.05em;
+}
+.bloco-slot.inativo .bloco-num { background:#adb5bd; }
+.tipo-conteudo-sel {
+  font-size:.8rem; border:1px solid #dee2e6; border-radius:6px;
+  padding:4px 8px; background:#f8f9fa; color:#495057; cursor:pointer;
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+}
+.tipo-conteudo-sel .badge { font-size:.65rem; cursor:pointer; }
+
 /* ── Tabela padrão ─────────────────────────────────────────────── */
 .cfg-table { width:100%; font-size:.82rem; border-collapse:collapse; }
 .cfg-table th {
@@ -289,6 +309,39 @@
 </div>
 
 
+<!-- Modal: Configurar Blocos do Tipo (até 6) -->
+<div class="modal fade" id="cfgModalBlocos" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#6f42c1,#4361ee)">
+        <h6 class="modal-title text-white mb-0">
+          <i class="bi bi-layout-split"></i> Blocos da Consulta:
+          <strong id="cfgBlocosTipoNome"></strong>
+        </h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-info-circle"></i>
+          Configure até <strong>6 blocos</strong>. Somente os blocos <strong>ativos</strong> aparecem na tela de atendimento.
+          Blocos do tipo <strong>Sinais Vitais</strong> usam os componentes configurados no botão <i class="bi bi-heart-pulse text-success"></i>.
+        </div>
+        <div class="row g-3" id="cfgBlocosGrid">
+          <!-- Slots 1-6 renderizados por JS -->
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+        <button class="btn btn-sm text-white" style="background:#6f42c1;border-color:#6f42c1"
+                onclick="cfgSalvarBlocos()">
+          <i class="bi bi-check-circle"></i> Salvar Blocos
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Modal: Configurar Componentes do Tipo -->
 <div class="modal fade" id="cfgModalVincular" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -563,7 +616,9 @@ var CFG = {
   meds: [],
   exames: [],
   vincTipoId: null,
-  vinculos: [],     // vínculos carregados do backend para o tipo sendo editado
+  vinculos: [],
+  blocosTipoId: null,
+  blocos: [],
 };
 
 /* ── Helpers ─────────────────────────────────────────────────── */
@@ -615,8 +670,11 @@ function cfgRenderTipos() {
       + '</td>'
       + '<td>'
         + '<button class="btn btn-sm py-0 border-0 me-1" style="color:#6f42c1" '
-          + 'onclick="cfgAbrirVincular(' + t.id + ')" title="Configurar componentes">'
-          + '<i class="bi bi-grid-3x3-gap-fill"></i> Componentes</button>'
+          + 'onclick="cfgAbrirBlocos(' + t.id + ')" title="Configurar Blocos">'
+          + '<i class="bi bi-layout-split"></i> Blocos</button>'
+        + '<button class="btn btn-sm py-0 border-0 me-1" style="color:#198754" '
+          + 'onclick="cfgAbrirVincular(' + t.id + ')" title="Componentes de Sinais Vitais">'
+          + '<i class="bi bi-heart-pulse"></i></button>'
         + '<button class="btn btn-sm btn-outline-secondary border-0 py-0 me-1" '
           + 'onclick="cfgAbrirModalTipo(' + t.id + ')" title="Editar">'
           + '<i class="bi bi-pencil"></i></button>'
@@ -792,6 +850,158 @@ window.cfgExcluirComp = async function (id) {
   if (!conf.isConfirmed) return;
   await cfgApi({ action: 'componente', id: id }, 'DELETE');
   await cfgCarregarComponentes(CFG.secaoAtual);
+};
+
+/* ════════════════════════════════════════════════════════════════
+   BLOCOS POR TIPO DE CONSULTA
+════════════════════════════════════════════════════════════════ */
+var TIPOS_CONTEUDO = [
+  { id:'SINAIS_VITAIS', label:'Sinais Vitais',    ico:'bi-heart-pulse-fill',    cor:'#dc3545' },
+  { id:'ANAMNESE',      label:'Anamnese',          ico:'bi-chat-left-text-fill', cor:'#0dcaf0' },
+  { id:'EXAME_FISICO',  label:'Exame Físico',      ico:'bi-clipboard2-pulse-fill',cor:'#198754' },
+  { id:'DIAGNOSTICO',   label:'Hipótese Diagnóstica',ico:'bi-journal-medical',   cor:'#6f42c1' },
+  { id:'PRESCRICOES',   label:'Prescrições',       ico:'bi-capsule-pill',        cor:'#0d6efd' },
+  { id:'EXAMES',        label:'Exames',            ico:'bi-microscope',          cor:'#ffc107' },
+  { id:'CONDUTA',       label:'Conduta/Plano',     ico:'bi-check2-square',       cor:'#198754' },
+  { id:'OBSERVACOES',   label:'Observações Internas',ico:'bi-sticky-fill',       cor:'#6c757d' },
+  { id:'DADOS_AGENDA',  label:'Dados do Agendamento',ico:'bi-calendar-check',    cor:'#0dcaf0' },
+  { id:'TEXTO_LIVRE',   label:'Texto Livre',       ico:'bi-fonts',               cor:'#495057' },
+];
+
+var BLOCOS_DEFAULTS = [
+  { numero_bloco:1, nome:'Sinais Vitais',       icone:'bi-heart-pulse-fill',   tipo_conteudo:'SINAIS_VITAIS', ativo:true  },
+  { numero_bloco:2, nome:'Anamnese',            icone:'bi-chat-left-text-fill',tipo_conteudo:'ANAMNESE',      ativo:true  },
+  { numero_bloco:3, nome:'Exame Físico',        icone:'bi-clipboard2-pulse-fill',tipo_conteudo:'EXAME_FISICO',ativo:true  },
+  { numero_bloco:4, nome:'Hipótese Diagnóstica',icone:'bi-journal-medical',    tipo_conteudo:'DIAGNOSTICO',   ativo:true  },
+  { numero_bloco:5, nome:'Prescrições',         icone:'bi-capsule-pill',       tipo_conteudo:'PRESCRICOES',   ativo:true  },
+  { numero_bloco:6, nome:'Exames',              icone:'bi-microscope',         tipo_conteudo:'EXAMES',        ativo:true  },
+];
+
+window.cfgAbrirBlocos = async function (tipoId) {
+  var tipo = CFG.tipos.find(function(t){ return t.id == tipoId; });
+  if(!tipo) return;
+  CFG.blocosTipoId = tipoId;
+  document.getElementById('cfgBlocosTipoNome').textContent = tipo.nome;
+
+  var data = await cfgApi({ action: 'blocos', tipo_id: tipoId });
+  CFG.blocos = Array.isArray(data) ? data : [];
+  _renderBlocosGrid();
+  abrirModal('cfgModalBlocos');
+};
+
+function _renderBlocosGrid() {
+  var grid = document.getElementById('cfgBlocosGrid');
+  grid.innerHTML = '';
+
+  for(var n = 1; n <= 6; n++) {
+    var blocoSalvo = CFG.blocos.find(function(b){ return b.numero_bloco == n; });
+    var def = BLOCOS_DEFAULTS[n-1];
+    var bloco = blocoSalvo || def;
+    var ativo = bloco.ativo !== false;
+    var tc = TIPOS_CONTEUDO.find(function(t){ return t.id === (bloco.tipo_conteudo || 'ANAMNESE'); }) || TIPOS_CONTEUDO[0];
+
+    var options = TIPOS_CONTEUDO.map(function(t){
+      return '<option value="'+t.id+'"'+(bloco.tipo_conteudo===t.id?' selected':'')+'>'+esc(t.label)+'</option>';
+    }).join('');
+
+    var col = document.createElement('div');
+    col.className = 'col-md-4';
+    col.innerHTML = '<div class="bloco-slot '+(ativo?'ativo':'inativo')+'" id="blocoSlot'+n+'">'
+      + '<span class="bloco-num">BLOCO '+n+'</span>'
+      + '<div class="d-flex align-items-center justify-content-between mb-3 mt-1">'
+        + '<div class="form-check form-switch mb-0">'
+          + '<input class="form-check-input" type="checkbox" id="blocoAtivo'+n+'" '+(ativo?'checked':'')+' '
+            + 'onchange="cfgToggleBloco('+n+',this.checked)">'
+          + '<label class="form-check-label small fw-bold" for="blocoAtivo'+n+'">'+(ativo?'Ativo':'Inativo')+'</label>'
+        + '</div>'
+        + (blocoSalvo && blocoSalvo.id ? '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.65rem">Salvo</span>' : '')
+      + '</div>'
+      + '<div class="mb-2">'
+        + '<label class="form-label small fw-bold mb-1">Nome do Bloco</label>'
+        + '<input type="text" class="form-control form-control-sm" id="blocoNome'+n+'" value="'+esc(bloco.nome||'')+'">'
+      + '</div>'
+      + '<div class="mb-2">'
+        + '<label class="form-label small fw-bold mb-1">Tipo de Conteúdo</label>'
+        + '<select class="form-select form-select-sm" id="blocoConteudo'+n+'" onchange="cfgBlocoMudaTipo('+n+',this.value)">'
+          + options
+        + '</select>'
+      + '</div>'
+      + '<div class="p-2 rounded" style="background:#f8f9fa;font-size:.75rem;color:#6c757d">'
+        + '<i class="bi '+tc.ico+'" style="color:'+tc.cor+'"></i> '
+        + '<span id="blocoDesc'+n+'">'+_blocoDescricao(bloco.tipo_conteudo)+'</span>'
+      + '</div>'
+      + '<input type="hidden" id="blocoId'+n+'" value="'+(blocoSalvo&&blocoSalvo.id?blocoSalvo.id:'')+'">'
+    + '</div>';
+    grid.appendChild(col);
+  }
+}
+
+window.cfgToggleBloco = function(n, ativo) {
+  var slot = document.getElementById('blocoSlot'+n);
+  if(slot) slot.className = 'bloco-slot '+(ativo?'ativo':'inativo');
+  var label = slot && slot.querySelector('label[for="blocoAtivo'+n+'"]');
+  if(label) label.textContent = ativo ? 'Ativo' : 'Inativo';
+};
+
+window.cfgBlocoMudaTipo = function(n, tipo) {
+  var desc = document.getElementById('blocoDesc'+n);
+  var tc = TIPOS_CONTEUDO.find(function(t){ return t.id === tipo; });
+  if(desc && tc) {
+    var parent = desc.closest('.p-2');
+    if(parent) parent.querySelector('i').className = 'bi '+tc.ico;
+    if(parent) parent.querySelector('i').style.color = tc.cor;
+    desc.textContent = _blocoDescricao(tipo);
+  }
+};
+
+function _blocoDescricao(tipo) {
+  var descs = {
+    SINAIS_VITAIS: 'Campos de sinais vitais configurados para este tipo',
+    ANAMNESE:      'Queixa principal, HDA e antecedentes',
+    EXAME_FISICO:  'Campo de texto livre para exame físico',
+    DIAGNOSTICO:   'Hipótese diagnóstica + campo CID-10',
+    PRESCRICOES:   'Lista de prescrições com busca no catálogo',
+    EXAMES:        'Solicitação de exames com busca no catálogo',
+    CONDUTA:       'Campo de conduta e plano terapêutico',
+    OBSERVACOES:   'Anotações internas (não aparecem no prontuário público)',
+    DADOS_AGENDA:  'Resumo dos dados do agendamento',
+    TEXTO_LIVRE:   'Campo de texto customizável',
+  };
+  return descs[tipo] || '';
+}
+
+window.cfgSalvarBlocos = async function () {
+  var tipoId = CFG.blocosTipoId;
+  var promises = [];
+
+  for(var n = 1; n <= 6; n++) {
+    (function(num) {
+      var nomeEl   = document.getElementById('blocoNome'+num);
+      var tipoEl   = document.getElementById('blocoConteudo'+num);
+      var ativoEl  = document.getElementById('blocoAtivo'+num);
+      var idEl     = document.getElementById('blocoId'+num);
+      if(!nomeEl) return;
+
+      var body = {
+        tipo_id:       parseInt(tipoId),
+        numero_bloco:  num,
+        nome:          nomeEl.value.trim() || ('Bloco '+num),
+        tipo_conteudo: tipoEl ? tipoEl.value : 'TEXTO_LIVRE',
+        ativo:         ativoEl ? ativoEl.checked : false,
+      };
+
+      var existeId = idEl ? idEl.value : '';
+      if(existeId) {
+        promises.push(cfgApi({ action:'bloco', id: existeId }, 'PATCH', body));
+      } else {
+        promises.push(cfgApi({ action:'bloco' }, 'POST', body));
+      }
+    })(n);
+  }
+
+  await Promise.all(promises);
+  fecharModal('cfgModalBlocos');
+  Swal.fire({ icon:'success', title:'Blocos salvos!', timer:1300, showConfirmButton:false });
 };
 
 /* ════════════════════════════════════════════════════════════════
@@ -1145,15 +1355,8 @@ window.cfgFiltrarIcones = function (v) { cfgRenderIconeGrid(v); };
 window.cfgSelecionarIcone = function (ico) {
   document.getElementById('cfgCompIcone').value = ico;
   cfgAtualizarIcoPreview();
-  // Aguarda o evento 'hidden.bs.modal' para só então reabrir cfgModalComp
-  // Isso evita o erro aria-hidden com foco preso entre os dois modais
-  var modalIcone = document.getElementById('cfgModalIcone');
-  function reabrirComp() {
-    modalIcone.removeEventListener('hidden.bs.modal', reabrirComp);
-    abrirModal('cfgModalComp');
-  }
-  modalIcone.addEventListener('hidden.bs.modal', reabrirComp);
   fecharModal('cfgModalIcone');
+  setTimeout(function () { abrirModal('cfgModalComp'); }, 200);
 };
 
 /* ════════════════════════════════════════════════════════════════
@@ -1164,6 +1367,83 @@ window.cfgMostrarSQL = function () {
 
 -- 1. Tipos de consulta
 CREATE TABLE IF NOT EXISTS config_tipos_consulta (
+  id          bigserial PRIMARY KEY,
+  nome        text NOT NULL,
+  descricao   text,
+  ativo       boolean DEFAULT true,
+  ordem       int DEFAULT 1,
+  created_at  timestamptz DEFAULT now()
+);
+
+-- 2. Catálogo de componentes (Sinais Vitais, HDA…)
+CREATE TABLE IF NOT EXISTS config_componentes (
+  id            bigserial PRIMARY KEY,
+  nome          text NOT NULL,
+  secao         text NOT NULL
+                  CHECK (secao IN ('SINAIS_VITAIS','HDA')),
+  icone         text DEFAULT 'bi-circle',
+  valor_default text,
+  unidade       text,
+  ordem         int DEFAULT 1,
+  created_at    timestamptz DEFAULT now()
+);
+
+-- 3. Vínculo tipo ↔ componente
+CREATE TABLE IF NOT EXISTS config_tipo_componentes (
+  id            bigserial PRIMARY KEY,
+  tipo_id       bigint NOT NULL
+                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
+  componente_id bigint NOT NULL
+                  REFERENCES config_componentes(id) ON DELETE CASCADE,
+  ativo         boolean DEFAULT true,
+  ordem         int DEFAULT 1,
+  UNIQUE (tipo_id, componente_id)
+);
+
+-- 4. Blocos configuráveis por tipo (máx 6 por tipo)
+CREATE TABLE IF NOT EXISTS config_blocos_tipo (
+  id            bigserial PRIMARY KEY,
+  tipo_id       bigint NOT NULL
+                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
+  numero_bloco  int NOT NULL CHECK (numero_bloco BETWEEN 1 AND 6),
+  nome          text NOT NULL,
+  tipo_conteudo text NOT NULL DEFAULT 'TEXTO_LIVRE'
+                  CHECK (tipo_conteudo IN (
+                    'SINAIS_VITAIS','ANAMNESE','EXAME_FISICO','DIAGNOSTICO',
+                    'PRESCRICOES','EXAMES','CONDUTA','OBSERVACOES',
+                    'DADOS_AGENDA','TEXTO_LIVRE'
+                  )),
+  ativo         boolean DEFAULT true,
+  UNIQUE (tipo_id, numero_bloco)
+);
+
+-- 5. Catálogo de medicamentos
+CREATE TABLE IF NOT EXISTS config_medicamentos (
+  id              bigserial PRIMARY KEY,
+  nome            text NOT NULL,
+  dose            text,
+  posologia       text,
+  categoria       text,
+  favorito_tipos  jsonb DEFAULT '[]',
+  created_at      timestamptz DEFAULT now()
+);
+
+-- 6. Catálogo de exames
+CREATE TABLE IF NOT EXISTS config_exames (
+  id              bigserial PRIMARY KEY,
+  nome            text NOT NULL,
+  grupo           text,
+  favorito_tipos  jsonb DEFAULT '[]',
+  created_at      timestamptz DEFAULT now()
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_tipo_comp_tipo  ON config_tipo_componentes(tipo_id);
+CREATE INDEX IF NOT EXISTS idx_blocos_tipo      ON config_blocos_tipo(tipo_id);
+CREATE INDEX IF NOT EXISTS idx_meds_nome        ON config_medicamentos(nome);
+CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);`;
+  abrirModal('cfgModalSQL');
+};
   id          bigserial PRIMARY KEY,
   nome        text NOT NULL,
   descricao   text,
