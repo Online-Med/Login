@@ -179,38 +179,54 @@ html += `
   }
 
 // Função global para abrir modais do Bootstrap 5
+// ── Funções globais de modal (Bootstrap 5) ──────────────────────
+// REGRA: sempre tirar o foco do elemento ativo ANTES de mexer no modal.
+// O Bootstrap seta aria-hidden="true" no modal ao fechar; se ainda há
+// um elemento focado dentro dele, o browser lança o aviso aria-hidden.
+
 window.abrirModal = function(idModal) {
-    // Remove o foco do elemento atual ANTES de abrir — evita o erro aria-hidden
-    if (document.activeElement && typeof document.activeElement.blur === 'function') {
-      document.activeElement.blur();
-    }
-    const elemento = document.getElementById(idModal);
-    if (!elemento) { console.error("Modal não encontrado: " + idModal); return; }
-    const meuModal = bootstrap.Modal.getOrCreateInstance(elemento);
-    // Aguarda o blur propagar antes de exibir
-    setTimeout(function() { meuModal.show(); }, 10);
+  // 1. Blur no elemento focado atualmente (pode estar num modal que fechou)
+  if (document.activeElement && typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+  const elemento = document.getElementById(idModal);
+  if (!elemento) { console.error('Modal não encontrado: ' + idModal); return; }
+  // 2. Força blur em qualquer elemento focado DENTRO do modal alvo
+  const focusedInModal = elemento.querySelector(':focus');
+  if (focusedInModal) focusedInModal.blur();
+  // 3. Pequeno delay para o blur propagar antes do Bootstrap adicionar aria-hidden
+  setTimeout(function() {
+    bootstrap.Modal.getOrCreateInstance(elemento).show();
+  }, 20);
 };
 
-
-  // Função global para fechar modais do Bootstrap 5
 window.fecharModal = function(idModal) {
-    const elemento = document.getElementById(idModal);
-    if (elemento) {
-        // Pega a instância existente do modal ou cria uma nova para poder fechar
-        const instancia = bootstrap.Modal.getOrCreateInstance(elemento);
-        instancia.hide();
-        
-        // Limpeza extra: remove o fundo escuro (backdrop) se ele travar
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }
-    } else {
-        console.error("Modal não encontrado para fechar: " + idModal);
+  const elemento = document.getElementById(idModal);
+  if (!elemento) { console.error('Modal não encontrado: ' + idModal); return; }
+  // Blur ANTES do hide — impede aria-hidden com foco ativo dentro do modal
+  if (document.activeElement && elemento.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+  const instancia = bootstrap.Modal.getInstance(elemento);
+  if (instancia) {
+    instancia.hide();
+  } else {
+    // Modal nunca foi inicializado (ex: chamado antes de show)
+    elemento.style.display = 'none';
+    elemento.classList.remove('show');
+    elemento.removeAttribute('aria-modal');
+    elemento.setAttribute('aria-hidden', 'true');
+  }
+  // Limpeza extra de backdrop travado
+  setTimeout(function() {
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+      backdrop.remove();
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     }
+  }, 300);
 };
 
   
