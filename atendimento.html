@@ -172,7 +172,7 @@
   </div>
 
   <!-- ── BODY — blocos dinâmicos ─────────────────────────────── -->
-  <div class="container-fluid p-3" style="max-height:calc(100vh - 195px);overflow-y:auto">
+  <div class="container-fluid p-3 pb-5">
     <div class="row g-3" id="atendBlocosRow">
 
       <!-- COLUNA ESQUERDA — blocos renderizados dinamicamente -->
@@ -252,17 +252,24 @@ var AT = {
   // Config tipo de consulta
   tipoId:         null,
   tipoNome:       null,
-  componentesSV:  [],    // componentes Sinais Vitais do tipo
-  componentesHDA: [],    // componentes HDA do tipo
-  medsConfig:     [],    // catálogo de medicamentos
-  examesConfig:   [],    // catálogo de exames
-  tiposConfig:    [],    // lista de tipos cadastrados
-  vitaisData:     {},    // valores dos vitais: { "cID": valor }
+  componentesSV:  [],
+  componentesHDA: [],
+  medsConfig:     [],
+  examesConfig:   [],
+  tiposConfig:    [],
+  blocos:         [],
+  vitaisData:     {},
   prescBuscaTmr:  null,
   exameBuscaTmr:  null,
-  tipoSelecionado: null, // id no modal antes de confirmar
-  _medDropList:   [],    // cache para seleção por índice
-  _exameDropList: [],    // cache para seleção por índice
+  tipoSelecionado: null,
+  _medDropList:   [],
+  _exameDropList: [],
+};
+// Expõe globalmente para que oninput inline nos vitais possa acessar
+window.AT = AT;
+// Função global para vitais — evita referência direta a AT no oninput inline
+window.atVitalInput = function(cid, val) {
+  if(window.AT) window.AT.vitaisData['c' + cid] = val;
 };
 
 /* ── API helpers ── */
@@ -1052,7 +1059,7 @@ function _htmlVitaisGrid() {
       +'<label><i class="bi '+esc(c.icone||'bi-circle')+'"></i> '+esc(c.nome)
         +(c.unidade?' <small class="text-muted fw-normal">('+esc(c.unidade)+')</small>':'')+'</label>'
       +'<input type="'+tipo+'" class="form-control form-control-sm" id="vComp_'+c.id
-        +'" placeholder="'+esc(placeholder||'—')+'" oninput="AT.vitaisData[\'c'+c.id+'\']=this.value">'
+        +'" placeholder="'+esc(placeholder||'—')+'" oninput="atVitalInput('+c.id+',this.value)">'
       +'</div>';
   }).join('');
 }
@@ -1121,6 +1128,13 @@ async function inicializarAtendimento() {
 }
 
 window.inicializarPaginaAtendimento = inicializarAtendimento;
+
+// Previne aria-hidden com foco preso nos modais do atendimento
+document.addEventListener('hide.bs.modal', function(e) {
+  var focused = e.target.querySelector(':focus');
+  if (focused) focused.blur();
+});
+
 inicializarAtendimento();
 
 })();
