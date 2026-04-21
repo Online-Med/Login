@@ -473,13 +473,13 @@ function _renderPresc(bn) {
   list.innerHTML = bloco.presc.map(function(p, i){
     return '<tr>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
-        +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+bn+','+i+','medicamento',this.value)"></td>'
+        +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+bn+','+i+',\'medicamento\',this.value)"></td>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="500mg"'
-        +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+bn+','+i+','dosagem',this.value)"></td>'
+        +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+bn+','+i+',\'dosagem\',this.value)"></td>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="1cp 8/8h"'
-        +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+bn+','+i+','posologia',this.value)"></td>'
+        +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+bn+','+i+',\'posologia\',this.value)"></td>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="7d"'
-        +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+bn+','+i+','duracao',this.value)"></td>'
+        +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+bn+','+i+',\'duracao\',this.value)"></td>'
       +'<td class="text-center">'
         +'<button class="btn-remove-row p-0" onclick="atDelPresc('+bn+','+i+')" title="Remover">'
           +'<i class="bi bi-trash3"></i></button>'
@@ -594,11 +594,11 @@ function _renderExames(bn) {
           +'<span class="badge bg-light text-dark border" style="font-size:.65rem;white-space:nowrap">'
             +(ICON_SUB[e.subtipo]||'📋')+' '+(e.subtipo||'LAB')+'</span>'
           +'<input type="text" class="form-control form-control-sm" placeholder="Nome do exame *"'
-            +' value="'+esc(e.exame)+'" oninput="atUpdExame('+bn+','+i+','exame',this.value)">'
+            +' value="'+esc(e.exame)+'" oninput="atUpdExame('+bn+','+i+',\'exame\',this.value)">'
           +(e.grupo?'<span class="badge bg-light text-dark border" style="font-size:.6rem;white-space:nowrap">'+esc(e.grupo)+'</span>':'')
         +'</div>'
         +'<input type="text" class="form-control form-control-sm" placeholder="Observação (opcional)"'
-          +' value="'+esc(e.observacao||'')+'" oninput="atUpdExame('+bn+','+i+','observacao',this.value)">'
+          +' value="'+esc(e.observacao||'')+'" oninput="atUpdExame('+bn+','+i+',\'observacao\',this.value)">'
       +'</div>'
       +'<button class="btn-remove-row" onclick="atDelExame('+bn+','+i+')"><i class="bi bi-trash3"></i></button>'
       +'</div>';
@@ -1142,10 +1142,10 @@ function _htmlBloco(bloco) {
   }
   if (tc === 'EXAMES') {
     btnPrint = '<button class="btn btn-sm btn-outline-warning text-dark py-0 ms-auto" style="font-size:.7rem" '
-      + 'onclick="atImprimirExames(' + bn + ','LAB')" title="Pedido de laboratório">'
+      + 'onclick="atImprimirExames(' + bn + ',\'LAB\')" title="Pedido de laboratório">'
       + '<i class="bi bi-printer-fill"></i> Lab</button>'
       + ' <button class="btn btn-sm btn-outline-secondary py-0" style="font-size:.7rem" '
-      + 'onclick="atImprimirExames(' + bn + ','IMG')" title="Pedido de imagem">'
+      + 'onclick="atImprimirExames(' + bn + ',\'IMG\')" title="Pedido de imagem">'
       + '<i class="bi bi-printer-fill"></i> Img</button>';
   }
 
