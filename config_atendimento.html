@@ -849,7 +849,7 @@ function _renderSecaoTabBar() {
     var meta = TIPOS_CONTEUDO_LABELS[tc] || { label: tc, ico: 'bi-grid', cor: '#6c757d' };
     var ativo = tc === CFG.secaoAtual;
     return '<span class="secao-tab' + (ativo ? ' active' : '') + '" data-tc="' + tc + '" '
-      + 'onclick="cfgMudarSecao('' + tc + '')">'
+      + 'onclick="cfgMudarSecao(this.dataset.tc)" data-tc="' + tc + '">' 
       + '<i class="bi ' + meta.ico + '" style="color:' + meta.cor + '"></i> ' + esc(meta.label)
       + '</span>';
   }).join('');
@@ -860,7 +860,7 @@ function _renderSecaoTabBar() {
   });
   var dropItems = disponiveis.map(function(tc) {
     var meta = TIPOS_CONTEUDO_LABELS[tc] || { label: tc, ico: 'bi-grid', cor: '#6c757d' };
-    return '<li><a class="dropdown-item" onclick="cfgAdicionarSecao('' + tc + '')">'
+    return '<li><a class="dropdown-item" onclick="cfgAdicionarSecao(this.dataset.tc)" data-tc="' + tc + '">'  
       + '<i class="bi ' + meta.ico + '" style="color:' + meta.cor + '"></i> ' + esc(meta.label)
       + '</a></li>';
   }).join('');
