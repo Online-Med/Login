@@ -7,15 +7,15 @@
 
 export const SUPABASE_URL = "https://pijymmyhtjvgfnpazjww.supabase.co";
 
-// Chave de serviço (service_role) — bypassa RLS no Supabase
-export const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpanltbXlodGp2Z2ZucGF6and3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDIwMDgxMCwiZXhwIjoyMDg5Nzc2ODEwfQ.VA6bhNcYV2y95tuUZh8W94jCy4d8bh-bDFXcLYI2LVM";
+// O código agora busca a chave do sistema, não do texto puro
+export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Headers prontos para usar em qualquer chamada ao Supabase
 export const sbHeaders = {
   'apikey':        SERVICE_KEY,
   'Authorization': `Bearer ${SERVICE_KEY}`,
   'Content-Type':  'application/json'
 };
+
 
 // ── Helper: chama o Supabase REST e retorna { ok, status, data } ──
 export async function sb(path, method = 'GET', body = null, extraHeaders = {}) {
