@@ -88,7 +88,10 @@
   position:absolute; z-index:1080; background:#fff;
   border:1px solid #dee2e6; border-radius:8px;
   box-shadow:0 4px 16px rgba(0,0,0,.12);
-  max-height:230px; overflow-y:auto; min-width:280px; left:0; top:100%;
+  max-height:260px; overflow-y:auto; overflow-x:hidden;
+  min-width:300px; left:0; top:100%;
+  /* Garante scroll funcional */
+  overscroll-behavior:contain;
 }
 .at-dropdown .dd-item {
   padding:8px 12px; cursor:pointer; font-size:.8rem; border-bottom:1px solid #f5f5f5;
@@ -103,6 +106,12 @@
   padding:4px 12px; font-size:.68rem; text-transform:uppercase;
   letter-spacing:.05em; color:#adb5bd; background:#f8f9fa;
   border-bottom:1px solid #dee2e6; border-top:1px solid #dee2e6;
+  position:sticky; top:0; z-index:1;
+}
+/* Seção de adicionar manualmente com botões de subtipo */
+.at-dropdown .dd-item-manual {
+  background:#fffbf0; border-top:1px solid #dee2e6;
+  position:sticky; bottom:0;
 }
 .at-input-wrap { position:relative; }
 
@@ -505,44 +514,46 @@ window.atBuscarMed = function(v, bn) {
       return Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1
         && (!termo || m.nome.toLowerCase().includes(termo));
     });
+    // Sem termo: mostra TODOS os medicamentos, não só favoritos
     var outros = lista.filter(function(m){
-      if(!termo) return false;
       var ehFav = Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1;
-      return !ehFav && m.nome.toLowerCase().includes(termo);
+      if(ehFav) return false;
+      if(!termo) return true;
+      return m.nome.toLowerCase().includes(termo);
     });
 
     AT._medDropList = favs.concat(outros);
     AT._medDropBn   = bn;
 
-    if(!AT._medDropList.length) {
-      drop.innerHTML = '<div class="dd-item text-muted">'
-        + (termo ? 'Nenhum resultado' : 'Favoritos deste tipo aparecerão aqui') + '</div>';
-    } else {
-      var html = '';
-      var idx = 0;
-      if(favs.length) {
-        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>';
-        favs.forEach(function(m){ html += _medDropItem(m, idx++); });
-      }
-      if(outros.length) {
-        html += '<div class="dd-sep">Catálogo</div>';
-        outros.forEach(function(m){ html += _medDropItem(m, idx++); });
-      }
-      if(termo) {
-        html += '<div class="dd-sep"></div>'
-          + '<div class="dd-item" data-add-med="'+esc(termo)+'" data-bn="'+bn+'">'
-          + '<span class="dd-nome"><i class="bi bi-plus-circle text-primary"></i> Adicionar "'+esc(termo)+'" manualmente</span></div>';
-      }
-      drop.innerHTML = html;
-      drop.querySelectorAll('[data-add-med]').forEach(function(el){
-        el.addEventListener('click', function(){
-          atAddPresc({ nome: el.dataset.addMed, dose:'', posologia:'' }, parseInt(el.dataset.bn)||bn);
-        });
-      });
+    var html = '';
+    var idx = 0;
+    if(favs.length) {
+      html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>';
+      favs.forEach(function(m){ html += _medDropItem(m, idx++); });
     }
+    if(outros.length) {
+      if(favs.length) html += '<div class="dd-sep">Todos os medicamentos</div>';
+      outros.forEach(function(m){ html += _medDropItem(m, idx++); });
+    }
+    if(!AT._medDropList.length) {
+      html = '<div class="dd-item text-muted py-2 text-center">Nenhum medicamento encontrado</div>';
+    }
+    if(termo) {
+      html += '<div class="dd-sep"></div>'
+        + '<div class="dd-item" data-add-med="'+esc(termo)+'" data-bn="'+bn+'">'
+        + '<span class="dd-nome"><i class="bi bi-plus-circle text-primary"></i> Adicionar "'
+          +esc(termo)+'" manualmente</span></div>';
+    }
+    drop.innerHTML = html;
+    drop.querySelectorAll('[data-add-med]').forEach(function(el){
+      el.addEventListener('click', function(){
+        atAddPresc({ nome: el.dataset.addMed, dose:'', posologia:'' }, parseInt(el.dataset.bn)||bn);
+      });
+    });
     drop.classList.remove('d-none');
-  }, 250);
+  }, termo ? 250 : 0); // sem delay ao focar com campo vazio
 };
+
 
 window.atAddPrescIdx = function(idx) {
   var m  = AT._medDropList && AT._medDropList[idx];
@@ -622,43 +633,56 @@ window.atBuscarExame = function(v, bn) {
       return Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1
         && (!termo || e.nome.toLowerCase().includes(termo));
     });
+    // Sem termo: mostra TODOS (não só favoritos)
     var outros = lista.filter(function(e){
-      if(!termo) return false;
       var ehFav = Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1;
-      return !ehFav && (e.nome.toLowerCase().includes(termo)||(e.grupo||'').toLowerCase().includes(termo));
+      if(ehFav) return false;
+      if(!termo) return true; // mostra todos quando campo vazio
+      return e.nome.toLowerCase().includes(termo) || (e.grupo||'').toLowerCase().includes(termo);
     });
 
     AT._exameDropList = favs.concat(outros);
     AT._exameDropBn   = bn;
 
-    if(!AT._exameDropList.length) {
-      drop.innerHTML = '<div class="dd-item text-muted">'
-        + (termo ? 'Nenhum resultado' : 'Favoritos para este tipo aparecerão aqui') + '</div>';
-    } else {
-      var html = '';
-      var idx = 0;
-      if(favs.length) {
-        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>';
-        favs.forEach(function(e){ html += _exameDropItem(e, idx++); });
-      }
-      if(outros.length) {
-        html += '<div class="dd-sep">Catálogo</div>';
-        outros.forEach(function(e){ html += _exameDropItem(e, idx++); });
-      }
-      if(termo) {
-        html += '<div class="dd-sep"></div>'
-          + '<div class="dd-item" data-add-exame="'+esc(termo)+'" data-bn="'+bn+'">'
-          + '<span class="dd-nome"><i class="bi bi-plus-circle text-warning"></i> Solicitar "'+esc(termo)+'" manualmente</span></div>';
-      }
-      drop.innerHTML = html;
-      drop.querySelectorAll('[data-add-exame]').forEach(function(el){
-        el.addEventListener('click', function(){
-          atAddExame({ nome: el.dataset.addExame, grupo:'', subtipo:'LAB' }, parseInt(el.dataset.bn)||bn);
-        });
-      });
+    var html = '';
+    var idx = 0;
+    if(favs.length) {
+      html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>';
+      favs.forEach(function(e){ html += _exameDropItem(e, idx++); });
     }
+    if(outros.length) {
+      if(favs.length) html += '<div class="dd-sep">Todos os exames</div>';
+      outros.forEach(function(e){ html += _exameDropItem(e, idx++); });
+    }
+    if(!AT._exameDropList.length) {
+      html = '<div class="dd-item text-muted py-2 text-center">Nenhum exame encontrado</div>';
+    }
+    // Adicionar manualmente com escolha de subtipo
+    if(termo) {
+      html += '<div class="dd-sep"></div>'
+        + '<div class="dd-item-manual px-3 py-2">'
+          + '<div class="small fw-bold mb-1"><i class="bi bi-plus-circle text-warning me-1"></i>Adicionar "'
+            + esc(termo) + '" manualmente:</div>'
+          + '<div class="d-flex gap-1 mt-1">'
+            + '<button class="btn btn-sm btn-outline-info flex-fill" style="font-size:.72rem" '
+              + 'data-add-exame="'+esc(termo)+'" data-sub="LAB" data-bn="'+bn+'">🔬 Lab</button>'
+            + '<button class="btn btn-sm btn-outline-warning text-dark flex-fill" style="font-size:.72rem" '
+              + 'data-add-exame="'+esc(termo)+'" data-sub="IMG" data-bn="'+bn+'">🖼 Imagem</button>'
+            + '<button class="btn btn-sm btn-outline-secondary flex-fill" style="font-size:.72rem" '
+              + 'data-add-exame="'+esc(termo)+'" data-sub="OUT" data-bn="'+bn+'">📋 Outro</button>'
+          + '</div>'
+        + '</div>';
+    }
+    drop.innerHTML = html;
+    drop.querySelectorAll('[data-add-exame]').forEach(function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        atAddExame({ nome: el.dataset.addExame, grupo:'', subtipo: el.dataset.sub||'LAB' },
+          parseInt(el.dataset.bn)||bn);
+      });
+    });
     drop.classList.remove('d-none');
-  }, 250);
+  }, termo ? 250 : 0); // sem delay quando campo vazio (ao focar)
 };
 
 window.atAddExameIdx = function(idx) {
@@ -1302,9 +1326,47 @@ function _set(id, val) {
 /* ══════════════════════════════════════════════════════════════
    INICIALIZAÇÃO
 ══════════════════════════════════════════════════════════════ */
+/* ── Carrega config do profissional logado ────────────────────
+   Usa o email do localStorage para identificar o profissional
+   e carregar topo/rodapé/assinatura para impressão de documentos.
+── */
+async function _carregarCfgProfissionalLogado() {
+  if(window._cfgProfissional) return; // já carregado
+  try {
+    var email = localStorage.getItem('onlineMed_email') || '';
+    if(!email) { window._cfgProfissional = {}; return; }
+
+    // Busca o id_profissional pelo email na tabela usuarios
+    var r = await fetch('/api/config_atendimento?action=profissional_por_email&email='
+      + encodeURIComponent(email));
+    var prof = await r.json();
+    var profId = prof && prof.id_profissional;
+
+    if(!profId) {
+      // Fallback: pega da agenda se disponível
+      var ag = AT.agData || {};
+      profId = ag.id_profissional;
+    }
+
+    if(profId) {
+      var cfg = await cfgApi({ action:'config', id_profissional: profId });
+      window._cfgProfissional = cfg || {};
+      AT.profissionalId = profId;
+    } else {
+      window._cfgProfissional = {};
+    }
+  } catch(e) {
+    window._cfgProfissional = {};
+  }
+}
+
 async function inicializarAtendimento() {
   AT.agId   = window._atendimentoAgendaId   || null;
   AT.agData = window._atendimentoAgendaData || null;
+
+  // Carrega config do profissional logado para impressão (prescrição/exames/atestados)
+  // Usa o email do localStorage para buscar o id_profissional na tabela usuarios
+  _carregarCfgProfissionalLogado();
 
   if(!AT.agId) {
     document.getElementById('atendNomePac').textContent = 'Nenhum atendimento selecionado';
