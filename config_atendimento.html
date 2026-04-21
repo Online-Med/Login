@@ -260,6 +260,87 @@
 </div><!-- /container -->
 
 
+<!-- SQL template: conteúdo lido por cfgMostrarSQL (fora do JS para evitar erros de parse) -->
+<template id="cfgSQLTemplate">-- config_atendimento — Execute no SQL Editor do Supabase (apenas uma vez)
+
+-- 1. Tipos de consulta
+CREATE TABLE IF NOT EXISTS config_tipos_consulta (
+  id          bigserial PRIMARY KEY,
+  nome        text NOT NULL,
+  descricao   text,
+  ativo       boolean DEFAULT true,
+  ordem       int DEFAULT 1,
+  created_at  timestamptz DEFAULT now()
+);
+
+-- 2. Catálogo de componentes (Sinais Vitais, HDA…)
+CREATE TABLE IF NOT EXISTS config_componentes (
+  id            bigserial PRIMARY KEY,
+  nome          text NOT NULL,
+  secao         text NOT NULL
+                  CHECK (secao IN ('SINAIS_VITAIS','HDA')),
+  icone         text DEFAULT 'bi-circle',
+  valor_default text,
+  unidade       text,
+  ordem         int DEFAULT 1,
+  created_at    timestamptz DEFAULT now()
+);
+
+-- 3. Vínculo tipo ↔ componente
+CREATE TABLE IF NOT EXISTS config_tipo_componentes (
+  id            bigserial PRIMARY KEY,
+  tipo_id       bigint NOT NULL
+                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
+  componente_id bigint NOT NULL
+                  REFERENCES config_componentes(id) ON DELETE CASCADE,
+  ativo         boolean DEFAULT true,
+  ordem         int DEFAULT 1,
+  UNIQUE (tipo_id, componente_id)
+);
+
+-- 4. Blocos configuráveis por tipo (máx 6 por tipo)
+CREATE TABLE IF NOT EXISTS config_blocos_tipo (
+  id            bigserial PRIMARY KEY,
+  tipo_id       bigint NOT NULL
+                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
+  numero_bloco  int NOT NULL CHECK (numero_bloco BETWEEN 1 AND 6),
+  nome          text NOT NULL,
+  tipo_conteudo text NOT NULL DEFAULT 'TEXTO_LIVRE'
+                  CHECK (tipo_conteudo IN (
+                    'SINAIS_VITAIS','ANAMNESE','EXAME_FISICO','DIAGNOSTICO',
+                    'PRESCRICOES','EXAMES','CONDUTA','OBSERVACOES',
+                    'DADOS_AGENDA','TEXTO_LIVRE'
+                  )),
+  ativo         boolean DEFAULT true,
+  UNIQUE (tipo_id, numero_bloco)
+);
+
+-- 5. Catálogo de medicamentos
+CREATE TABLE IF NOT EXISTS config_medicamentos (
+  id              bigserial PRIMARY KEY,
+  nome            text NOT NULL,
+  dose            text,
+  posologia       text,
+  categoria       text,
+  favorito_tipos  jsonb DEFAULT '[]',
+  created_at      timestamptz DEFAULT now()
+);
+
+-- 6. Catálogo de exames
+CREATE TABLE IF NOT EXISTS config_exames (
+  id              bigserial PRIMARY KEY,
+  nome            text NOT NULL,
+  grupo           text,
+  favorito_tipos  jsonb DEFAULT '[]',
+  created_at      timestamptz DEFAULT now()
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_tipo_comp_tipo  ON config_tipo_componentes(tipo_id);
+CREATE INDEX IF NOT EXISTS idx_blocos_tipo      ON config_blocos_tipo(tipo_id);
+CREATE INDEX IF NOT EXISTS idx_meds_nome        ON config_medicamentos(nome);
+CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</template>
+
 <!-- ═══ MODAIS ════════════════════════════════════════════════════ -->
 
 <!-- Modal: Tipo de Consulta -->
@@ -1363,146 +1444,8 @@ window.cfgSelecionarIcone = function (ico) {
    SQL
 ════════════════════════════════════════════════════════════════ */
 window.cfgMostrarSQL = function () {
-  document.getElementById('cfgSQLContent').textContent = `-- config_atendimento — Execute no SQL Editor do Supabase (apenas uma vez)
-
--- 1. Tipos de consulta
-CREATE TABLE IF NOT EXISTS config_tipos_consulta (
-  id          bigserial PRIMARY KEY,
-  nome        text NOT NULL,
-  descricao   text,
-  ativo       boolean DEFAULT true,
-  ordem       int DEFAULT 1,
-  created_at  timestamptz DEFAULT now()
-);
-
--- 2. Catálogo de componentes (Sinais Vitais, HDA…)
-CREATE TABLE IF NOT EXISTS config_componentes (
-  id            bigserial PRIMARY KEY,
-  nome          text NOT NULL,
-  secao         text NOT NULL
-                  CHECK (secao IN ('SINAIS_VITAIS','HDA')),
-  icone         text DEFAULT 'bi-circle',
-  valor_default text,
-  unidade       text,
-  ordem         int DEFAULT 1,
-  created_at    timestamptz DEFAULT now()
-);
-
--- 3. Vínculo tipo ↔ componente
-CREATE TABLE IF NOT EXISTS config_tipo_componentes (
-  id            bigserial PRIMARY KEY,
-  tipo_id       bigint NOT NULL
-                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
-  componente_id bigint NOT NULL
-                  REFERENCES config_componentes(id) ON DELETE CASCADE,
-  ativo         boolean DEFAULT true,
-  ordem         int DEFAULT 1,
-  UNIQUE (tipo_id, componente_id)
-);
-
--- 4. Blocos configuráveis por tipo (máx 6 por tipo)
-CREATE TABLE IF NOT EXISTS config_blocos_tipo (
-  id            bigserial PRIMARY KEY,
-  tipo_id       bigint NOT NULL
-                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
-  numero_bloco  int NOT NULL CHECK (numero_bloco BETWEEN 1 AND 6),
-  nome          text NOT NULL,
-  tipo_conteudo text NOT NULL DEFAULT 'TEXTO_LIVRE'
-                  CHECK (tipo_conteudo IN (
-                    'SINAIS_VITAIS','ANAMNESE','EXAME_FISICO','DIAGNOSTICO',
-                    'PRESCRICOES','EXAMES','CONDUTA','OBSERVACOES',
-                    'DADOS_AGENDA','TEXTO_LIVRE'
-                  )),
-  ativo         boolean DEFAULT true,
-  UNIQUE (tipo_id, numero_bloco)
-);
-
--- 5. Catálogo de medicamentos
-CREATE TABLE IF NOT EXISTS config_medicamentos (
-  id              bigserial PRIMARY KEY,
-  nome            text NOT NULL,
-  dose            text,
-  posologia       text,
-  categoria       text,
-  favorito_tipos  jsonb DEFAULT '[]',
-  created_at      timestamptz DEFAULT now()
-);
-
--- 6. Catálogo de exames
-CREATE TABLE IF NOT EXISTS config_exames (
-  id              bigserial PRIMARY KEY,
-  nome            text NOT NULL,
-  grupo           text,
-  favorito_tipos  jsonb DEFAULT '[]',
-  created_at      timestamptz DEFAULT now()
-);
-
--- Índices
-CREATE INDEX IF NOT EXISTS idx_tipo_comp_tipo  ON config_tipo_componentes(tipo_id);
-CREATE INDEX IF NOT EXISTS idx_blocos_tipo      ON config_blocos_tipo(tipo_id);
-CREATE INDEX IF NOT EXISTS idx_meds_nome        ON config_medicamentos(nome);
-CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);`;
-  abrirModal('cfgModalSQL');
-};
-  id          bigserial PRIMARY KEY,
-  nome        text NOT NULL,
-  descricao   text,
-  ativo       boolean DEFAULT true,
-  ordem       int DEFAULT 1,
-  created_at  timestamptz DEFAULT now()
-);
-
--- 2. Catálogo de componentes (Sinais Vitais, HDA…)
-CREATE TABLE IF NOT EXISTS config_componentes (
-  id            bigserial PRIMARY KEY,
-  nome          text NOT NULL,
-  secao         text NOT NULL
-                  CHECK (secao IN ('SINAIS_VITAIS','HDA')),
-  icone         text DEFAULT 'bi-circle',
-  valor_default text,
-  unidade       text,
-  ordem         int DEFAULT 1,
-  created_at    timestamptz DEFAULT now()
-);
-
--- 3. Vínculo tipo ↔ componente
-CREATE TABLE IF NOT EXISTS config_tipo_componentes (
-  id            bigserial PRIMARY KEY,
-  tipo_id       bigint NOT NULL
-                  REFERENCES config_tipos_consulta(id) ON DELETE CASCADE,
-  componente_id bigint NOT NULL
-                  REFERENCES config_componentes(id) ON DELETE CASCADE,
-  ativo         boolean DEFAULT true,
-  ordem         int DEFAULT 1,
-  UNIQUE (tipo_id, componente_id)
-);
-
--- 4. Catálogo de medicamentos
-CREATE TABLE IF NOT EXISTS config_medicamentos (
-  id              bigserial PRIMARY KEY,
-  nome            text NOT NULL,
-  dose            text,
-  posologia       text,
-  categoria       text,
-  favorito_tipos  jsonb DEFAULT '[]',
-  created_at      timestamptz DEFAULT now()
-);
-
--- 5. Catálogo de exames
-CREATE TABLE IF NOT EXISTS config_exames (
-  id              bigserial PRIMARY KEY,
-  nome            text NOT NULL,
-  grupo           text,
-  favorito_tipos  jsonb DEFAULT '[]',
-  created_at      timestamptz DEFAULT now()
-);
-
--- Índices
-CREATE INDEX IF NOT EXISTS idx_tipo_comp_tipo  ON config_tipo_componentes(tipo_id);
-CREATE INDEX IF NOT EXISTS idx_tipo_comp_comp  ON config_tipo_componentes(componente_id);
-CREATE INDEX IF NOT EXISTS idx_meds_nome       ON config_medicamentos(nome);
-CREATE INDEX IF NOT EXISTS idx_exames_nome     ON config_exames(nome);
-CREATE INDEX IF NOT EXISTS idx_exames_grupo    ON config_exames(grupo);`;
+  var tpl = document.getElementById('cfgSQLTemplate');
+  document.getElementById('cfgSQLContent').textContent = tpl ? tpl.innerHTML.trim() : '';
   abrirModal('cfgModalSQL');
 };
 
