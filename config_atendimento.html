@@ -351,7 +351,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         <h6 class="modal-title text-white mb-0">
           <i class="bi bi-list-ul"></i> <span id="cfgTipoTitulo">Novo Tipo de Consulta</span>
         </h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalTipo')"></button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="cfgTipoId">
@@ -380,7 +380,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalTipo')">Cancelar</button>
         <button class="btn btn-info text-white btn-sm" onclick="cfgSalvarTipo()">
           <i class="bi bi-check-circle"></i> Salvar
         </button>
@@ -399,7 +399,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
           <i class="bi bi-layout-split"></i> Blocos da Consulta:
           <strong id="cfgBlocosTipoNome"></strong>
         </h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalBlocos')"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info py-2 small mb-3">
@@ -412,7 +412,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalBlocos')">Fechar</button>
         <button class="btn btn-sm text-white" style="background:#6f42c1;border-color:#6f42c1"
                 onclick="cfgSalvarBlocos()">
           <i class="bi bi-check-circle"></i> Salvar Blocos
@@ -432,7 +432,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
           <i class="bi bi-grid-3x3"></i> Componentes para:
           <strong id="cfgVincTipoNome"></strong>
         </h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalVincular')"></button>
       </div>
       <div class="modal-body p-0">
         <ul class="nav nav-tabs px-3 pt-2 bg-light" id="cfgVincTabs">
@@ -469,7 +469,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalVincular')">Fechar</button>
         <button class="btn btn-sm text-white" style="background:#6f42c1;border-color:#6f42c1"
                 onclick="cfgSalvarVinculos()">
           <i class="bi bi-check-circle"></i> Salvar configuração
@@ -488,7 +488,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         <h6 class="modal-title text-white mb-0">
           <i class="bi bi-grid-3x3"></i> <span id="cfgCompTitulo">Novo Componente</span>
         </h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalComp')"></button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="cfgCompId">
@@ -533,7 +533,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalComp')">Cancelar</button>
         <button class="btn btn-success btn-sm" onclick="cfgSalvarComp()">
           <i class="bi bi-check-circle"></i> Salvar
         </button>
@@ -551,7 +551,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         <h6 class="modal-title text-white mb-0">
           <i class="bi bi-capsule"></i> <span id="cfgMedTitulo">Novo Medicamento</span>
         </h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalMed')"></button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="cfgMedId">
@@ -587,7 +587,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalMed')">Cancelar</button>
         <button class="btn btn-primary btn-sm" onclick="cfgSalvarMed()">
           <i class="bi bi-check-circle"></i> Salvar
         </button>
@@ -605,7 +605,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         <h6 class="modal-title text-white mb-0">
           <i class="bi bi-microscope"></i> <span id="cfgExameTitulo">Novo Exame</span>
         </h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalExame')"></button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="cfgExameId">
@@ -629,7 +629,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalExame')">Cancelar</button>
         <button class="btn btn-danger btn-sm" onclick="cfgSalvarExame()">
           <i class="bi bi-check-circle"></i> Salvar
         </button>
@@ -645,7 +645,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
     <div class="modal-content">
       <div class="modal-header py-2">
         <h6 class="modal-title mb-0"><i class="bi bi-grid-fill"></i> Selecionar ícone</h6>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
+        <button class="btn-close" onclick="fecharModal('cfgModalIcone')"></button>
       </div>
       <div class="modal-body">
         <input type="text" class="form-control form-control-sm mb-3"
@@ -664,7 +664,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
     <div class="modal-content">
       <div class="modal-header py-2">
         <h6 class="modal-title mb-0"><i class="bi bi-database-fill-gear text-info"></i> SQL — criar tabelas no Supabase</h6>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
+        <button class="btn-close" onclick="fecharModal('cfgModalSQL')"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info py-2 small mb-3">
@@ -1436,8 +1436,14 @@ window.cfgFiltrarIcones = function (v) { cfgRenderIconeGrid(v); };
 window.cfgSelecionarIcone = function (ico) {
   document.getElementById('cfgCompIcone').value = ico;
   cfgAtualizarIcoPreview();
+  // Usa evento hidden.bs.modal para só abrir cfgModalComp após animação de fechamento
+  var modalIcone = document.getElementById('cfgModalIcone');
+  function reabrirComp() {
+    modalIcone.removeEventListener('hidden.bs.modal', reabrirComp);
+    abrirModal('cfgModalComp');
+  }
+  modalIcone.addEventListener('hidden.bs.modal', reabrirComp);
   fecharModal('cfgModalIcone');
-  setTimeout(function () { abrirModal('cfgModalComp'); }, 200);
 };
 
 /* ════════════════════════════════════════════════════════════════
@@ -1476,6 +1482,12 @@ async function cfgInit() {
 
 // Expõe inicializador para o dashboard
 window.inicializarPaginaConfigAtendimento = cfgInit;
+
+// Previne aria-hidden com foco preso: blur antes de qualquer modal fechar
+document.addEventListener('hide.bs.modal', function(e) {
+  var focused = e.target.querySelector(':focus');
+  if (focused) focused.blur();
+});
 
 cfgInit();
 })();
