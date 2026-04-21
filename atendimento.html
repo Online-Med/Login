@@ -264,6 +264,7 @@ var AT = {
   tipoSelecionado: null,
   _medDropList:   [],
   _exameDropList: [],
+  blocoData:      {},
 };
 // Expõe globalmente para que oninput inline nos vitais possa acessar
 window.AT = AT;
@@ -416,10 +417,15 @@ function _preencherForm(r) {
       if(el) el.value = r.vitais[key];
     });
   }
-  AT.presc  = r.prescricoes       || [];
-  AT.exames = r.exames_solicitados || [];
-  _renderPresc();
-  _renderExames();
+  // Restaura prescrições no primeiro bloco PRESCRICOES
+  var bnPresc = _primeiroBlocoDeTipo('PRESCRICOES');
+  _getBloco(bnPresc).presc = r.prescricoes || [];
+  _renderPresc(bnPresc);
+
+  // Restaura exames no primeiro bloco EXAMES
+  var bnExame = _primeiroBlocoDeTipo('EXAMES');
+  _getBloco(bnExame).exames = r.exames_solicitados || [];
+  _renderExames(bnExame);
 }
 
 function _set(id, val) {
@@ -428,35 +434,35 @@ function _set(id, val) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PRESCRIÇÕES — com catálogo
+   PRESCRIÇÕES — por bloco (bn = numero_bloco)
 ══════════════════════════════════════════════════════════════ */
-window.atAddPresc = function(med) {
-  AT.presc.push({
+function _getBloco(bn) {
+  if (!AT.blocoData[bn]) AT.blocoData[bn] = { presc:[], exames:[], tc:'' };
+  return AT.blocoData[bn];
+}
+
+window.atAddPresc = function(med, bn) {
+  bn = bn || _primeiroBlocoDeTipo('PRESCRICOES');
+  var bloco = _getBloco(bn);
+  bloco.presc.push({
     medicamento: med ? med.nome  : '',
     dosagem:     med ? (med.dose || '') : '',
     posologia:   med ? (med.posologia || '') : '',
     duracao: ''
   });
-  _renderPresc();
-  var inp = document.getElementById('prescBusca');
+  _renderPresc(bn);
+  var inp = document.getElementById('prescBusca_b' + bn);
   if(inp) inp.value = '';
-  _fecharDrop('prescDrop');
-  setTimeout(function(){
-    // Foca no campo Medicamento da última linha
-    var rows = document.querySelectorAll('#prescList tr');
-    if(rows.length) {
-      var firstInput = rows[rows.length-1].querySelector('input');
-      if(firstInput) firstInput.focus();
-    }
-  }, 50);
+  _fecharDrop('prescDrop_b' + bn);
 };
 
-function _renderPresc() {
-  var list  = document.getElementById('prescList');
-  var empty = document.getElementById('prescEmpty');
-  var table = document.getElementById('prescTable');
+function _renderPresc(bn) {
+  var bloco = _getBloco(bn);
+  var list  = document.getElementById('prescList_b'  + bn);
+  var empty = document.getElementById('prescEmpty_b' + bn);
+  var table = document.getElementById('prescTable_b' + bn);
   if(!list) return;
-  if(!AT.presc.length) {
+  if(!bloco.presc.length) {
     list.innerHTML = '';
     if(empty) empty.classList.remove('d-none');
     if(table) table.style.display = 'none';
@@ -464,31 +470,33 @@ function _renderPresc() {
   }
   if(empty) empty.classList.add('d-none');
   if(table) table.style.display = '';
-  list.innerHTML = AT.presc.map(function(p, i){
+  list.innerHTML = bloco.presc.map(function(p, i){
     return '<tr>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
-        +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+i+',\'medicamento\',this.value)"></td>'
+        +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+bn+','+i+','medicamento',this.value)"></td>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="500mg"'
-        +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+i+',\'dosagem\',this.value)"></td>'
+        +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+bn+','+i+','dosagem',this.value)"></td>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="1cp 8/8h"'
-        +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+i+',\'posologia\',this.value)"></td>'
+        +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+bn+','+i+','posologia',this.value)"></td>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="7d"'
-        +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+i+',\'duracao\',this.value)"></td>'
+        +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+bn+','+i+','duracao',this.value)"></td>'
       +'<td class="text-center">'
-        +'<button class="btn-remove-row p-0" onclick="atDelPresc('+i+')" title="Remover">'
+        +'<button class="btn-remove-row p-0" onclick="atDelPresc('+bn+','+i+')" title="Remover">'
           +'<i class="bi bi-trash3"></i></button>'
       +'</td>'
       +'</tr>';
   }).join('');
 }
-window.atUpdPresc = function(i,c,v){ if(AT.presc[i]) AT.presc[i][c]=v; };
-window.atDelPresc = function(i){ AT.presc.splice(i,1); _renderPresc(); };
+window.atUpdPresc = function(bn,i,c,v){ var b=_getBloco(bn); if(b.presc[i]) b.presc[i][c]=v; };
+window.atDelPresc = function(bn,i){ _getBloco(bn).presc.splice(i,1); _renderPresc(bn); };
 
-/* Busca no catálogo de medicamentos */
-window.atBuscarMed = function(v) {
+/* Busca medicamentos — por bloco */
+window.atBuscarMed = function(v, bn) {
+  bn = bn || _primeiroBlocoDeTipo('PRESCRICOES');
   if(AT.prescBuscaTmr) clearTimeout(AT.prescBuscaTmr);
   AT.prescBuscaTmr = setTimeout(function() {
-    var drop = document.getElementById('prescDrop');
+    var drop = document.getElementById('prescDrop_b' + bn);
+    if(!drop) return;
     var lista = AT.medsConfig || [];
     var tipoId = AT.tipoId;
     var termo = (v||'').toLowerCase().trim();
@@ -504,6 +512,7 @@ window.atBuscarMed = function(v) {
     });
 
     AT._medDropList = favs.concat(outros);
+    AT._medDropBn   = bn;
 
     if(!AT._medDropList.length) {
       drop.innerHTML = '<div class="dd-item text-muted">'
@@ -512,7 +521,7 @@ window.atBuscarMed = function(v) {
       var html = '';
       var idx = 0;
       if(favs.length) {
-        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos deste tipo</div>';
+        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>';
         favs.forEach(function(m){ html += _medDropItem(m, idx++); });
       }
       if(outros.length) {
@@ -521,13 +530,14 @@ window.atBuscarMed = function(v) {
       }
       if(termo) {
         html += '<div class="dd-sep"></div>'
-          + '<div class="dd-item" data-add-med="'+esc(termo)+'">'
+          + '<div class="dd-item" data-add-med="'+esc(termo)+'" data-bn="'+bn+'">'
           + '<span class="dd-nome"><i class="bi bi-plus-circle text-primary"></i> Adicionar "'+esc(termo)+'" manualmente</span></div>';
       }
       drop.innerHTML = html;
-      // Listener para "adicionar manualmente"
       drop.querySelectorAll('[data-add-med]').forEach(function(el){
-        el.addEventListener('click', function(){ atAddPresc({ nome: el.dataset.addMed, dose:'', posologia:'' }); });
+        el.addEventListener('click', function(){
+          atAddPresc({ nome: el.dataset.addMed, dose:'', posologia:'' }, parseInt(el.dataset.bn)||bn);
+        });
       });
     }
     drop.classList.remove('d-none');
@@ -535,64 +545,75 @@ window.atBuscarMed = function(v) {
 };
 
 window.atAddPrescIdx = function(idx) {
-  var m = AT._medDropList && AT._medDropList[idx];
-  if(m) atAddPresc({ nome: m.nome, dose: m.dose||'', posologia: m.posologia||'' });
+  var m  = AT._medDropList && AT._medDropList[idx];
+  var bn = AT._medDropBn || _primeiroBlocoDeTipo('PRESCRICOES');
+  if(m) atAddPresc({ nome: m.nome, dose: m.dose||'', posologia: m.posologia||'' }, bn);
 };
 
 function _medDropItem(m, idx) {
   return '<div class="dd-item" onclick="atAddPrescIdx('+idx+')">'
     + '<span class="dd-nome">'+esc(m.nome)+'</span>'
-    + '<span class="dd-sub">'+(m.dose||'')+(m.posologia?' \xb7 '+m.posologia:'')+'</span>'
+    + '<span class="dd-sub">'+(m.dose||'')+(m.posologia?' · '+m.posologia:'')+'</span>'
     + '</div>';
 }
 
 /* ══════════════════════════════════════════════════════════════
-   EXAMES — com catálogo
+   EXAMES — por bloco (bn = numero_bloco)
 ══════════════════════════════════════════════════════════════ */
-window.atAddExame = function(exame) {
-  AT.exames.push({
+window.atAddExame = function(exame, bn) {
+  bn = bn || _primeiroBlocoDeTipo('EXAMES');
+  var bloco = _getBloco(bn);
+  bloco.exames.push({
     exame: exame ? exame.nome : '',
-    grupo: exame ? (exame.grupo || '') : '',
+    grupo: exame ? (exame.grupo||'') : '',
+    subtipo: exame ? (exame.subtipo||'LAB') : 'LAB',
     observacao: ''
   });
-  _renderExames();
-  var inp = document.getElementById('exameBusca');
+  _renderExames(bn);
+  var inp = document.getElementById('exameBusca_b' + bn);
   if(inp) inp.value = '';
-  _fecharDrop('exameDrop');
-  setTimeout(function(){
-    var inputs = document.querySelectorAll('#exameList .exam-row input');
-    if(inputs.length) inputs[inputs.length - 2].focus();
-  }, 50);
+  _fecharDrop('exameDrop_b' + bn);
 };
 
-function _renderExames() {
-  var list = document.getElementById('exameList');
-  var empty = document.getElementById('exameEmpty');
-  if(!AT.exames.length) { list.innerHTML=''; empty.classList.remove('d-none'); return; }
-  empty.classList.add('d-none');
-  list.innerHTML = AT.exames.map(function(e, i){
+function _renderExames(bn) {
+  var bloco = _getBloco(bn);
+  var list  = document.getElementById('exameList_b'  + bn);
+  var empty = document.getElementById('exameEmpty_b' + bn);
+  if(!list) return;
+  if(!bloco.exames.length) {
+    list.innerHTML = '';
+    if(empty) empty.classList.remove('d-none');
+    return;
+  }
+  if(empty) empty.classList.add('d-none');
+  var ICON_SUB = { LAB:'🔬', IMG:'🖼', OUT:'📋' };
+  list.innerHTML = bloco.exames.map(function(e, i){
     return '<div class="exam-row">'
       +'<div class="flex-grow-1">'
         +'<div class="d-flex gap-1 align-items-center mb-1">'
+          +'<span class="badge bg-light text-dark border" style="font-size:.65rem;white-space:nowrap">'
+            +(ICON_SUB[e.subtipo]||'📋')+' '+(e.subtipo||'LAB')+'</span>'
           +'<input type="text" class="form-control form-control-sm" placeholder="Nome do exame *"'
-            +' value="'+esc(e.exame)+'" oninput="atUpdExame('+i+',\'exame\',this.value)">'
+            +' value="'+esc(e.exame)+'" oninput="atUpdExame('+bn+','+i+','exame',this.value)">'
           +(e.grupo?'<span class="badge bg-light text-dark border" style="font-size:.6rem;white-space:nowrap">'+esc(e.grupo)+'</span>':'')
         +'</div>'
         +'<input type="text" class="form-control form-control-sm" placeholder="Observação (opcional)"'
-          +' value="'+esc(e.observacao||'')+'" oninput="atUpdExame('+i+',\'observacao\',this.value)">'
+          +' value="'+esc(e.observacao||'')+'" oninput="atUpdExame('+bn+','+i+','observacao',this.value)">'
       +'</div>'
-      +'<button class="btn-remove-row" onclick="atDelExame('+i+')"><i class="bi bi-trash3"></i></button>'
+      +'<button class="btn-remove-row" onclick="atDelExame('+bn+','+i+')"><i class="bi bi-trash3"></i></button>'
       +'</div>';
   }).join('<hr class="my-1">');
 }
-window.atUpdExame = function(i,c,v){ if(AT.exames[i]) AT.exames[i][c]=v; };
-window.atDelExame = function(i){ AT.exames.splice(i,1); _renderExames(); };
+window.atUpdExame = function(bn,i,c,v){ var b=_getBloco(bn); if(b.exames[i]) b.exames[i][c]=v; };
+window.atDelExame = function(bn,i){ _getBloco(bn).exames.splice(i,1); _renderExames(bn); };
 
-/* Busca no catálogo de exames */
-window.atBuscarExame = function(v) {
+/* Busca exames — por bloco */
+window.atBuscarExame = function(v, bn) {
+  bn = bn || _primeiroBlocoDeTipo('EXAMES');
   if(AT.exameBuscaTmr) clearTimeout(AT.exameBuscaTmr);
   AT.exameBuscaTmr = setTimeout(function() {
-    var drop = document.getElementById('exameDrop');
+    var drop = document.getElementById('exameDrop_b' + bn);
+    if(!drop) return;
     var lista = AT.examesConfig || [];
     var tipoId = AT.tipoId;
     var termo = (v||'').toLowerCase().trim();
@@ -604,10 +625,11 @@ window.atBuscarExame = function(v) {
     var outros = lista.filter(function(e){
       if(!termo) return false;
       var ehFav = Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1;
-      return !ehFav && (e.nome.toLowerCase().includes(termo) || (e.grupo||'').toLowerCase().includes(termo));
+      return !ehFav && (e.nome.toLowerCase().includes(termo)||(e.grupo||'').toLowerCase().includes(termo));
     });
 
     AT._exameDropList = favs.concat(outros);
+    AT._exameDropBn   = bn;
 
     if(!AT._exameDropList.length) {
       drop.innerHTML = '<div class="dd-item text-muted">'
@@ -616,7 +638,7 @@ window.atBuscarExame = function(v) {
       var html = '';
       var idx = 0;
       if(favs.length) {
-        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos deste tipo</div>';
+        html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>';
         favs.forEach(function(e){ html += _exameDropItem(e, idx++); });
       }
       if(outros.length) {
@@ -625,12 +647,14 @@ window.atBuscarExame = function(v) {
       }
       if(termo) {
         html += '<div class="dd-sep"></div>'
-          + '<div class="dd-item" data-add-exame="'+esc(termo)+'">'
+          + '<div class="dd-item" data-add-exame="'+esc(termo)+'" data-bn="'+bn+'">'
           + '<span class="dd-nome"><i class="bi bi-plus-circle text-warning"></i> Solicitar "'+esc(termo)+'" manualmente</span></div>';
       }
       drop.innerHTML = html;
       drop.querySelectorAll('[data-add-exame]').forEach(function(el){
-        el.addEventListener('click', function(){ atAddExame({ nome: el.dataset.addExame, grupo:'' }); });
+        el.addEventListener('click', function(){
+          atAddExame({ nome: el.dataset.addExame, grupo:'', subtipo:'LAB' }, parseInt(el.dataset.bn)||bn);
+        });
       });
     }
     drop.classList.remove('d-none');
@@ -638,18 +662,17 @@ window.atBuscarExame = function(v) {
 };
 
 window.atAddExameIdx = function(idx) {
-  var e = AT._exameDropList && AT._exameDropList[idx];
-  if(e) atAddExame({ nome: e.nome, grupo: e.grupo||'' });
+  var e  = AT._exameDropList && AT._exameDropList[idx];
+  var bn = AT._exameDropBn || _primeiroBlocoDeTipo('EXAMES');
+  if(e) atAddExame({ nome: e.nome, grupo: e.grupo||'', subtipo: e.subtipo||'LAB' }, bn);
 };
 
-
 function _exameDropItem(e, idx) {
+  var ICON_SUB = { LAB:'🔬', IMG:'🖼', OUT:'📋' };
   return '<div class="dd-item" onclick="atAddExameIdx('+idx+')">'
-    + '<span class="dd-nome">'+esc(e.nome)+'</span>'
-    + (e.grupo?'<span class="dd-sub">'+esc(e.grupo)+'</span>':'')
-    + '</div>';
+    + '<span class="dd-nome">'+(ICON_SUB[e.subtipo]||'📋')+' '+esc(e.nome)+'</span>'
+    + (e.grupo?'<span class="dd-sub">'+esc(e.grupo)+'</span>':'')+'</div>';
 }
-
 
 function _fecharDrop(id) {
   var d = document.getElementById(id);
@@ -657,23 +680,181 @@ function _fecharDrop(id) {
 }
 
 // Fecha dropdowns ao clicar fora
-document.addEventListener('click', function(e) {
-  ['prescDrop','exameDrop'].forEach(function(id) {
-    var d = document.getElementById(id);
-    var w = d && d.closest('.at-input-wrap');
-    if(d && w && !w.contains(e.target)) d.classList.add('d-none');
+document.addEventListener('click', function(e){
+  document.querySelectorAll('.at-dropdown').forEach(function(drop){
+    var wrap = drop.closest('.at-input-wrap');
+    if(wrap && !wrap.contains(e.target)) drop.classList.add('d-none');
   });
 });
+
+// Retorna o numero_bloco do primeiro bloco ativo com esse tipo_conteudo
+function _primeiroBlocoDeTipo(tc) {
+  var b = (AT.blocos||[]).find(function(bl){ return bl.tipo_conteudo === tc && bl.ativo !== false; });
+  return b ? b.numero_bloco : 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   IMPRESSÃO DE PRESCRIÇÃO E EXAMES — inline, formato A4
+══════════════════════════════════════════════════════════════ */
+function _cfgImpressao() {
+  // Usa config do profissional carregada pelo atendimento via cfgApi
+  return window._cfgProfissional || {};
+}
+
+window.atImprimirPrescricao = function(bn) {
+  var bloco = _getBloco(bn);
+  var presc = bloco.presc.filter(function(p){ return p.medicamento.trim(); });
+  if(!presc.length) {
+    Swal.fire({icon:'info',title:'Sem prescrições',text:'Adicione pelo menos um medicamento antes de imprimir.',confirmButtonColor:'#0d6efd'});
+    return;
+  }
+  var ag  = AT.agData || {};
+  var cfg = _cfgImpressao();
+  var dataHoje = new Date().toLocaleDateString('pt-BR');
+
+  var itens = presc.map(function(p, i){
+    return '<tr style="border-bottom:1px solid #eee">'
+      +'<td style="padding:6pt 4pt;font-weight:600">'+(i+1)+'. '+esc(p.medicamento)+'</td>'
+      +'<td style="padding:6pt 4pt;text-align:center">'+esc(p.dosagem||'—')+'</td>'
+      +'<td style="padding:6pt 4pt">'+esc(p.posologia||'—')+'</td>'
+      +'<td style="padding:6pt 4pt;text-align:center">'+esc(p.duracao||'—')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var html = _htmlDocumentoA4({
+    cfg: cfg,
+    titulo: 'PRESCRIÇÃO MÉDICA',
+    dataHoje: dataHoje,
+    pacNome: ag.paciente_nome||'',
+    corpo: '<table style="width:100%;border-collapse:collapse;font-size:10pt;margin-top:20pt">'
+      +'<thead><tr style="background:#f8f9fa">'
+        +'<th style="padding:6pt 4pt;text-align:left;font-size:9pt">Medicamento</th>'
+        +'<th style="padding:6pt 4pt;width:80pt;font-size:9pt">Dose</th>'
+        +'<th style="padding:6pt 4pt;font-size:9pt">Posologia</th>'
+        +'<th style="padding:6pt 4pt;width:60pt;font-size:9pt">Duração</th>'
+      +'</tr></thead>'
+      +'<tbody>'+itens+'</tbody>'
+      +'</table>',
+  });
+  _executarImpressaoA4(html);
+};
+
+window.atImprimirExames = function(bn, subtipo) {
+  var bloco = _getBloco(bn);
+  var todos = bloco.exames.filter(function(e){ return e.exame.trim(); });
+  var lista = subtipo ? todos.filter(function(e){ return (e.subtipo||'LAB') === subtipo; }) : todos;
+
+  if(!lista.length) {
+    Swal.fire({icon:'info',title:'Sem exames',
+      text:'Nenhum exame do tipo ' + (subtipo==='IMG'?'Imagem':'Laboratório') + ' adicionado.',
+      confirmButtonColor:'#ffc107'});
+    return;
+  }
+  var ag   = AT.agData || {};
+  var cfg  = _cfgImpressao();
+  var dataHoje = new Date().toLocaleDateString('pt-BR');
+  var titulo = subtipo === 'IMG' ? 'PEDIDO DE EXAMES DE IMAGEM' : 'PEDIDO DE EXAMES LABORATORIAIS';
+
+  var itens = lista.map(function(e, i){
+    return '<div style="padding:8pt 0;border-bottom:1px solid #eee">'
+      +'<strong style="font-size:11pt">'+(i+1)+'. '+esc(e.exame)+'</strong>'
+      +(e.grupo?'<span style="font-size:9pt;color:#666;margin-left:8pt">'+esc(e.grupo)+'</span>':'')
+      +(e.observacao?'<div style="font-size:9.5pt;color:#444;margin-top:3pt"><em>'+esc(e.observacao)+'</em></div>':'')
+      +'</div>';
+  }).join('');
+
+  var html = _htmlDocumentoA4({
+    cfg: cfg,
+    titulo: titulo,
+    dataHoje: dataHoje,
+    pacNome: ag.paciente_nome||'',
+    corpo: '<div style="font-size:11pt;margin-top:20pt">'+itens+'</div>',
+  });
+  _executarImpressaoA4(html);
+};
+
+function _htmlDocumentoA4(opts) {
+  var c = opts.cfg || {};
+  var topo1   = c.atestado_topo1    || '';
+  var topo2   = c.atestado_topo2    || '';
+  var titulo  = opts.titulo         || '';
+  var cidade  = c.atestado_cidade   || 'São Paulo';
+  var assin1  = c.atestado_assinatura1 || '';
+  var assin2  = c.atestado_assinatura2 || '';
+  var rodape1 = c.atestado_rodape1  || '';
+  var rodape2 = c.atestado_rodape2  || '';
+  var pacNome = opts.pacNome;
+
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<style>'
+    +'@page{size:A4;margin:18mm 20mm 30mm}'
+    +'body{font-family:"Times New Roman",serif;font-size:12pt;line-height:1.6;color:#000;margin:0}'
+    +'.rodape{position:fixed;bottom:0;left:20mm;right:20mm;padding:8pt 0;border-top:1px solid #aaa;font-size:8.5pt;text-align:center;color:#444}'
+    +'</style></head><body>'
+    +(topo1?'<div style="font-weight:700;font-size:11pt">'+esc(topo1)+'</div>':'')
+    +(topo2?'<div style="font-size:10pt;font-style:italic">'+esc(topo2)+'</div>':'')
+    +'<div style="border-bottom:2px solid #3b5bdb;margin:4pt 0 0"></div>'
+    +'<div style="text-align:center;font-weight:700;font-size:14pt;letter-spacing:.06em;margin:28pt 0 10pt">'+esc(titulo)+'</div>'
+    +'<div style="margin-bottom:14pt;font-size:11pt">'+esc(cidade)+', '+opts.dataHoje+'.</div>'
+    +(pacNome?'<div style="margin-bottom:16pt;font-size:11pt"><strong>Paciente:</strong> '+esc(pacNome.toUpperCase())+'</div>':'')
+    +opts.corpo
+    +'<div style="text-align:center;margin-top:60pt">'
+      +'<div style="border-top:1px solid #333;width:240pt;margin:0 auto 6pt"></div>'
+      +(assin1?'<div style="font-weight:700;font-size:10pt">'+esc(assin1)+'</div>':'')
+      +(assin2?'<div style="font-size:10pt">'+esc(assin2)+'</div>':'')
+    +'</div>'
+    +((rodape1||rodape2)
+      ?'<div class="rodape">'+(rodape1?esc(rodape1)+'<br>':'')+esc(rodape2||'')+'</div>':'')
+    +'</body></html>';
+}
+
+function _executarImpressaoA4(html) {
+  var win = window.open('', '_blank', 'width=800,height=900,toolbar=0,menubar=0');
+  if(!win) {
+    Swal.fire({icon:'warning',title:'Popup bloqueado',
+      text:'Permita popups para este site e tente novamente.',confirmButtonColor:'#0d6efd'});
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(function(){ win.print(); }, 400);
+}
 
 /* ── Coletar dados do formulário ── */
 function _coletarDados(status) {
   var ag = AT.agData || {};
-  // Coleta vitais dinâmicos
+
+  // Coleta vitais dinâmicos (busca em qualquer bloco de SINAIS_VITAIS)
   var vitais = {};
   AT.componentesSV.forEach(function(c) {
-    var el = document.getElementById('vComp_' + c.id);
-    if(el && el.value.trim() !== '') vitais['c' + c.id] = el.value.trim();
+    document.querySelectorAll('[id^="vComp_'+c.id+'"]').forEach(function(el){
+      if(el.value.trim()) vitais['c' + c.id] = el.value.trim();
+    });
   });
+
+  // Agrega prescrições e exames de todos os blocos
+  var todasPresc = [];
+  var todosExames = [];
+  Object.keys(AT.blocoData).forEach(function(bn) {
+    var b = AT.blocoData[bn];
+    (b.presc||[]).forEach(function(p){ if(p.medicamento.trim()) todasPresc.push(p); });
+    (b.exames||[]).forEach(function(e){ if(e.exame.trim()) todosExames.push(e); });
+  });
+
+  // Captura campos de texto livre por bloco
+  var textoLivre = {};
+  (AT.blocos||[]).forEach(function(bl) {
+    if(bl.tipo_conteudo === 'TEXTO_LIVRE') {
+      var el = document.getElementById('atTexto_b' + bl.numero_bloco);
+      if(el && el.value.trim()) textoLivre['b'+bl.numero_bloco] = el.value.trim();
+    }
+    if(bl.tipo_conteudo === 'EXAME_FISICO') {
+      var ef = document.getElementById('atExameFisico_b' + bl.numero_bloco);
+      if(ef && ef.value.trim()) textoLivre['exame_fisico_b'+bl.numero_bloco] = ef.value.trim();
+    }
+  });
+
   return {
     agenda_id:             AT.agId,
     paciente_id:           ag.paciente_id || null,
@@ -686,15 +867,16 @@ function _coletarDados(status) {
     queixa_principal:      _val('atQueixa'),
     historia_doenca_atual: _val('atHDA'),
     antecedentes:          _val('atAntecedentes'),
-    exame_fisico:          _val('atExameFisico'),
+    exame_fisico:          _val('atExameFisico') || textoLivre['exame_fisico_b1'] || '',
     hipotese_diagnostica:  _val('atDiagnostico'),
     cid:                   (_val('atCID')||'').toUpperCase(),
     conduta:               _val('atConduta'),
     observacoes:           _val('atObs'),
     vitais:                Object.keys(vitais).length ? vitais : null,
     vitais_meta:           AT.componentesSV.map(function(c){ return {id:c.id,nome:c.nome,icone:c.icone,unidade:c.unidade}; }),
-    prescricoes:           AT.presc.filter(function(p){ return p.medicamento.trim(); }),
-    exames_solicitados:    AT.exames.filter(function(e){ return e.exame.trim(); }),
+    prescricoes:           todasPresc,
+    exames_solicitados:    todosExames,
+    texto_livre:           Object.keys(textoLivre).length ? textoLivre : null,
     status:                status || 'ABERTO'
   };
 }
@@ -837,6 +1019,14 @@ async function _carregarConfigTipo(tipoId) {
     badge.classList.remove('d-none');
   }
 
+  // Carrega config do profissional para usar na impressão (prescrição/exames)
+  var agData = AT.agData || {};
+  if(agData.id_profissional && !window._cfgProfissional) {
+    cfgApi({ action:'config', id_profissional: agData.id_profissional })
+      .then(function(cfg){ window._cfgProfissional = cfg || {}; })
+      .catch(function(){ window._cfgProfissional = {}; });
+  }
+
   // Carrega blocos + componentes + catálogos em paralelo
   try {
     var results = await Promise.all([
@@ -941,12 +1131,33 @@ function _htmlBloco(bloco) {
   var tc   = bloco.tipo_conteudo || 'TEXTO_LIVRE';
   var meta = BLOCO_META[tc] || { ico:'bi-grid', cor:'text-muted' };
   var nome = esc(bloco.nome || tc);
-  var hd   = '<div class="at-section-hd"><i class="bi '+meta.ico+' '+meta.cor+'"></i> '+nome+'</div>';
+  var bn   = bloco.numero_bloco || 0;  // identificador único do bloco
+
+  // Botão de impressão para tipos que geram documentos
+  var btnPrint = '';
+  if (tc === 'PRESCRICOES') {
+    btnPrint = '<button class="btn btn-sm btn-outline-primary py-0 ms-auto" style="font-size:.7rem" '
+      + 'onclick="atImprimirPrescricao(' + bn + ')" title="Imprimir prescrição">'
+      + '<i class="bi bi-printer-fill"></i> Imprimir</button>';
+  }
+  if (tc === 'EXAMES') {
+    btnPrint = '<button class="btn btn-sm btn-outline-warning text-dark py-0 ms-auto" style="font-size:.7rem" '
+      + 'onclick="atImprimirExames(' + bn + ','LAB')" title="Pedido de laboratório">'
+      + '<i class="bi bi-printer-fill"></i> Lab</button>'
+      + ' <button class="btn btn-sm btn-outline-secondary py-0" style="font-size:.7rem" '
+      + 'onclick="atImprimirExames(' + bn + ','IMG')" title="Pedido de imagem">'
+      + '<i class="bi bi-printer-fill"></i> Img</button>';
+  }
+
+  var hd = '<div class="at-section-hd">'
+    + '<i class="bi '+meta.ico+' '+meta.cor+'"></i> '+nome
+    + btnPrint
+    + '</div>';
 
   var corpo = '';
   switch(tc) {
     case 'SINAIS_VITAIS':
-      corpo = '<div class="vitais-grid" id="vitaisGrid">'
+      corpo = '<div class="vitais-grid" id="vitaisGrid_b' + bn + '">'
         + _htmlVitaisGrid()
         + '</div>';
       break;
@@ -967,7 +1178,7 @@ function _htmlBloco(bloco) {
       break;
 
     case 'EXAME_FISICO':
-      corpo = '<textarea class="form-control form-control-sm" id="atExameFisico" rows="5"'
+      corpo = '<textarea class="form-control form-control-sm" id="atExameFisico_b' + bn + '" rows="5"'
         +' placeholder="Inspeção geral, ausculta, palpação, percussão..."></textarea>';
       break;
 
@@ -991,40 +1202,44 @@ function _htmlBloco(bloco) {
       break;
 
     case 'PRESCRICOES':
+      // ID único por bloco
       corpo = '<div class="at-input-wrap mb-2">'
           +'<div class="input-group input-group-sm">'
             +'<span class="input-group-text"><i class="bi bi-search"></i></span>'
-            +'<input type="text" class="form-control" id="prescBusca" placeholder="Buscar medicamento..." autocomplete="off">'
-            +'<button class="btn btn-primary btn-sm" onclick="atAddPresc()" title="Adicionar manual"><i class="bi bi-plus"></i></button>'
+            +'<input type="text" class="form-control" id="prescBusca_b' + bn + '" placeholder="Buscar medicamento..." autocomplete="off"'
+              +' oninput="atBuscarMed(this.value,' + bn + ')" onfocus="atBuscarMed(this.value,' + bn + ')">'
+            +'<button class="btn btn-primary btn-sm" onclick="atAddPresc(null,' + bn + ')" title="Add manual"><i class="bi bi-plus"></i></button>'
           +'</div>'
-          +'<div class="at-dropdown d-none" id="prescDrop"></div>'
+          +'<div class="at-dropdown d-none" id="prescDrop_b' + bn + '"></div>'
         +'</div>'
-        +'<div id="prescListWrap">'
-          +'<table class="table table-sm" id="prescTable" style="font-size:.78rem;display:none">'
+        +'<div>'
+          +'<table class="table table-sm" id="prescTable_b' + bn + '" style="font-size:.78rem;display:none">'
             +'<thead class="table-light"><tr>'
-              +'<th>Medicamento</th><th style="width:100px">Dose</th>'
-              +'<th style="width:130px">Posologia</th><th style="width:80px">Duração</th>'
+              +'<th>Medicamento</th><th style="width:90px">Dose</th>'
+              +'<th style="width:120px">Posologia</th><th style="width:70px">Duração</th>'
               +'<th style="width:32px"></th>'
             +'</tr></thead>'
-            +'<tbody id="prescList"></tbody>'
+            +'<tbody id="prescList_b' + bn + '"></tbody>'
           +'</table>'
-          +'<div class="text-muted small text-center py-2" id="prescEmpty">'
+          +'<div class="text-muted small text-center py-2" id="prescEmpty_b' + bn + '">'
             +'<i class="bi bi-capsule-pill"></i> Nenhuma prescrição'
           +'</div>'
         +'</div>';
       break;
 
     case 'EXAMES':
+      // ID único por bloco — permite dois blocos de EXAMES independentes
       corpo = '<div class="at-input-wrap mb-2">'
           +'<div class="input-group input-group-sm">'
             +'<span class="input-group-text"><i class="bi bi-search"></i></span>'
-            +'<input type="text" class="form-control" id="exameBusca" placeholder="Buscar exame..." autocomplete="off">'
-            +'<button class="btn btn-warning text-dark btn-sm" onclick="atAddExame()" title="Adicionar manual"><i class="bi bi-plus"></i></button>'
+            +'<input type="text" class="form-control" id="exameBusca_b' + bn + '" placeholder="Buscar exame..." autocomplete="off"'
+              +' oninput="atBuscarExame(this.value,' + bn + ')" onfocus="atBuscarExame(this.value,' + bn + ')">'
+            +'<button class="btn btn-warning text-dark btn-sm" onclick="atAddExame(null,' + bn + ')" title="Add manual"><i class="bi bi-plus"></i></button>'
           +'</div>'
-          +'<div class="at-dropdown d-none" id="exameDrop"></div>'
+          +'<div class="at-dropdown d-none" id="exameDrop_b' + bn + '"></div>'
         +'</div>'
-        +'<div id="exameList"></div>'
-        +'<div class="text-muted small text-center py-2" id="exameEmpty">'
+        +'<div id="exameList_b' + bn + '"></div>'
+        +'<div class="text-muted small text-center py-2" id="exameEmpty_b' + bn + '">'
           +'<i class="bi bi-microscope"></i> Nenhum exame solicitado'
         +'</div>';
       break;
@@ -1039,12 +1254,16 @@ function _htmlBloco(bloco) {
       break;
 
     default: // TEXTO_LIVRE
-      corpo = '<textarea class="form-control form-control-sm" id="atTexto_'+bloco.numero_bloco+'" rows="4"'
+      corpo = '<textarea class="form-control form-control-sm" id="atTexto_b' + bn + '" rows="4"'
         +' placeholder="'+nome+'..."></textarea>';
   }
 
+  // Inicializa estado do bloco
+  if (!AT.blocoData[bn]) AT.blocoData[bn] = { presc: [], exames: [], tc: tc };
+
   return '<div class="at-section">' + hd + '<div class="at-section-body">' + corpo + '</div></div>';
 }
+
 
 function _htmlVitaisGrid() {
   var comps = AT.componentesSV;
