@@ -30,6 +30,15 @@ export default async function handler(req, res) {
     // ─── GET ─────────────────────────────────────────────────────
     if (method === 'GET') {
 
+      // Busca profissional pelo email (para carregar config na impressão)
+      if (action === 'profissional_por_email' && query.email) {
+        const { ok, data } = await sb(
+          `usuarios?email=eq.${encodeURIComponent(query.email)}&select=id_profissional,nome,especialidade,crm&limit=1`
+        );
+        const prof = ok && data && data[0] ? data[0] : null;
+        return res.status(200).json(prof || {});
+      }
+
       if (action === 'tipos') {
         const { ok, data } = await sb('config_tipos_consulta?order=ordem.asc,nome.asc&select=*');
         return res.status(200).json(ok ? data || [] : []);
