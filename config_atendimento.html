@@ -1241,6 +1241,7 @@ function _cfgRenderVincList(tc) {
     var vinc = vincAtivos.find(function (v) { return v.componente_id == c.id; });
     var ativo = vinc ? vinc.ativo !== false : false;
     var ordem = vinc ? (vinc.ordem || c.ordem) : c.ordem;
+    var tipoVinculo = vinc ? (vinc.tipo_vinculo || 'FIXO') : 'FIXO';
     return '<div class="vinc-row' + (ativo ? '' : ' inativo') + '" data-tc="' + tc + '">'
       + '<div style="width:38px">'
         + '<input type="checkbox" class="form-check-input vinc-ativo" data-cid="' + c.id
@@ -1253,10 +1254,17 @@ function _cfgRenderVincList(tc) {
         + (c.unidade ? ' <small class="text-muted">(' + esc(c.unidade) + ')</small>' : '')
         + (c.valor_default ? '<br><small class="text-muted">Padrão: ' + esc(c.valor_default) + '</small>' : '')
       + '</div>'
-      + '<div>'
-        + '<label class="form-label small mb-0 me-1">Ordem</label>'
-        + '<input type="number" class="form-control form-control-sm vinc-ordem" '
-          + 'data-cid="' + c.id + '" data-tc="' + tc + '" value="' + ordem + '" min="1" style="width:60px">'
+      + '<div class="d-flex align-items-center gap-2">'
+        + '<select class="form-select form-select-sm vinc-tipo" style="width:110px;font-size:.72rem" '
+            + 'data-cid="' + c.id + '" data-tc="' + tc + '">'
+          + '<option value="FIXO"' + (tipoVinculo==="FIXO"?" selected":"") + '>🔒 Fixo</option>'
+          + '<option value="ADICIONAL"' + (tipoVinculo==="ADICIONAL"?" selected":"") + '>➕ Adicional</option>'
+        + '</select>'
+        + '<div>'
+          + '<label class="form-label small mb-0 me-1">Ordem</label>'
+          + '<input type="number" class="form-control form-control-sm vinc-ordem" '
+            + 'data-cid="' + c.id + '" data-tc="' + tc + '" value="' + ordem + '" min="1" style="width:55px">'
+        + '</div>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -1284,11 +1292,15 @@ window.cfgSalvarVinculos = async function () {
       var vincAtivos = CFG.vinculos[tc] || [];
       var existente = vincAtivos.find(function (v) { return v.componente_id == c.id; });
 
+      var tipoVincEl = document.querySelector('.vinc-tipo[data-cid="' + c.id + '"][data-tc="' + tc + '"]');
+      var tipoVinculo = tipoVincEl ? tipoVincEl.value : 'FIXO';
+
       if (existente && existente.id) {
-        promises.push(cfgApi({ action: 'vincular', id: existente.id }, 'PATCH', { ativo: ativo, ordem: ordem }));
+        promises.push(cfgApi({ action: 'vincular', id: existente.id }, 'PATCH',
+          { ativo: ativo, ordem: ordem, tipo_vinculo: tipoVinculo }));
       } else if (ativo) {
         promises.push(cfgApi({ action: 'vincular' }, 'POST',
-          { tipo_id: parseInt(tipoId), componente_id: c.id, ativo: true, ordem: ordem }));
+          { tipo_id: parseInt(tipoId), componente_id: c.id, ativo: true, ordem: ordem, tipo_vinculo: tipoVinculo }));
       }
     });
   });
