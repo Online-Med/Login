@@ -501,25 +501,31 @@ window.atDelPresc = function(bn,i){ _getBloco(bn).presc.splice(i,1); _renderPres
 
 /* Busca medicamentos — por bloco */
 window.atBuscarMed = function(v, bn) {
+  // 1. MOVA A DEFINIÇÃO PARA CÁ (Antes do setTimeout)
+  var termo = (v || '').toLowerCase().trim();
+  
   bn = bn || _primeiroBlocoDeTipo('PRESCRICOES');
   if(AT.prescBuscaTmr) clearTimeout(AT.prescBuscaTmr);
+
+  // 2. Agora o 'termo' já existe e pode ser usado no delay lá embaixo
   AT.prescBuscaTmr = setTimeout(function() {
     var drop = document.getElementById('prescDrop_b' + bn);
     if(!drop) return;
+    
     var lista = AT.medsConfig || [];
     var tipoId = AT.tipoId;
-    var termo = (v||'').toLowerCase().trim();
 
+    // O filtro continua funcionando normalmente
     var favs = lista.filter(function(m){
       return Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1
-        && (!termo || m.nome.toLowerCase().includes(termo));
+        && (!termo || (m.nome||'').toLowerCase().includes(termo));
     });
-    // Sem termo: mostra TODOS os medicamentos, não só favoritos
+
     var outros = lista.filter(function(m){
       var ehFav = Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1;
       if(ehFav) return false;
       if(!termo) return true;
-      return m.nome.toLowerCase().includes(termo);
+      return (m.nome||'').toLowerCase().includes(termo);
     });
 
     AT._medDropList = favs.concat(outros);
@@ -545,13 +551,17 @@ window.atBuscarMed = function(v, bn) {
           +esc(termo)+'" manualmente</span></div>';
     }
     drop.innerHTML = html;
+    
+    // Adicionando eventos aos itens manuais
     drop.querySelectorAll('[data-add-med]').forEach(function(el){
       el.addEventListener('click', function(){
         atAddPresc({ nome: el.dataset.addMed, dose:'', posologia:'' }, parseInt(el.dataset.bn)||bn);
       });
     });
+    
     drop.classList.remove('d-none');
-  }, termo ? 250 : 0); // sem delay ao focar com campo vazio
+    
+  }, termo ? 250 : 0); // 3. Agora o JS sabe o que é 'termo' aqui!
 };
 
 
