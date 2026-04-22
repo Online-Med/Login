@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       // Busca profissional pelo email (para carregar config na impressão)
       if (action === 'profissional_por_email' && query.email) {
         const { ok, data } = await sb(
-          `usuarios?email=eq.${encodeURIComponent(query.email)}&select=id_profissional,nome,especialidade,crm&limit=1`
+          "user"//`usuarios?email=eq.${encodeURIComponent(query.email)}&select=id_profissional,nome,especialidade,crm&limit=1`
         );
         const prof = ok && data && data[0] ? data[0] : null;
         return res.status(200).json(prof || {});
