@@ -961,8 +961,10 @@ AG.acao = async function(tipo, id, extra) {
     body={hora_chegada:ts, status:'AGUARDANDO'};
     campos={hora_chegada:ts, status:'AGUARDANDO'};
   } else if(tipo==='status') {
-    body={status:extra};
-    campos={status:extra};
+    // Ao reverter para AGENDADO ou AGUARDANDO, limpa hora_atendido
+    var clearAtendido = (extra === 'AGENDADO' || extra === 'AGUARDANDO') ? { hora_atendido: null } : {};
+    body   = Object.assign({ status: extra }, clearAtendido);
+    campos = Object.assign({ status: extra }, clearAtendido);
   } else if(tipo==='atendido') {
     var ts=new Date().toISOString();
     body={status:'ATENDIDO', hora_atendido:ts};
