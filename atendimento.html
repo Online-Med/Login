@@ -292,7 +292,7 @@ var AT = {
   // Catálogos
   medsConfig: [], examesConfig: [],
   // Médico
-  medicoId: null, medicoNome: null,
+  medicoId: null, medicoNome: null, medicoCRM: null, medicoEsp: null,
   // Dropdowns
   _medDropList: [], _exameDropList: [],
   prescBuscaTmr: null, exameBuscaTmr: null,
@@ -351,13 +351,15 @@ async function _carregarMedicoLogado() {
     if(prof && prof.id_profissional) {
       AT.medicoId   = prof.id_profissional;
       AT.medicoNome = prof.nome || email;
-      // Carrega config para impressão
+      AT.medicoCRM  = prof.crm  || '';
+      AT.medicoEsp  = prof.especialidade || '';
+      // Carrega config de impressão (topo/assinatura/rodapé dos atestados)
       cfgApi({ action:'config', id_profissional: prof.id_profissional })
         .then(function(cfg){ window._cfgProfissional = cfg || {}; })
         .catch(function(){ window._cfgProfissional = {}; });
     }
     var nomeEl = document.getElementById('atendMedicoNome');
-    if(nomeEl) nomeEl.textContent = AT.medicoNome || '—';
+    if(nomeEl) nomeEl.textContent = (AT.medicoNome||'—') + (AT.medicoCRM?' · CRM '+AT.medicoCRM:'');
   } catch(e) {
     window._cfgProfissional = {};
   }
@@ -444,16 +446,18 @@ async function _carregarConfigTipo(tipoId) {
     AT.medsConfig    = Array.isArray(results[2]) ? results[2] : [];
     AT.examesConfig  = Array.isArray(results[3]) ? results[3] : [];
 
-    // Agrupa componentes por tipo_conteudo (secao do componente)
-    AT.componentesPorTipo = {};
+    // Agrupa componentes por tipo_conteudo separando FIXO/ADICIONAL
+    AT.componentesPorTipo = {};   // { tc: { fixo:[...], adicional:[...] } }
     vincAtivos.forEach(function(v) {
       if(!v.componente) return;
       var tc = v.componente.secao;
-      if(!AT.componentesPorTipo[tc]) AT.componentesPorTipo[tc] = [];
-      AT.componentesPorTipo[tc].push(v.componente);
+      if(!AT.componentesPorTipo[tc]) AT.componentesPorTipo[tc] = { fixo:[], adicional:[] };
+      var tipoVinculo = v.tipo_vinculo || 'FIXO';
+      AT.componentesPorTipo[tc][tipoVinculo === 'ADICIONAL' ? 'adicional' : 'fixo'].push(v.componente);
     });
     Object.keys(AT.componentesPorTipo).forEach(function(tc) {
-      AT.componentesPorTipo[tc].sort(function(a,b){ return (a.ordem||99)-(b.ordem||99); });
+      AT.componentesPorTipo[tc].fixo.sort(function(a,b){ return (a.ordem||99)-(b.ordem||99); });
+      AT.componentesPorTipo[tc].adicional.sort(function(a,b){ return (a.ordem||99)-(b.ordem||99); });
     });
 
     AT.blocos = blocos.length ? blocos : _blocosDefault();
@@ -513,12 +517,15 @@ function _htmlBloco(bloco) {
   var meta = BLOCO_META[tc] || { ico:'bi-grid', cor:'text-muted' };
   var nome = esc(bloco.nome || tc);
 
-  // Componentes deste tipo_conteudo (se configurados)
-  var comps = AT.componentesPorTipo[tc] || [];
-  var compsHtml = '';
-  if(comps.length) {
-    compsHtml = '<div class="vitais-grid mb-2">'
-      + comps.map(function(c) {
+  var tcInfo = AT.componentesPorTipo[tc] || { fixo:[], adicional:[] };
+  var fixos    = tcInfo.fixo     || [];
+  var adicionais = tcInfo.adicional || [];
+
+  // ── Componentes FIXOS — sempre visíveis, não removíveis ──
+  var fixosHtml = '';
+  if(fixos.length) {
+    fixosHtml = '<div class="vitais-grid mb-2">'
+      + fixos.map(function(c) {
           var ph = (c.valor_default||'') + (c.unidade?' '+c.unidade:'');
           return '<div class="vital-item">'
             + '<label><i class="bi ' + esc(c.icone||'bi-circle') + '"></i> ' + esc(c.nome)
@@ -533,31 +540,141 @@ function _htmlBloco(bloco) {
       + '</div>';
   }
 
-  // Textarea livre (sempre presente)
+  // ── Componentes ADICIONAIS — adicionar/remover dinamicamente ──
+  var adcBtnHtml = '';
+  if(adicionais.length) {
+    adcBtnHtml = '<div class="mb-2">'
+      + '<div class="at-input-wrap">'
+        + '<div class="input-group input-group-sm">'
+          + '<span class="input-group-text" style="font-size:.7rem"><i class="bi bi-plus-circle text-info"></i></span>'
+          + '<input type="text" class="form-control form-control-sm" '
+            + 'id="adcBusca_b'+bn+'" placeholder="Adicionar componente..." autocomplete="off" '
+            + 'oninput="atBuscarCompAdc(this.value,'+bn+')" onfocus="atBuscarCompAdc(this.value,'+bn+')">'
+        + '</div>'
+        + '<div class="at-dropdown d-none" id="adcDrop_b'+bn+'"></div>'
+      + '</div>'
+      + '<div id="adcList_b'+bn+'"></div>'
+    + '</div>';
+  }
+
+  // ── Textarea livre (sempre presente) ──
+  var rows = (fixos.length > 3 || adicionais.length) ? 2 : (fixos.length > 0 ? 2 : 4);
   var txtHtml = '<textarea class="form-control form-control-sm bloco-textarea" '
-    + 'id="blocoTxt_'+bn+'" rows="' + (comps.length ? 2 : 4) + '" '
+    + 'id="blocoTxt_'+bn+'" rows="'+rows+'" '
     + 'placeholder="Anotações livres..." '
     + 'oninput="atSetBlocoTexto('+bn+',this.value)"></textarea>';
 
   return '<div class="at-section">'
     + '<div class="at-section-hd"><i class="bi '+meta.ico+' '+meta.cor+'"></i> '+nome+'</div>'
-    + '<div class="at-section-body">' + compsHtml + txtHtml + '</div>'
+    + '<div class="at-section-body">' + fixosHtml + adcBtnHtml + txtHtml + '</div>'
     + '</div>';
 }
+
 
 function _restaurarBlocoData() {
   Object.keys(AT.blocoData).forEach(function(bn) {
     var bd = AT.blocoData[bn];
-    // Texto
+    var n = parseInt(bn);
+    // Texto livre
     var txtEl = document.getElementById('blocoTxt_'+bn);
     if(txtEl && bd.texto) txtEl.value = bd.texto;
-    // Componentes
+    // Componentes fixos
     Object.keys(bd.comp||{}).forEach(function(key) {
       var cid = key.replace(/^c/,'');
       var compEl = document.getElementById('comp_b'+bn+'_c'+cid);
       if(compEl) compEl.value = bd.comp[key];
     });
+    // Componentes adicionais: renderiza e preenche
+    _renderCompAdicionais(n);
   });
+}
+
+/* ══ Componentes ADICIONAIS (busca e gerenciamento por bloco) ════ */
+window.atBuscarCompAdc = function(v, bn) {
+  var drop = document.getElementById('adcDrop_b' + bn);
+  if(!drop) return;
+  var tc = (AT.blocos.find(function(b){ return b.numero_bloco == bn; }) || {}).tipo_conteudo;
+  var tcInfo = AT.componentesPorTipo[tc] || { fixo:[], adicional:[] };
+  var adicionais = tcInfo.adicional || [];
+  var termo = (v||'').toLowerCase().trim();
+
+  // Filtra os que já foram adicionados
+  var adicionados = AT.blocoData[bn] ? Object.keys(AT.blocoData[bn].comp || {}) : [];
+  var disponiveis = adicionais.filter(function(c) {
+    var jaAdicionado = adicionados.indexOf('c'+c.id) !== -1;
+    var bateTerme = !termo || c.nome.toLowerCase().includes(termo);
+    return !jaAdicionado && bateTerme;
+  });
+
+  if(!disponiveis.length) {
+    drop.innerHTML = '<div class="dd-item text-muted small py-1 px-2">'
+      + (termo ? 'Nenhum componente encontrado' : 'Todos os adicionais já incluídos') + '</div>';
+  } else {
+    drop.innerHTML = disponiveis.map(function(c) {
+      return '<div class="dd-item" onclick="atAddCompAdc('+bn+','+c.id+')">'
+        + '<span class="dd-nome"><i class="bi '+esc(c.icone||'bi-plus-circle')+' text-info me-1"></i>'
+          + esc(c.nome)+'</span>'
+        + (c.unidade?'<span class="dd-sub">'+esc(c.unidade)+'</span>':'')
+        + '</div>';
+    }).join('');
+  }
+  drop.classList.remove('d-none');
+};
+
+window.atAddCompAdc = function(bn, cid) {
+  // Adiciona componente adicional ao estado e renderiza
+  if(!AT.blocoData[bn]) AT.blocoData[bn] = { texto:'', comp:{} };
+  AT.blocoData[bn].comp['c'+cid] = '';
+
+  // Encontra o componente na configuração
+  var tc = (AT.blocos.find(function(b){ return b.numero_bloco == bn; }) || {}).tipo_conteudo;
+  var tcInfo = AT.componentesPorTipo[tc] || { fixo:[], adicional:[] };
+  var comp = tcInfo.adicional.find(function(c){ return c.id == cid; });
+
+  _renderCompAdicionais(bn);
+  _fecharDrop('adcDrop_b' + bn);
+  var inp = document.getElementById('adcBusca_b' + bn);
+  if(inp) inp.value = '';
+};
+
+window.atDelCompAdc = function(bn, cid) {
+  if(AT.blocoData[bn] && AT.blocoData[bn].comp) {
+    delete AT.blocoData[bn].comp['c'+cid];
+  }
+  _renderCompAdicionais(bn);
+};
+
+function _renderCompAdicionais(bn) {
+  var container = document.getElementById('adcList_b' + bn);
+  if(!container) return;
+  var comp = AT.blocoData[bn] ? (AT.blocoData[bn].comp || {}) : {};
+  var tc = (AT.blocos.find(function(b){ return b.numero_bloco == bn; }) || {}).tipo_conteudo;
+  var tcInfo = AT.componentesPorTipo[tc] || { fixo:[], adicional:[] };
+
+  var html = '';
+  tcInfo.adicional.forEach(function(c) {
+    var key = 'c'+c.id;
+    if(!(key in comp)) return; // só mostra se adicionado
+    var ph = (c.valor_default||'') + (c.unidade?' '+c.unidade:'');
+    html += '<div class="d-flex align-items-center gap-2 mb-1 py-1 px-1 rounded" style="background:#f0f9ff">'
+      + '<div class="flex-grow-1 vital-item mb-0">'
+        + '<label style="font-size:.72rem"><i class="bi '+esc(c.icone||'bi-circle')+'"></i> '
+          + esc(c.nome)
+          + (c.unidade?' <small class="text-muted fw-normal">('+esc(c.unidade)+')</small>':'')
+          + ' <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size:.55rem">adicional</span>'
+        + '</label>'
+        + '<input type="text" class="form-control form-control-sm" '
+          + 'id="comp_b'+bn+'_c'+c.id+'" '
+          + 'placeholder="'+esc(ph||'—')+'" '
+          + 'oninput="atSetBlocoComp('+bn+','+c.id+',this.value)" '
+          + 'value="'+esc(comp[key]||'')+'">'
+      + '</div>'
+      + '<button class="btn btn-sm btn-outline-danger border-0 py-0 px-1" '
+        + 'onclick="atDelCompAdc('+bn+','+c.id+')" title="Remover">'
+        + '<i class="bi bi-x-circle"></i></button>'
+    + '</div>';
+  });
+  container.innerHTML = html;
 }
 
 /* ══ Preencher formulário com dados salvos ══════════════════════ */
@@ -601,11 +718,18 @@ function _coletarDados(status) {
     status:             status || 'ABERTO',
   };
 
-  // Salva blocos 1-6
+  // Salva blocos 1-6 — texto, componentes E snapshot do nome/tipo (foto da consulta)
+  var ativos = AT.blocos.filter(function(b){ return b.ativo !== false; });
   for(var n = 1; n <= 6; n++) {
     var bd = AT.blocoData[n] || {};
     body['bloco'+n+'_texto']       = bd.texto || '';
     body['bloco'+n+'_componentes'] = bd.comp  || {};
+    // Snapshot: nome e tipo do bloco no momento do atendimento
+    var blocoConf = ativos.find(function(b){ return b.numero_bloco == n; });
+    if(blocoConf) {
+      body['bloco'+n+'_nome'] = blocoConf.nome || '';
+      body['bloco'+n+'_tipo'] = blocoConf.tipo_conteudo || '';
+    }
   }
 
   return body;
@@ -721,13 +845,13 @@ window.atUpdPresc = function(i,c,v){ if(AT.presc[i]) AT.presc[i][c]=v; };
 window.atDelPresc = function(i){ AT.presc.splice(i,1); _renderPresc(); };
 
 window.atBuscarMed = function(v) {
+  var termo = (v||'').toLowerCase().trim();  // antes do setTimeout para uso no delay
   if(AT.prescBuscaTmr) clearTimeout(AT.prescBuscaTmr);
   AT.prescBuscaTmr = setTimeout(function(){
     var drop = document.getElementById('prescDrop');
     if(!drop) return;
     var lista = AT.medsConfig || [];
     var tipoId = AT.tipoId;
-    var termo = (v||'').toLowerCase().trim();
     var favs = lista.filter(function(m){
       return Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1
         && (!termo || m.nome.toLowerCase().includes(termo));
@@ -795,13 +919,13 @@ window.atUpdExame = function(i,c,v){ if(AT.exames[i]) AT.exames[i][c]=v; };
 window.atDelExame = function(i){ AT.exames.splice(i,1); _renderExames(); };
 
 window.atBuscarExame = function(v) {
+  var termo = (v||'').toLowerCase().trim();  // antes do setTimeout para uso no delay
   if(AT.exameBuscaTmr) clearTimeout(AT.exameBuscaTmr);
   AT.exameBuscaTmr = setTimeout(function(){
     var drop = document.getElementById('exameDrop');
     if(!drop) return;
     var lista = AT.examesConfig || [];
     var tipoId = AT.tipoId;
-    var termo = (v||'').toLowerCase().trim();
     var favs = lista.filter(function(e){
       return Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1
         && (!termo || e.nome.toLowerCase().includes(termo));
