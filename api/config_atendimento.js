@@ -39,6 +39,23 @@ export default async function handler(req, res) {
         return res.status(200).json(prof || {});
       }
 
+
+// --adicieoi um config que faltava
+if (action === 'config' && query.id_profissional) {
+  const { ok, data } = await sb(
+    `configuracoes?id_profissional=eq.${query.id_profissional}&select=*`
+  );
+  // Transforma o array de configs em um objeto único { chave: valor }
+  if (ok && data) {
+    const obj = {};
+    data.forEach(item => { obj[item.chave_config] = item.valor; });
+    return res.status(200).json(obj);
+  }
+  return res.status(200).json({});
+}
+
+
+      
       if (action === 'tipos') {
         const { ok, data } = await sb('config_tipos_consulta?order=ordem.asc,nome.asc&select=*');
         return res.status(200).json(ok ? data || [] : []);
