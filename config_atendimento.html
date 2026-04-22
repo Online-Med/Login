@@ -683,7 +683,7 @@ var TIPOS_CONTEUDO_LABELS = {
   ANAMNESE:      { label:'Anamnese',           ico:'bi-chat-left-text-fill', cor:'#0dcaf0' },
   EXAME_FISICO:  { label:'Exame Físico',       ico:'bi-clipboard2-pulse-fill',cor:'#198754' },
   DIAGNOSTICO:   { label:'Hipótese Diag.',     ico:'bi-journal-medical',     cor:'#6f42c1' },
-  PRESCRICOES:   { label:'Prescrições',        ico:'bi-capsule-pill',        cor:'#0d6efd' },
+  PRESCRICOES:   { label:'Prescrições (fixo)', ico:'bi-capsule-pill',        cor:'#0d6efd' }, // painel fixo
   EXAMES:        { label:'Exames',             ico:'bi-microscope',          cor:'#ffc107' },
   CONDUTA:       { label:'Conduta/Plano',      ico:'bi-check2-square',       cor:'#198754' },
   OBSERVACOES:   { label:'Observações',        ico:'bi-sticky-fill',         cor:'#6c757d' },
@@ -691,7 +691,8 @@ var TIPOS_CONTEUDO_LABELS = {
   TEXTO_LIVRE:   { label:'Texto Livre',        ico:'bi-fonts',               cor:'#495057' },
 };
 var TIPOS_CONTEUDO_ORDEM = ['SINAIS_VITAIS','ANAMNESE','EXAME_FISICO','DIAGNOSTICO',
-  'PRESCRICOES','EXAMES','CONDUTA','OBSERVACOES','DADOS_AGENDA','TEXTO_LIVRE'];
+  'EXAMES','CONDUTA','OBSERVACOES','DADOS_AGENDA','TEXTO_LIVRE'];
+// PRESCRICOES removido — painel fixo no lado direito do atendimento
 var CFG = {
   secaoAtual: 'SINAIS_VITAIS',
   tipos: [],
@@ -1018,12 +1019,12 @@ var TIPOS_CONTEUDO = [
 ];
 
 var BLOCOS_DEFAULTS = [
-  { numero_bloco:1, nome:'Sinais Vitais',       icone:'bi-heart-pulse-fill',   tipo_conteudo:'SINAIS_VITAIS', ativo:true  },
-  { numero_bloco:2, nome:'Anamnese',            icone:'bi-chat-left-text-fill',tipo_conteudo:'ANAMNESE',      ativo:true  },
-  { numero_bloco:3, nome:'Exame Físico',        icone:'bi-clipboard2-pulse-fill',tipo_conteudo:'EXAME_FISICO',ativo:true  },
-  { numero_bloco:4, nome:'Hipótese Diagnóstica',icone:'bi-journal-medical',    tipo_conteudo:'DIAGNOSTICO',   ativo:true  },
-  { numero_bloco:5, nome:'Prescrições',         icone:'bi-capsule-pill',       tipo_conteudo:'PRESCRICOES',   ativo:true  },
-  { numero_bloco:6, nome:'Exames',              icone:'bi-microscope',         tipo_conteudo:'EXAMES',        ativo:true  },
+  { numero_bloco:1, nome:'Sinais Vitais',       icone:'bi-heart-pulse-fill',    tipo_conteudo:'SINAIS_VITAIS', ativo:true  },
+  { numero_bloco:2, nome:'Anamnese',            icone:'bi-chat-left-text-fill', tipo_conteudo:'ANAMNESE',      ativo:true  },
+  { numero_bloco:3, nome:'Exame Físico',        icone:'bi-clipboard2-pulse-fill',tipo_conteudo:'EXAME_FISICO', ativo:true  },
+  { numero_bloco:4, nome:'Hipótese Diagnóstica',icone:'bi-journal-medical',     tipo_conteudo:'DIAGNOSTICO',   ativo:true  },
+  { numero_bloco:5, nome:'Conduta',             icone:'bi-check2-square',       tipo_conteudo:'CONDUTA',       ativo:false },
+  { numero_bloco:6, nome:'Observações',         icone:'bi-sticky-fill',         tipo_conteudo:'OBSERVACOES',   ativo:false },
 ];
 
 window.cfgAbrirBlocos = async function (tipoId) {
