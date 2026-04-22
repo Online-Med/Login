@@ -1126,25 +1126,41 @@ async function inicializarAtendimento() {
   }
 
   _preencherPainel(pac, ag);
-  AT.horaInicio = new Date();
-  _iniciarTimer(AT.horaInicio);
+
+  // 1. Definimos a hora base como AGORA por padrão
+  var horaBaseParaTimer = new Date(); 
 
   // Busca rascunho existente
   try {
     var existente = await apiAt({ action:'get', agenda_id: AT.agId });
     if(existente && existente.id) {
       AT.atId = existente.id;
-      if(existente.hora_inicio) AT.horaInicio = new Date(existente.hora_inicio);
-      _iniciarTimer(AT.horaInicio);
+      
+      // 2. Se o rascunho tem uma hora de início real, usamos ela (a mais antiga)
+      if(existente.hora_inicio) {
+        horaBaseParaTimer = new Date(existente.hora_inicio);
+      }
+      
       _preencherForm(existente);
+
       if(existente.tipo_consulta_id) {
         var tiposData = await cfgApi({ action:'tipos' });
         AT.tiposConfig = (Array.isArray(tiposData)?tiposData:[]).filter(function(t){ return t.ativo; });
         await _carregarConfigTipo(existente.tipo_consulta_id);
+        
+        // 3. Atualizamos o objeto AT e iniciamos o timer antes do return
+        AT.horaInicio = horaBaseParaTimer;
+        _iniciarTimer(AT.horaInicio);
         return;
       }
     }
-  } catch(e) { /* novo atendimento */ }
+  } catch(e) { 
+    /* erro ou novo atendimento - mantém a horaBaseParaTimer como agora */ 
+  }
+
+  // 4. Se chegou aqui (atendimento novo), inicia com a hora definida
+  AT.horaInicio = horaBaseParaTimer;
+  _iniciarTimer(AT.horaInicio);
 
   await _mostrarModalTipo();
 }
