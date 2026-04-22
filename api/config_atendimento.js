@@ -40,13 +40,15 @@ export default async function handler(req, res) {
       }
 
 
-// --adicieoi um config que faltava
+// --adicionei um config que faltava
 if (action === 'config' && query.id_profissional) {
+  // Busca na tabela de configurações os dados do profissional (topo, rodapé, etc)
   const { ok, data } = await sb(
-    `configuracoes?id_profissional=eq.${query.id_profissional}&select=*`
+    `configuracoes?id_profissional=eq.${query.id_profissional}&select=chave_config,valor`
   );
-  // Transforma o array de configs em um objeto único { chave: valor }
+  
   if (ok && data) {
+    // Transforma o array do banco em um objeto fácil de usar: { atestado_topo1: "Valor", ... }
     const obj = {};
     data.forEach(item => { obj[item.chave_config] = item.valor; });
     return res.status(200).json(obj);
