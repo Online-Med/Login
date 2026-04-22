@@ -630,25 +630,30 @@ window.atDelExame = function(bn,i){ _getBloco(bn).exames.splice(i,1); _renderExa
 
 /* Busca exames — por bloco */
 window.atBuscarExame = function(v, bn) {
+  // 1. DEFINA O TERMO AQUI NO INÍCIO (Fora do setTimeout)
+  var termo = (v || '').toLowerCase().trim();
+
   bn = bn || _primeiroBlocoDeTipo('EXAMES');
   if(AT.exameBuscaTmr) clearTimeout(AT.exameBuscaTmr);
+
   AT.exameBuscaTmr = setTimeout(function() {
     var drop = document.getElementById('exameDrop_b' + bn);
     if(!drop) return;
+    
     var lista = AT.examesConfig || [];
     var tipoId = AT.tipoId;
-    var termo = (v||'').toLowerCase().trim();
 
+    // 2. Os filtros usam o termo que já foi declarado lá em cima
     var favs = lista.filter(function(e){
       return Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1
-        && (!termo || e.nome.toLowerCase().includes(termo));
+        && (!termo || (e.nome||'').toLowerCase().includes(termo));
     });
-    // Sem termo: mostra TODOS (não só favoritos)
+
     var outros = lista.filter(function(e){
       var ehFav = Array.isArray(e.favorito_tipos) && e.favorito_tipos.indexOf(tipoId) !== -1;
       if(ehFav) return false;
-      if(!termo) return true; // mostra todos quando campo vazio
-      return e.nome.toLowerCase().includes(termo) || (e.grupo||'').toLowerCase().includes(termo);
+      if(!termo) return true; 
+      return (e.nome||'').toLowerCase().includes(termo) || (e.grupo||'').toLowerCase().includes(termo);
     });
 
     AT._exameDropList = favs.concat(outros);
@@ -667,7 +672,7 @@ window.atBuscarExame = function(v, bn) {
     if(!AT._exameDropList.length) {
       html = '<div class="dd-item text-muted py-2 text-center">Nenhum exame encontrado</div>';
     }
-    // Adicionar manualmente com escolha de subtipo
+
     if(termo) {
       html += '<div class="dd-sep"></div>'
         + '<div class="dd-item-manual px-3 py-2">'
@@ -684,6 +689,7 @@ window.atBuscarExame = function(v, bn) {
         + '</div>';
     }
     drop.innerHTML = html;
+
     drop.querySelectorAll('[data-add-exame]').forEach(function(el){
       el.addEventListener('click', function(ev){
         ev.stopPropagation();
@@ -691,8 +697,10 @@ window.atBuscarExame = function(v, bn) {
           parseInt(el.dataset.bn)||bn);
       });
     });
+
     drop.classList.remove('d-none');
-  }, termo ? 250 : 0); // sem delay quando campo vazio (ao focar)
+    
+  }, termo ? 250 : 0); // 3. Agora o cronômetro consegue ler o 'termo' corretamente!
 };
 
 window.atAddExameIdx = function(idx) {
