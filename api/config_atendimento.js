@@ -33,7 +33,7 @@ export default async function handler(req, res) {
       // Busca profissional pelo email (para carregar config na impressão)
       if (action === 'profissional_por_email' && query.email) {
         const { ok, data } = await sb(
-          "user"//`usuarios?email=eq.${encodeURIComponent(query.email)}&select=id_profissional,nome,especialidade,crm&limit=1`
+          `usuarios?email=eq.${encodeURIComponent(query.email)}&select=id_profissional,nome,especialidade,crm&limit=1`
         );
         const prof = ok && data && data[0] ? data[0] : null;
         return res.status(200).json(prof || {});
@@ -88,10 +88,9 @@ if (action === 'config' && query.id_profissional) {
         const filtroSecao = secao ? `&secao=eq.${encodeURIComponent(secao)}` : '';
         const { ok, data } = await sb(
           `config_tipo_componentes?tipo_id=eq.${tipo_id}&order=ordem.asc` +
-          `&select=id,tipo_id,componente_id,ativo,ordem,componente:config_componentes(id,nome,secao,icone,valor_default,unidade,ordem)`
+          `&select=id,tipo_id,componente_id,ativo,ordem,tipo_vinculo,componente:config_componentes(id,nome,secao,icone,valor_default,unidade,ordem)`
           + (secao ? `&componente.secao=eq.${encodeURIComponent(secao)}` : '')
         );
-        // Filtra pelo secao no lado JS se necessário (PostgREST join filter pode variar)
         let result = ok ? data || [] : [];
         if (secao) result = result.filter(v => v.componente && v.componente.secao === secao);
         return res.status(200).json(result);
