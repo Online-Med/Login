@@ -345,7 +345,7 @@ function _iniciarTimer(horaBase) {
 async function _carregarMedicoLogado() {
   try {
     var email = localStorage.getItem('onlineMed_email') || '';
-    if(!email) return;
+    if(!email) { window._cfgProfissional = {}; return; }
     var r = await fetch('/api/config_atendimento?action=profissional_por_email&email='+encodeURIComponent(email));
     var prof = await r.json();
     if(prof && prof.id_profissional) {
@@ -353,13 +353,16 @@ async function _carregarMedicoLogado() {
       AT.medicoNome = prof.nome || email;
       AT.medicoCRM  = prof.crm  || '';
       AT.medicoEsp  = prof.especialidade || '';
-      // Carrega config de impressão (topo/assinatura/rodapé dos atestados)
-      cfgApi({ action:'config', id_profissional: prof.id_profissional })
-        .then(function(cfg){ window._cfgProfissional = cfg || {}; })
-        .catch(function(){ window._cfgProfissional = {}; });
+      // Carrega config de impressão (topo/assinatura/rodapé) usando o médico LOGADO
+      try {
+        var cfg = await cfgApi({ action:'config', id_profissional: prof.id_profissional });
+        window._cfgProfissional = cfg || {};
+      } catch(e) { window._cfgProfissional = {}; }
+    } else {
+      window._cfgProfissional = {};
     }
     var nomeEl = document.getElementById('atendMedicoNome');
-    if(nomeEl) nomeEl.textContent = (AT.medicoNome||'—') + (AT.medicoCRM?' · CRM '+AT.medicoCRM:'');
+    if(nomeEl) nomeEl.textContent = (AT.medicoNome||'—') + (AT.medicoCRM ? ' · CRM '+AT.medicoCRM : '');
   } catch(e) {
     window._cfgProfissional = {};
   }
@@ -426,12 +429,8 @@ async function _carregarConfigTipo(tipoId) {
     badge.classList.remove('d-none');
   }
 
-  // Fallback config médico pela agenda
-  if(!window._cfgProfissional && AT.agData && AT.agData.id_profissional) {
-    cfgApi({ action:'config', id_profissional: AT.agData.id_profissional })
-      .then(function(cfg){ window._cfgProfissional = cfg || {}; })
-      .catch(function(){ window._cfgProfissional = {}; });
-  }
+  // Nota: a config do médico logado (_cfgProfissional) já foi carregada em _carregarMedicoLogado
+  // Só faz fallback se ainda não carregou (caso raro: médico não tem email no localStorage)
 
   try {
     var results = await Promise.all([
@@ -762,8 +761,9 @@ window.atEncerrar = async function() {
   if(!conf.isConfirmed) return;
 
   try {
+    var horaFim = new Date().toISOString();
     var dados = _coletarDados('ENCERRADO');
-    dados.hora_fim = new Date().toISOString();
+    dados.hora_fim        = horaFim;
     dados.medico_fim_id   = AT.medicoId;
     dados.medico_fim_nome = AT.medicoNome;
 
@@ -773,11 +773,15 @@ window.atEncerrar = async function() {
       var r = await apiAt({}, 'POST', dados);
       if(r && r.id) AT.atId = r.id;
     }
-    // Atualiza status na agenda
+
+    // Atualiza status + hora_atendido na agenda
     if(AT.agId) {
       await fetch('/api/agenda?id='+AT.agId, {
         method:'PATCH', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ status:'ATENDIDO' })
+        body: JSON.stringify({
+          status: 'ATENDIDO',
+          hora_atendido: horaFim,
+        })
       });
     }
     clearInterval(AT.timerInterval);
