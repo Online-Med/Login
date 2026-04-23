@@ -3,11 +3,26 @@
 
   /* ── Titulo ──────────────────────────────────────────────────── */
 #atestTitulo {
-    margin-bottom: 30px; /* Espaço entre o título e a toolbar */
-    padding-bottom: 10px;
-    border-bottom: 2px solid #e9ecef; /* Linha sutil abaixo do título */
-    display: flex;
-    align-items: center;
+    margin-top: 10px;    /* Espaço em relação ao topo */
+    margin-bottom: 35px; /* Espaço generoso em relação à toolbar */
+    display: block;
+    border-left: 5px solid #0d6efd; /* Uma barra vertical grossa à esquerda */
+    padding-left: 15px;             /* Espaço entre a barra e o texto */
+}
+
+#atestCamposTitulo {
+    font-size: 2.2rem;          /* Tamanho bem maior (estilo H1) */
+    font-weight: 900;           /* Peso máximo para o negrito */
+    color: #212529;             /* Cor quase preta para contraste máximo */
+    letter-spacing: -1px;       /* Letras levemente juntas (estilo design moderno) */
+    text-transform: uppercase;
+    line-height: 1;
+    display: inline-block;
+}
+
+/* Opcional: Se quiser que a primeira letra ou um ícone tenha a cor azul */
+#atestCamposTitulo::first-letter {
+    color: #0d6efd;
 }
 
   
@@ -174,7 +189,7 @@
 
 <div id="atestTitulo">
   <span id="atestCamposTitulo">
-    <i class="bi bi-file-earmark-check me-2"></i>ATESTADOS
+    <i class="bi bi-file-earmark-medical-fill text-primary"></i> ATESTADOS
   </span>
 </div>
 
