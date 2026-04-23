@@ -243,11 +243,20 @@ async function _carregarProntuario(pcod) {
 function _preencherPainelPac(pac, pcod) {
   document.getElementById('prontPacPanel').classList.remove('d-none');
   document.getElementById('prontPacPcod').textContent = 'PCOD ' + pcod;
-  if(!pac) { document.getElementById('prontPacNome').textContent = 'Paciente #'+pcod; return; }
-  document.getElementById('prontPacNome').textContent = pac.Nome || '—';
+  
+  if(!pac) { 
+    document.getElementById('prontPacNome').textContent = 'Paciente #'+pcod; 
+    return; 
+  }
+
+  // Ajuste aqui para bater com as maiúsculas do seu banco:
+  document.getElementById('prontPacNome').textContent = pac.None || pac.Nome || '—';
   document.getElementById('prontPacCPF').textContent  = pac.Documento || '—';
   document.getElementById('prontPacCel').textContent  = pac.Celular || pac.Telefone || '—';
-  document.getElementById('prontPacConv').textContent = pac.Convenio || pac.Convenio || '—';
+  
+  // Testamos todas as variações possíveis de nome da coluna convenio:
+  document.getElementById('prontPacConv').textContent = pac.Convenio || pac.convenio || pac.CONVENIO || '—';
+
   if(pac.Data_Nascimento) {
     var nasc = new Date(pac.Data_Nascimento+'T12:00:00');
     var hoje = new Date();
