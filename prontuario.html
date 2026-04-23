@@ -108,6 +108,8 @@
 
 </div><!-- /prontWrap -->
 
+
+
 <script>
 (function(){
 
@@ -122,7 +124,7 @@ window.prontVoltar = function() {
   else window.history.back();
 };
 
-/* ── Busca autocomplete (VERSÃO FINAL COMPATÍVEL) ─────────────────── */
+/* ── Busca autocomplete (CORRIGIDO PARA CPF E COLUNA "None") ─────────────────── */
 var _bTmr = null;
 document.getElementById('prontBuscaInput').addEventListener('input', function(){
   var v = this.value.trim();
@@ -133,21 +135,15 @@ document.getElementById('prontBuscaInput').addEventListener('input', function(){
   
   _bTmr = setTimeout(async function(){
     try {
-      // 1. Pegamos o valor original (com ou sem ponto)
       var termoOriginal = v;
-      
-      // 2. Criamos uma versão só com números (caso seja um CPF)
       var apenasNumeros = v.replace(/\D/g, '');
-
-      // Se o usuário digitou algo que parece CPF (mais de 5 números), 
-      // priorizamos a busca pelos números limpos.
+      // Se for CPF (mais de 5 números), envia apenas os números para a API
       var termoFinal = (apenasNumeros.length > 5) ? apenasNumeros : termoOriginal;
 
       var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoFinal));
       var lista = await r.json();
       
       if(!Array.isArray(lista)||!lista.length){ 
-          // Se não achou com o termo limpo e tinha ponto, tenta uma última vez com o original
           if(termoFinal !== termoOriginal) {
               var r2 = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoOriginal));
               lista = await r2.json();
@@ -156,10 +152,12 @@ document.getElementById('prontBuscaInput').addEventListener('input', function(){
       }
       
       dd.innerHTML = lista.map(function(p){
+        // Ajuste: Usando p.None que é o nome da coluna no seu banco
+        var nomeMostra = p.None || p.Nome || 'Sem Nome';
         return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:.83rem" '
           +'onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'\'" '
           +'onclick="prontSelecionarPac('+p.pcod+')">'
-          +'<strong>'+esc(p.Nome||'')+'</strong>'
+          +'<strong>'+esc(nomeMostra)+'</strong>'
           +(p.Documento?' <span style="color:#6c757d;font-size:.73rem">'+esc(p.Documento)+'</span>':'')
           +'<br><span style="color:#adb5bd;font-size:.72rem">PCOD '+p.pcod+'</span>'
           +'</div>';
@@ -175,32 +173,30 @@ document.addEventListener('click', function(e){
   if(dd && inp && !dd.contains(e.target) && e.target !== inp) dd.style.display='none';
 });
 
+/* ── Botão Buscar (CORRIGIDO PARA NÃO TRAVAR EM CPF) ─────────────────── */
 window.prontBuscar = async function() {
   var input = document.getElementById('prontBuscaInput').value.trim();
   if(!input) return;
 
-  // 1. Tenta limpar pontos e traços para ver se é um número (CPF ou PCOD)
   var apenasNumeros = input.replace(/\D/g, ''); 
 
-  // Se for apenas números e tiver tamanho de PCOD ou CPF, tentamos a busca direta
-  if (apenasNumeros.length > 0 && !isNaN(apenasNumeros)) {
-      // Se for um PCOD pequeno ou CPF completo, usamos o valor limpo
+  // Se for um PCOD pequeno (até 5 dígitos), vai direto. 
+  // Se for maior, tratamos como CPF e deixamos a API buscar.
+  if (apenasNumeros.length > 0 && apenasNumeros.length <= 5) {
       prontSelecionarPac(apenasNumeros); 
       return; 
   }
 
   try {
-    // Para busca por nome, enviamos o texto normal
-    var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(input));
+    var termoEnvio = (apenasNumeros.length > 5) ? apenasNumeros : input;
+    var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoEnvio));
     var lista = await r.json();
     if(Array.isArray(lista) && lista.length) {
         prontSelecionarPac(lista[0].pcod);
     } else {
-        Swal.fire({icon:'info', title:'Não encontrado', text:'Paciente não localizado com este termo.', confirmButtonColor:'#0dcaf0'});
+        Swal.fire({icon:'info', title:'Não encontrado', text:'Paciente não localizado.', confirmButtonColor:'#0dcaf0'});
     }
-  } catch(e){
-      console.error("Erro na busca:", e);
-  }
+  } catch(e){ console.error("Erro na busca:", e); }
 };
 
 window.prontSelecionarPac = async function(pcod) {
@@ -217,14 +213,12 @@ async function _carregarProntuario(pcod) {
   document.getElementById('prontSpinner').classList.remove('d-none');
 
   try {
-    // Paciente
     var rp = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(String(pcod)));
     var dpList = await rp.json();
     var pac = Array.isArray(dpList) ? dpList.find(function(p){ return p.pcod==pcod; }) || dpList[0] : null;
     PRONT.pac = pac;
     _preencherPainelPac(pac, pcod);
 
-    // Consultas
     var rc = await fetch('/api/atendimento?action=historico&paciente_id='+pcod);
     PRONT.consultas = await rc.json();
     if(!Array.isArray(PRONT.consultas)) PRONT.consultas = [];
@@ -249,12 +243,10 @@ function _preencherPainelPac(pac, pcod) {
     return; 
   }
 
-  // Ajuste aqui para bater com as maiúsculas do seu banco:
+  // Ajuste para bater com as colunas do seu banco (None, Documento, Convenio)
   document.getElementById('prontPacNome').textContent = pac.None || pac.Nome || '—';
   document.getElementById('prontPacCPF').textContent  = pac.Documento || '—';
   document.getElementById('prontPacCel').textContent  = pac.Celular || pac.Telefone || '—';
-  
-  // Testamos todas as variações possíveis de nome da coluna convenio:
   document.getElementById('prontPacConv').textContent = pac.Convenio || pac.convenio || pac.CONVENIO || '—';
 
   if(pac.Data_Nascimento) {
@@ -285,10 +277,8 @@ function _renderConsultas(lista) {
       duracao = diff + ' min';
     }
 
-    // ── RESUMO: extrai linha de resumo dos blocos ──────────────
     var resumoTexto = _extrairResumo(c);
 
-    // ── TAGS rápidas ──────────────────────────────────────────
     var tags = '';
     if(c.prescricoes && c.prescricoes.length) {
       tags += '<span class="pront-tag" style="background:#e8f0ff;color:#0d6efd">💊 '+c.prescricoes.length+' rx</span>';
@@ -303,7 +293,6 @@ function _renderConsultas(lista) {
     var div = document.createElement('div');
     div.className = 'pront-card';
     div.innerHTML =
-      // ── CABEÇALHO (resumo, sempre visível) ──
       '<div class="pront-card-hd" onclick="prontToggle('+i+')" id="prontHd-'+i+'">'
         + '<i class="bi bi-chevron-right text-muted" id="prontChev-'+i+'" style="font-size:.85rem;flex-shrink:0"></i>'
         + '<span class="pront-date"><i class="bi bi-calendar3"></i> '+dt+'</span>'
@@ -317,8 +306,6 @@ function _renderConsultas(lista) {
         + '</div>'
         + (c.medico_inicio_nome?'<span class="medico-pr text-end" style="white-space:nowrap"><i class="bi bi-person-badge"></i> '+esc(c.medico_inicio_nome.split(' ').slice(0,2).join(' '))+'</span>':'')
       + '</div>'
-
-      // ── CORPO EXPANDIDO ──
       + '<div class="pront-card-body p-3" id="prontBody-'+i+'">'
         + _renderDetalhe(c)
       + '</div>';
@@ -327,16 +314,13 @@ function _renderConsultas(lista) {
   });
 }
 
-/* Extrai uma linha de resumo dos blocos */
 function _extrairResumo(c) {
-  // Tenta usar texto do primeiro bloco não-vazio
   for(var n = 1; n <= 6; n++) {
     var txt = c['bloco'+n+'_texto'];
     if(txt && txt.trim()) {
       var linha = txt.trim().split('\n')[0];
       return linha.length > 80 ? linha.substring(0,80)+'…' : linha;
     }
-    // Tenta componentes
     var comps = c['bloco'+n+'_componentes'];
     if(comps && typeof comps === 'object') {
       var vals = Object.values(comps).filter(Boolean);
@@ -346,11 +330,8 @@ function _extrairResumo(c) {
   return c.tipo_consulta_nome ? 'Consulta — '+c.tipo_consulta_nome : 'Consulta registrada';
 }
 
-/* Renderiza detalhe completo de uma consulta */
 function _renderDetalhe(c) {
   var html = '';
-
-  // Médico que atendeu
   if(c.medico_inicio_nome || c.medico_fim_nome) {
     html += '<div class="d-flex gap-3 mb-3 p-2 rounded" style="background:#f0fff4;border:1px solid #d1e7dd;font-size:.8rem">';
     if(c.medico_inicio_nome) html += '<span><i class="bi bi-person-badge text-success me-1"></i><strong>Iniciado por:</strong> '+esc(c.medico_inicio_nome)+'</span>';
@@ -360,7 +341,6 @@ function _renderDetalhe(c) {
     html += '</div>';
   }
 
-  // Blocos (usa snapshot de nome/tipo salvos na consulta)
   var temBlocos = false;
   for(var n = 1; n <= 6; n++) {
     var nomBloco = c['bloco'+n+'_nome'];
@@ -378,7 +358,6 @@ function _renderDetalhe(c) {
     html += '<div class="bloco-pr-hd"><i class="bi '+meta.ico+'" style="color:'+meta.cor+'"></i> '
       + esc(nomBloco || tipBloco || 'Bloco '+n)+'</div>';
 
-    // Componentes com valores
     if(cmpBloco && typeof cmpBloco === 'object') {
       var compHtml = '';
       Object.entries(cmpBloco).forEach(function(kv) {
@@ -387,14 +366,12 @@ function _renderDetalhe(c) {
       if(compHtml) html += '<div class="mb-2">'+compHtml+'</div>';
     }
 
-    // Texto livre
     if(txtBloco && txtBloco.trim()) {
       html += '<div class="bloco-pr-corpo">'+esc(txtBloco.trim())+'</div>';
     }
     html += '</div>';
   }
 
-  // Prescrições
   if(c.prescricoes && c.prescricoes.length) {
     html += '<div class="bloco-pr" style="border-left-color:#0d6efd">';
     html += '<div class="bloco-pr-hd"><i class="bi bi-capsule-pill text-primary"></i> Prescrições ('+c.prescricoes.length+')</div>';
@@ -407,7 +384,6 @@ function _renderDetalhe(c) {
     html += '</div>';
   }
 
-  // Exames
   if(c.exames_solicitados && c.exames_solicitados.length) {
     var ICON = { LAB:'🔬', IMG:'🖼', OUT:'📋' };
     html += '<div class="bloco-pr" style="border-left-color:#ffc107">';
@@ -424,7 +400,6 @@ function _renderDetalhe(c) {
   if(!temBlocos && !c.prescricoes?.length && !c.exames_solicitados?.length) {
     html += '<p class="text-muted small">Nenhum conteúdo registrado nesta consulta.</p>';
   }
-
   return html;
 }
 
