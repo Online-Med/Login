@@ -772,14 +772,14 @@ window.atestGerar = function() {
   document.getElementById('atestBtnSalvar').disabled = false;
 };
 
-// ── Imprimir ──────────────────────────────────────────────────
+
+ // ── Imprimir ──────────────────────────────────────────────────
 window.atestImprimir = function() {
   if(!AT.gerado) { atestGerar(); setTimeout(atestImprimir, 300); return; }
 
   var corpoTpl = AT.gerado.corpoTpl;
   var { texto: corpo } = _resolverVars(corpoTpl, false);
 
-  // Página A4 única — atestado completo
   var paginaHtml = '<div class="a4-page">' + _htmlAtestadoPrint(corpo) + '</div>';
 
   var area = document.getElementById('atestPrintArea');
@@ -802,32 +802,27 @@ function _htmlAtestadoPrint(corpo) {
   var dataVal = dataEl ? dataEl.value : _hoje();
   var dataStr = cidade + ', ' + _dataExtenso(dataVal) + '.';
 
-  return '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.6">'
+  // Prepara a string de CIDs (Pega apenas os códigos da lista incremental)
+  var cidsCodigos = (AT.cidList || []).map(item => item.cod).join(', ');
+  var htmlCidGerado = cidsCodigos ? 
+    '<div style="font-size:11pt; text-align:center; margin: 15pt 0; font-weight:bold;">CID-10: ' + esc(cidsCodigos) + '</div>' : '';
 
-    // ── TOPO ──
+  return '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.6">'
     +(c.atestado_topo1?'<div style="font-weight:700;font-size:12pt">'+esc(c.atestado_topo1)+'</div>':'')
     +(c.atestado_topo2?'<div style="font-size:12pt;font-style:italic">'+esc(c.atestado_topo2)+'</div>':'')
     +'<div style="border-bottom:2px solid #3b5bdb;margin:4pt 0 0"></div>'
-
-    // ── CONTEÚDO ──
     +'<div style="text-align:center;font-weight:700;font-size:14pt;letter-spacing:.06em;margin:32pt 0 24pt">'+esc(c.atestado_titulo||'ATESTADO MÉDICO')+'</div>'
     +'<div style="margin-bottom:24pt;font-size:12pt">'+esc(dataStr)+'</div>'
-    +'<div style="text-indent:3em;margin-bottom:28pt;font-size:12pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
-    +(AT.cidCod?'<div style="font-size:11pt;text-align:center;margin-bottom:8pt">CID-10: '+esc(AT.cidCod)+' – '+esc(AT.cidDesc||'')+'</div>':'')
+    +'<div style="text-indent:3em;margin-bottom:20pt;font-size:12pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
+    
+    + htmlCidGerado // CID entre corpo e assinatura
 
-    // ── CID (ENTRE CORPO E ASSINATURA) ──
-    + cidHtml
-        
-    // ── ASSINATURA ──
-    +'<div style="text-align:center;margin-top:60pt">'
+    +'<div style="text-align:center;margin-top:40pt">'
       +'<div style="border-top:1px solid #333;width:240pt;margin:0 auto 6pt"></div>'
       +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:12pt">'+esc(c.atestado_assinatura1)+'</div>':'')
       +(c.atestado_assinatura2?'<div style="font-size:12pt">'+esc(c.atestado_assinatura2)+'</div>':'')
     +'</div>'
-
     +'</div>'
-
-    // ── RODAPÉ — fixado no fundo via .a4-rodape + position:fixed no @media print ──
     +((c.atestado_rodape1||c.atestado_rodape2)
       ? '<div class="a4-rodape">'
           +(c.atestado_rodape1?esc(c.atestado_rodape1)+'<br>':'')
@@ -843,6 +838,9 @@ window.atestSalvar = async function() {
   var corpo = AT.gerado.corpoTpl;
   var { texto: corpoRend } = _resolverVars(corpo, false);
   try {
+    // Pega a lista de códigos para salvar no banco
+    var cidsSalvar = (AT.cidList || []).map(item => item.cod).join(', ');
+
     var r = await api({action:'gerar'}, 'POST', {
       id_profissional:  parseInt(AT.profId),
       paciente_id:      AT.pacData ? AT.pacData.pcod : null,
@@ -850,7 +848,7 @@ window.atestSalvar = async function() {
       tipo_atestado:    AT.tipoAtual ? AT.tipoAtual.id : null,
       corpo_renderizado: corpoRend,
       variaveis:        AT.gerado.valores,
-      cid:              AT.cidCod||null,
+      cid:              cidsSalvar || null,
       data_emissao:     dataEl ? dataEl.value : _hoje(),
     });
     if(r && r.sucesso === false) throw new Error(r.erro);
@@ -860,16 +858,13 @@ window.atestSalvar = async function() {
   }
 };
 
-// ... (resto do código anterior)
-
-// ── NOVAS FUNÇÕES PARA MÚLTIPLOS CIDS (DENTRO DO BLOCO) ───────
+// ── Funções de suporte para o CID ──────────────────────────────
 function _renderizarCidsSelecionados() {
   var container = document.getElementById('atestCidInfo');
   if (!AT.cidList || AT.cidList.length === 0) {
     container.classList.add('d-none');
     return;
   }
-  
   container.innerHTML = AT.cidList.map((item, idx) => {
     return `<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle me-1 mb-1" 
                   style="cursor:pointer" onclick="atestRemoverCID(${idx})">
@@ -890,50 +885,9 @@ window.atestLimparCID = function() {
   document.getElementById('atestCidBusca').value = '';
 };
 
-// ── AJUSTE NA IMPRESSÃO (Substitua sua _htmlAtestadoPrint por esta) ──
-function _htmlAtestadoPrint(corpo) {
-  var c = AT.cfg;
-  var cidade = c.atestado_cidade || 'São Paulo';
-  var dataEl = document.getElementById('campo_data');
-  var dataVal = dataEl ? dataEl.value : _hoje();
-  var dataStr = cidade + ', ' + _dataExtenso(dataVal) + '.';
-
-  // Pega apenas os códigos da lista
-  var cidsCodigos = AT.cidList.map(item => item.cod).join(', ');
-  var htmlCidImp = cidsCodigos ? 
-    '<div style="font-size:11pt; text-align:center; margin: 15pt 0; font-weight:bold;">CID-10: ' + esc(cidsCodigos) + '</div>' : '';
-
-  return '<div style="font-family:\'Times New Roman\',serif;font-size:12pt;line-height:1.6">'
-    +(c.atestado_topo1?'<div style="font-weight:700;font-size:12pt">'+esc(c.atestado_topo1)+'</div>':'')
-    +(c.atestado_topo2?'<div style="font-size:12pt;font-style:italic">'+esc(c.atestado_topo2)+'</div>':'')
-    +'<div style="border-bottom:2px solid #3b5bdb;margin:4pt 0 0"></div>'
-    +'<div style="text-align:center;font-weight:700;font-size:14pt;letter-spacing:.06em;margin:32pt 0 24pt">'+esc(c.atestado_titulo||'ATESTADO MÉDICO')+'</div>'
-    +'<div style="margin-bottom:24pt;font-size:12pt">'+esc(dataStr)+'</div>'
-    +'<div style="text-indent:3em;margin-bottom:20pt;font-size:12pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
-    
-    // CID entre corpo e assinatura
-    + htmlCidImp
-
-    +'<div style="text-align:center;margin-top:40pt">'
-      +'<div style="border-top:1px solid #333;width:240pt;margin:0 auto 6pt"></div>'
-      +(c.atestado_assinatura1?'<div style="font-weight:700;font-size:12pt">'+esc(c.atestado_assinatura1)+'</div>':'')
-      +(c.atestado_assinatura2?'<div style="font-size:12pt">'+esc(c.atestado_assinatura2)+'</div>':'')
-    +'</div>'
-    +'</div>'
-    +((c.atestado_rodape1||c.atestado_rodape2)
-      ? '<div class="a4-rodape">'
-          +(c.atestado_rodape1?esc(c.atestado_rodape1)+'<br>':'')
-          +esc(c.atestado_rodape2||'')
-        +'</div>'
-      : '');
-}
-
 // ── Init ──────────────────────────────────────────────────────
 window.inicializarPaginaAtestados = atestInit;
 atestInit();
 
-})(); // <--- O fechamento da função TEM que estar depois de tudo!
+})(); 
 </script>
-
-
-
