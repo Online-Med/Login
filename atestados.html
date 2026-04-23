@@ -1,5 +1,14 @@
 <!-- atestados.html — Emissão de Atestados Médicos -->
 <style>
+
+  /* ── Toolbar ──────────────────────────────────────────────────── */
+#atestTitulo {
+  background:#fff; border-bottom:1px solid #e9ecef;
+  padding:8px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+#atestTitulo h5 { margin:0; font-size:.95rem; }
+
+  
 /* ── Toolbar ──────────────────────────────────────────────────── */
 #atestToolbar {
   background:#fff; border-bottom:1px solid #e9ecef;
@@ -159,10 +168,13 @@
 }
 </style>
 
-
-<div id="atestToolbar">
-  <h5><i class="bi bi-file-earmark-medical text-primary"></i> ATESTADOS </h6>
+<!-- ═══ TITULO ═══════════════════════════════════════════════════ -->
+<div>
+ <div id="atestTitulo">
+  <span id="atestCamposTitulo"> ATESTADOS </span>
+ </div>
 </div>
+
 <!-- ═══ TOOLBAR ═══════════════════════════════════════════════════ -->
 <div id="atestToolbar">
   <h5><i class="bi bi-file-earmark-medical text-primary"></i> SELECIONE O PROFISSIONAL:</h5>
