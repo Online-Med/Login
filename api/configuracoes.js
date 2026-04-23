@@ -21,16 +21,16 @@ export default async function handler(req, res) {
       const { id_profissional, action, termo } = query;
 
       // 1. Prioridade Total: Busca de CID
-      if (action === 'buscar_cid') {
-        if (!termo) return res.status(200).json([]);
-        
-        const { ok, data } = await sb(
-          `cid?or=(codigo.ilike.*${termo}*,nome.ilike.*${termo}*)&limit=10&select=codigo,nome`
-        );
-        
-        // O "return" aqui é CRUCIAL para não executar o código debaixo
-        return res.status(200).json(ok ? data || [] : []);
-      }
+    if (action === 'buscar_cid') {
+    if (!termo) return res.status(200).json([]);
+  
+      // pesquisa em 'codigo' OU em 'descricao'
+  const { ok, data } = await sb(
+    `cid?or=(codigo.ilike.*${termo}*,descricao.ilike.*${termo}*)&limit=10&select=codigo,descricao`
+  );
+  
+  return res.status(200).json(ok ? data || [] : []);
+}
 
       // 2. Lógica Original de Configurações (só roda se não for buscar_cid)
       if (!id_profissional) {
