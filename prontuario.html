@@ -154,15 +154,31 @@ document.addEventListener('click', function(e){
 });
 
 window.prontBuscar = async function() {
-  var v = document.getElementById('prontBuscaInput').value.trim();
-  if(!v) return;
-  if(!isNaN(v)) { prontSelecionarPac(parseInt(v)); return; }
+  var input = document.getElementById('prontBuscaInput').value.trim();
+  if(!input) return;
+
+  // 1. Tenta limpar pontos e traços para ver se é um número (CPF ou PCOD)
+  var apenasNumeros = input.replace(/\D/g, ''); 
+
+  // Se for apenas números e tiver tamanho de PCOD ou CPF, tentamos a busca direta
+  if (apenasNumeros.length > 0 && !isNaN(apenasNumeros)) {
+      // Se for um PCOD pequeno ou CPF completo, usamos o valor limpo
+      prontSelecionarPac(apenasNumeros); 
+      return; 
+  }
+
   try {
-    var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(v));
+    // Para busca por nome, enviamos o texto normal
+    var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(input));
     var lista = await r.json();
-    if(Array.isArray(lista)&&lista.length) prontSelecionarPac(lista[0].pcod);
-    else Swal.fire({icon:'info',title:'Não encontrado',confirmButtonColor:'#0dcaf0'});
-  } catch(e){}
+    if(Array.isArray(lista) && lista.length) {
+        prontSelecionarPac(lista[0].pcod);
+    } else {
+        Swal.fire({icon:'info', title:'Não encontrado', text:'Paciente não localizado com este termo.', confirmButtonColor:'#0dcaf0'});
+    }
+  } catch(e){
+      console.error("Erro na busca:", e);
+  }
 };
 
 window.prontSelecionarPac = async function(pcod) {
