@@ -209,7 +209,7 @@ function _preencherPainelPac(pac, pcod) {
   document.getElementById('prontPacNome').textContent = pac.Nome || '—';
   document.getElementById('prontPacCPF').textContent  = pac.Documento || '—';
   document.getElementById('prontPacCel').textContent  = pac.Celular || pac.Telefone || '—';
-  document.getElementById('prontPacConv').textContent = pac.Convenio || '—';
+  document.getElementById('prontPacConv').textContent = pac.Convenio || pac.Convenio || '—';
   if(pac.Data_Nascimento) {
     var nasc = new Date(pac.Data_Nascimento+'T12:00:00');
     var hoje = new Date();
