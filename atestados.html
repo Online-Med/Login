@@ -357,8 +357,7 @@ var AT = {
   tipoAtual: null,
   pacData:   null,
   pacsList:  [],          // cache da última busca de pacientes
-  cidCod:    null,
-  cidDesc:   null,
+  cidList:   [],
   gerado:    null,
   buscarPacTmr: null,
   buscarCidTmr: null,
@@ -623,12 +622,19 @@ window.atestBuscarCID = function(v) {
   }, 350);
 };
 
-window.atestSelecionarCID = function(cod, desc) {
-  AT.cidCod = cod; AT.cidDesc = desc;
-  document.getElementById('atestCidBusca').value = cod + ' — ' + desc;
-  document.getElementById('atestCidCod').value = cod;
-  document.getElementById('atestCidTag').textContent = 'CID-10: ' + cod + ' — ' + desc;
-  document.getElementById('atestCidInfo').classList.remove('d-none');
+
+  window.atestSelecionarCID = function(cod, desc) {
+  // 1. Adiciona o CID à lista (se não for repetido)
+  if (!AT.cidList.some(item => item.cod === cod)) {
+    AT.cidList.push({ cod: cod, desc: desc });
+  }
+  
+  // 2. AQUI É ONDE VOCÊ COLOCA A LINHA:
+  // Ela serve para atualizar as etiquetas vermelhas na tela
+  _renderizarCidsSelecionados();
+  
+  // 3. Limpa o campo de busca para o médico digitar o próximo
+  document.getElementById('atestCidBusca').value = '';
   document.getElementById('atestCidDrop').classList.add('d-none');
 };
 
@@ -809,6 +815,9 @@ function _htmlAtestadoPrint(corpo) {
     +'<div style="text-indent:3em;margin-bottom:28pt;font-size:12pt;line-height:1.8;white-space:pre-wrap">'+esc(corpo)+'</div>'
     +(AT.cidCod?'<div style="font-size:11pt;text-align:center;margin-bottom:8pt">CID-10: '+esc(AT.cidCod)+' – '+esc(AT.cidDesc||'')+'</div>':'')
 
+    // ── CID (ENTRE CORPO E ASSINATURA) ──
+    + cidHtml
+        
     // ── ASSINATURA ──
     +'<div style="text-align:center;margin-top:60pt">'
       +'<div style="border-top:1px solid #333;width:240pt;margin:0 auto 6pt"></div>'
@@ -855,4 +864,24 @@ window.atestSalvar = async function() {
 window.inicializarPaginaAtestados = atestInit;
 atestInit();
 })();
+
+
+  function _renderizarCidsSelecionados() {
+  var container = document.getElementById('atestCidInfo');
+  if (AT.cidList.length === 0) {
+    container.classList.add('d-none');
+    return;
+  }
+  
+  container.innerHTML = AT.cidList.map((item, idx) => {
+    return `<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle me-1 mb-1" 
+                  style="cursor:pointer" onclick="atestRemoverCID(${idx})">
+      CID-10: ${item.cod} <i class="bi bi-x"></i>
+    </span>`;
+  }).join('');
+  container.classList.remove('d-none');
+}
+
+
+  
 </script>
