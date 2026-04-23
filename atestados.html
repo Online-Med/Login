@@ -27,11 +27,26 @@
 
   
 /* ── Toolbar ──────────────────────────────────────────────────── */
-#atestToolbar {
-  background:#fff; border-bottom:1px solid #e9ecef;
-  padding:8px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+/* Estado quando o profissional está selecionado */
+.prof-selecionado {
+    background-color: #e7f1ff !important; /* Azul bem clarinho de fundo */
+    border-color: #0d6efd !important;     /* Borda azul padrão */
+    color: #084298 !important;            /* Texto azul escuro */
+    font-weight: bold !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15); /* Brilho sutil em volta */
 }
-#atestToolbar h5 { margin:0; font-size:.95rem; }
+
+/* Ajuste no Toolbar para alinhar melhor o destaque */
+#atestToolbar {
+    background: #fff;
+    border: 1px solid #dee2e6; /* Mudei para borda completa para parecer um card */
+    border-radius: 8px;        /* Arredondei as bordas */
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
 /* ── Tabs de tipo ─────────────────────────────────────────────── */
 .atest-tab-btn {
@@ -322,6 +337,22 @@
 
 <!-- ═══ SCRIPT ════════════════════════════════════════════════════ -->
 <script>
+
+
+window.atestCarregarProf = function() {
+    var combo = document.getElementById('atestProf');
+    
+    // Se o valor não for vazio, adiciona a classe de destaque, senão remove
+    if (combo.value !== "") {
+        combo.classList.add('prof-selecionado');
+    } else {
+        combo.classList.remove('prof-selecionado');
+    }
+
+    // ... restante do seu código que já funciona ...
+};
+
+  
 (function(){
 'use strict';
 
