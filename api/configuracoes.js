@@ -19,6 +19,18 @@ export default async function handler(req, res) {
     // ── GET ?id_profissional=X → carrega config (com defaults se vazio) ──
     if (method === 'GET') {
       const { id_profissional } = query;
+
+
+// ── NOVO: Busca de CID ──
+      if (action === 'buscar_cid' && termo) {
+        const { ok, data } = await sb(
+          `cid?or=(codigo.ilike.*${termo}*,nome.ilike.*${termo}*)&limit=10&select=codigo,nome`
+        );
+        return res.status(200).json(ok ? data || [] : []);
+      }
+
+
+      
       if (!id_profissional) return res.status(400).json({ erro: 'id_profissional obrigatório.' });
 
       const { ok, data } = await sb(
