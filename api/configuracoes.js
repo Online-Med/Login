@@ -16,28 +16,31 @@ export default async function handler(req, res) {
 
   try {
 
-    // ── GET ?id_profissional=X → carrega config (com defaults se vazio) ──
+// ── GET ──────────────────────────────────────────────────────
     if (method === 'GET') {
-      const { id_profissional } = query;
+      const { id_profissional, action, termo } = query;
 
-
-// ── NOVO: Busca de CID ──
-      if (action === 'buscar_cid' && termo) {
+      // 1. Prioridade Total: Busca de CID
+      if (action === 'buscar_cid') {
+        if (!termo) return res.status(200).json([]);
+        
         const { ok, data } = await sb(
           `cid?or=(codigo.ilike.*${termo}*,nome.ilike.*${termo}*)&limit=10&select=codigo,nome`
         );
+        
+        // O "return" aqui é CRUCIAL para não executar o código debaixo
         return res.status(200).json(ok ? data || [] : []);
       }
 
-
-      
-      if (!id_profissional) return res.status(400).json({ erro: 'id_profissional obrigatório.' });
+      // 2. Lógica Original de Configurações (só roda se não for buscar_cid)
+      if (!id_profissional) {
+        return res.status(400).json({ erro: 'id_profissional obrigatório.' });
+      }
 
       const { ok, data } = await sb(
         `configuracoes?id_profissional=eq.${id_profissional}&select=chave_config,valor`
       );
 
-      // Monta objeto com defaults + valores do banco
       const cfg = { ...DEFAULTS };
       if (ok && data) {
         data.forEach(r => { cfg[r.chave_config] = r.valor; });
