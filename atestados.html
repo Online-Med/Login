@@ -605,7 +605,7 @@ window.atestBuscarCID = function(v) {
   AT.buscarCidTmr = setTimeout(async function(){
     try {
       // Adapte o endpoint conforme a tabela CID do seu banco
-      var r = await fetch('/api/atestados?action=buscar_cid&termo=' + encodeURIComponent(v));
+      var r = await fetch('/api/configuracoes?action=buscar_cid&termo=' + encodeURIComponent(v));
       var data = await r.json();
       var lista = Array.isArray(data) ? data : [];
       if(!lista.length) {
