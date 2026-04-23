@@ -33,7 +33,7 @@
 .pac-pcod { background:#6f42c1; color:#fff; border-radius:20px; padding:2px 10px; font-size:.72rem; font-weight:700; }
 .pac-1v { background:#fff3cd; color:#664d03; border-radius:20px; padding:2px 8px; font-size:.7rem; font-weight:700; }
 
-.at-section { background:#fff; border-radius:8px; border:1px solid #e9ecef; margin-bottom:12px; overflow:hidden; }
+.at-section { background:#fff; border-radius:8px; border:1px solid #e9ecef; margin-bottom:12px; overflow:visible; }
 .at-section-hd {
   background:#f8f9fa; padding:7px 14px;
   font-size:.78rem; font-weight:700; text-transform:uppercase;
@@ -41,7 +41,7 @@
   border-bottom:1px solid #e9ecef;
   display:flex; align-items:center; gap:6px;
 }
-.at-section-body { padding:12px 14px; }
+.at-section-body { padding:12px 14px; overflow:visible; }
 
 .vitais-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
 .vital-item label { font-size:.74rem; font-weight:700; color:#6c757d; margin-bottom:3px; display:block; }
@@ -55,11 +55,12 @@
 
 /* Dropdown */
 .at-dropdown {
-  position:absolute; z-index:1080; background:#fff;
+  position:absolute; z-index:2000; background:#fff;
   border:1px solid #dee2e6; border-radius:8px;
-  box-shadow:0 4px 16px rgba(0,0,0,.12);
-  max-height:260px; overflow-y:auto; overflow-x:hidden;
-  min-width:300px; left:0; top:100%; overscroll-behavior:contain;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  max-height:280px; overflow-y:auto; overflow-x:hidden;
+  min-width:300px; left:0; top:calc(100% + 2px);
+  overscroll-behavior:contain;
 }
 .at-dropdown .dd-item { padding:8px 12px; cursor:pointer; font-size:.8rem; border-bottom:1px solid #f5f5f5; display:flex; flex-direction:column; gap:2px; }
 .at-dropdown .dd-item:last-child { border-bottom:none; }
@@ -165,18 +166,20 @@
             </div>
             <div class="at-dropdown d-none" id="prescDrop"></div>
           </div>
-          <table class="table table-sm mb-0" id="prescTable" style="font-size:.78rem;display:none">
+          <div style="overflow-x:auto;">
+          <table class="table table-sm mb-0" id="prescTable" style="font-size:.78rem;display:none;min-width:360px">
             <thead class="table-light">
               <tr>
                 <th>Medicamento</th>
-                <th style="width:90px">Dose</th>
-                <th style="width:120px">Posologia</th>
-                <th style="width:65px">Duração</th>
+                <th style="width:80px">Dose</th>
+                <th style="width:100px">Posologia</th>
+                <th style="width:55px">Duração</th>
                 <th style="width:28px"></th>
               </tr>
             </thead>
             <tbody id="prescList"></tbody>
           </table>
+          </div>
           <div class="text-muted small text-center py-2" id="prescEmpty">
             <i class="bi bi-capsule-pill"></i> Nenhuma prescrição
           </div>
@@ -205,7 +208,7 @@
               <input type="text" class="form-control" id="exameBusca"
                      placeholder="Buscar exame..." autocomplete="off"
                      oninput="atBuscarExame(this.value)" onfocus="atBuscarExame(this.value)">
-              <button class="btn btn-warning text-dark btn-sm" onclick="atAddExame(null)" title="Add manual">
+              <button class="btn btn-warning text-dark btn-sm" onclick="atAddExameManual()" title="Adicionar exame manual">
                 <i class="bi bi-plus"></i>
               </button>
             </div>
@@ -332,12 +335,23 @@ async function cfgApi(params, method, body) {
 /* ══ Timer ═══════════════════════════════════════════════════════ */
 function _iniciarTimer(horaBase) {
   if(AT.timerInterval) clearInterval(AT.timerInterval);
+  // Garante que horaBase é um timestamp numérico (ms) para evitar recálculos com objeto Date
+  var tsBase = (horaBase instanceof Date) ? horaBase.getTime() : new Date(horaBase).getTime();
   AT.timerInterval = setInterval(function(){
-    var diff = Math.floor((new Date() - horaBase) / 1000);
-    var m = Math.floor(diff/60), s = diff%60;
+    var diff = Math.floor((Date.now() - tsBase) / 1000);
+    if(diff < 0) diff = 0;
+    var h = Math.floor(diff/3600);
+    var m = Math.floor((diff%3600)/60);
+    var s = diff%60;
     var el = document.getElementById('atendTimer');
-    if(el) el.innerHTML = '<i class="bi bi-stopwatch"></i> '
-      + String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    if(!el) return;
+    if(h > 0) {
+      el.innerHTML = '<i class="bi bi-stopwatch"></i> '
+        + String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    } else {
+      el.innerHTML = '<i class="bi bi-stopwatch"></i> '
+        + String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    }
   }, 1000);
 }
 
@@ -806,16 +820,24 @@ window.atendVerProntuario = function() {
 
 /* ══ Prescrições (painel direito fixo) ══════════════════════════ */
 window.atAddPresc = function(med) {
+  // Ignora chamada sem medicamento para evitar linha vazia acidental
+  // (o botão + sem selecionar nada não deve adicionar linha vazia)
+  var nomeMed = med ? (med.nome||'').trim() : '';
   AT.presc.push({
-    medicamento: med ? med.nome  : '',
+    medicamento: nomeMed,
     dosagem:     med ? (med.dose||'') : '',
     posologia:   med ? (med.posologia||'') : '',
-    duracao: '',
+    duracao:     '',
   });
   _renderPresc();
   var inp = document.getElementById('prescBusca');
   if(inp) inp.value = '';
   _fecharDrop('prescDrop');
+  // Foca o campo medicamento da linha recém-adicionada
+  setTimeout(function(){
+    var rows = document.querySelectorAll('#prescList input[placeholder="Medicamento *"]');
+    if(rows.length) rows[rows.length-1].focus();
+  }, 60);
 };
 
 function _renderPresc() {
@@ -835,11 +857,11 @@ function _renderPresc() {
     return '<tr>'
       +'<td><input type="text" class="form-control form-control-sm" placeholder="Medicamento *"'
         +' value="'+esc(p.medicamento)+'" oninput="atUpdPresc('+i+',\'medicamento\',this.value)"></td>'
-      +'<td><input type="text" class="form-control form-control-sm" placeholder="500mg"'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="mg"'
         +' value="'+esc(p.dosagem)+'" oninput="atUpdPresc('+i+',\'dosagem\',this.value)"></td>'
-      +'<td><input type="text" class="form-control form-control-sm" placeholder="1cp 8/8h"'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="dosagem"'
         +' value="'+esc(p.posologia)+'" oninput="atUpdPresc('+i+',\'posologia\',this.value)"></td>'
-      +'<td><input type="text" class="form-control form-control-sm" placeholder="7d"'
+      +'<td><input type="text" class="form-control form-control-sm" placeholder="dias"'
         +' value="'+esc(p.duracao)+'" oninput="atUpdPresc('+i+',\'duracao\',this.value)"></td>'
       +'<td><button class="presc-del-btn" onclick="atDelPresc('+i+')"><i class="bi bi-trash3"></i></button></td>'
       +'</tr>';
@@ -889,11 +911,65 @@ function _medItem(m, idx) {
 
 /* ══ Exames (painel direito fixo) ════════════════════════════════ */
 window.atAddExame = function(exame) {
-  AT.exames.push({ exame: exame?exame.nome:'', grupo:exame?exame.grupo||'':'', subtipo:exame?exame.subtipo||'LAB':'LAB', observacao:'' });
+  var nomeExame = exame ? (exame.nome||'').trim() : '';
+  AT.exames.push({
+    exame:       nomeExame,
+    grupo:       exame ? (exame.grupo||'')    : '',
+    subtipo:     exame ? (exame.subtipo||'LAB'): 'LAB',
+    observacao:  '',
+  });
   _renderExames();
   var inp = document.getElementById('exameBusca');
   if(inp) inp.value = '';
   _fecharDrop('exameDrop');
+  // Foca o campo exame da linha recém-adicionada
+  setTimeout(function(){
+    var rows = document.querySelectorAll('#exameList input[placeholder="Nome do exame *"]');
+    if(rows.length) rows[rows.length-1].focus();
+  }, 60);
+};
+
+// Adicionar exame manual com seleção de subtipo via prompt visual
+window.atAddExameManual = function() {
+  Swal.fire({
+    title: 'Adicionar exame manualmente',
+    html:
+      '<div class="d-flex flex-column gap-3 mt-2">'
+      +'<input id="swal-exame-nome" class="swal2-input" placeholder="Nome do exame">'
+      +'<div class="d-flex gap-2 justify-content-center">'
+        +'<button type="button" id="swal-btn-lab" class="btn btn-outline-info btn-sm flex-grow-1" onclick="atSwalSubtipo(\'LAB\')">🔬 Laboratório</button>'
+        +'<button type="button" id="swal-btn-img" class="btn btn-outline-warning btn-sm flex-grow-1" onclick="atSwalSubtipo(\'IMG\')">🖼 Imagem</button>'
+        +'<button type="button" id="swal-btn-out" class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="atSwalSubtipo(\'OUT\')">📋 Outro</button>'
+      +'</div>'
+      +'<input id="swal-exame-subtipo" type="hidden" value="LAB">'
+    +'</div>',
+    showConfirmButton: true,
+    confirmButtonText: 'Adicionar',
+    confirmButtonColor: '#ffc107',
+    showCancelButton: true,
+    cancelButtonText: 'Cancelar',
+    didOpen: function() {
+      document.getElementById('swal-btn-lab').classList.add('active');
+    },
+    preConfirm: function() {
+      var nome = (document.getElementById('swal-exame-nome').value||'').trim();
+      var sub  = document.getElementById('swal-exame-subtipo').value || 'LAB';
+      if(!nome) { Swal.showValidationMessage('Digite o nome do exame'); return false; }
+      return { nome: nome, subtipo: sub };
+    }
+  }).then(function(r){
+    if(r.isConfirmed && r.value) {
+      atAddExame({ nome: r.value.nome, grupo:'', subtipo: r.value.subtipo });
+    }
+  });
+};
+
+window.atSwalSubtipo = function(sub) {
+  document.getElementById('swal-exame-subtipo').value = sub;
+  ['lab','img','out'].forEach(function(s){
+    var btn = document.getElementById('swal-btn-'+s);
+    if(btn) btn.classList.toggle('active', s.toUpperCase() === sub);
+  });
 };
 
 function _renderExames() {
@@ -1126,41 +1202,25 @@ async function inicializarAtendimento() {
   }
 
   _preencherPainel(pac, ag);
-
-  // 1. Definimos a hora base como AGORA por padrão
-  var horaBaseParaTimer = new Date(); 
+  AT.horaInicio = new Date();
+  _iniciarTimer(AT.horaInicio);
 
   // Busca rascunho existente
   try {
     var existente = await apiAt({ action:'get', agenda_id: AT.agId });
     if(existente && existente.id) {
       AT.atId = existente.id;
-      
-      // 2. Se o rascunho tem uma hora de início real, usamos ela (a mais antiga)
-      if(existente.hora_inicio) {
-        horaBaseParaTimer = new Date(existente.hora_inicio);
-      }
-      
+      if(existente.hora_inicio) AT.horaInicio = new Date(existente.hora_inicio);
+      _iniciarTimer(AT.horaInicio);
       _preencherForm(existente);
-
       if(existente.tipo_consulta_id) {
         var tiposData = await cfgApi({ action:'tipos' });
         AT.tiposConfig = (Array.isArray(tiposData)?tiposData:[]).filter(function(t){ return t.ativo; });
         await _carregarConfigTipo(existente.tipo_consulta_id);
-        
-        // 3. Atualizamos o objeto AT e iniciamos o timer antes do return
-        AT.horaInicio = horaBaseParaTimer;
-        _iniciarTimer(AT.horaInicio);
         return;
       }
     }
-  } catch(e) { 
-    /* erro ou novo atendimento - mantém a horaBaseParaTimer como agora */ 
-  }
-
-  // 4. Se chegou aqui (atendimento novo), inicia com a hora definida
-  AT.horaInicio = horaBaseParaTimer;
-  _iniciarTimer(AT.horaInicio);
+  } catch(e) { /* novo atendimento */ }
 
   await _mostrarModalTipo();
 }
