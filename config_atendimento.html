@@ -1431,24 +1431,32 @@ window.cfgExcluirMed = async function (id) {
 };
 
 /* ════════════════════════════════════════════════════════════════
-   EXAMES
+    EXAMES
 ════════════════════════════════════════════════════════════════ */
 async function cfgCarregarExames() {
   try {
     var data = await cfgApi({ action: 'exames' });
     CFG.exames = Array.isArray(data) ? data : [];
     cfgRenderExames(CFG.exames);
-  } catch (e) { console.error('cfgCarregarExames', e); }
+  } catch (e) { 
+    console.error('cfgCarregarExames', e); 
+  }
 }
 
 function cfgRenderExames(lista) {
   var tbody = document.getElementById('cfgListaExames');
-  if (!lista.length) {
+  
+  // ── TRAVA DE SEGURANÇA ──
+  // Se o elemento não existir (você mudou de página rápido), o código para aqui e não dá erro.
+  if (!tbody) return; 
+
+  if (!lista || !lista.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-5">'
       + '<i class="bi bi-microscope fs-3 d-block mb-2 opacity-25"></i>'
       + 'Nenhum exame cadastrado.</td></tr>';
     return;
   }
+
   tbody.innerHTML = lista.map(function (e) {
     var favs    = Array.isArray(e.favorito_tipos) ? e.favorito_tipos : [];
     var favHtml = favs.map(function (tid) {
@@ -1456,6 +1464,7 @@ function cfgRenderExames(lista) {
       return t ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle badge-tipo">'
                + esc(t.nome) + '</span>' : '';
     }).filter(Boolean).join(' ');
+
     return '<tr>'
       + '<td><strong>' + esc(e.nome) + '</strong></td>'
       + '<td>'
@@ -1477,6 +1486,7 @@ function cfgRenderExames(lista) {
 
 window.cfgFiltrarExames = function (v) {
   var t = v.toLowerCase();
+  // Filtra a lista original e renderiza
   cfgRenderExames(CFG.exames.filter(function (e) {
     return !t
       || (e.nome || '').toLowerCase().includes(t)
