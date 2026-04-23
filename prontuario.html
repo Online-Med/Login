@@ -115,7 +115,11 @@
 
 var PRONT = { pcod:null, retorno:null, pac:null, consultas:[] };
 
+// ── FUNÇÕES DE UTILIDADE E LIMPEZA ──────────────────────────
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Função para limpar documentos (remove tudo que não é número)
+var limparDoc = function(v) { return String(v || '').replace(/\D/g, ''); };
 
 window.prontVoltar = function() {
   var ret = PRONT.retorno || window._prontuarioRetorno || null;
@@ -124,53 +128,37 @@ window.prontVoltar = function() {
   else window.history.back();
 };
 
-/* ── Busca autocomplete (CORRIGIDO: COMPARAÇÃO LIMPA DE NÚMEROS) ─────────────────── */
+/* ── Busca autocomplete (Com limpeza dos dois lados) ────────── */
 var _bTmr = null;
-
-// 1 - Função para limpar o que for digitado ou o que vem do banco
-var limparParaComparar = function(valor) {
-    return String(valor || '').replace(/\D/g, '');
-};
-
 document.getElementById('prontBuscaInput').addEventListener('input', function(){
   var v = this.value.trim();
   var dd = document.getElementById('prontDropdown');
-  
   if(_bTmr) clearTimeout(_bTmr);
   if(v.length < 2){ dd.style.display='none'; return; }
   
   _bTmr = setTimeout(async function(){
     try {
-      // Limpamos o que o usuário digitou para a busca
-      var vLimpo = limparParaComparar(v);
-      
-      // Se for número (CPF), mandamos o termo limpo. Se for nome, mandamos o texto original.
-      var termoFinal = (vLimpo.length > 5) ? vLimpo : v;
+      var vLimpo = limparDoc(v);
+      // Se digitou mais de 5 números, busca pelo termo limpo (CPF), senão busca o texto original (Nome)
+      var termoBusca = (vLimpo.length > 5) ? vLimpo : v;
 
-      var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoFinal));
+      var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoBusca));
       var lista = await r.json();
       
-      if(!Array.isArray(lista) || !lista.length){ 
-          dd.style.display='none'; return; 
-      }
+      if(!Array.isArray(lista) || !lista.length){ dd.style.display='none'; return; }
 
-      // 2 - Filtragem: Comparamos o campo limpo do banco com o campo limpo digitado
+      // FILTRAGEM: Limpa o documento que vem do banco e compara com o que foi digitado
       var listaFiltrada = lista.filter(function(p) {
-          var docBancoLimpo = limparParaComparar(p.Documento);
-          var digitadoLimpo = limparParaComparar(v);
-          
-          // Se o usuário digitou números, verifica se o documento do banco contém esses números
-          if (digitadoLimpo.length > 0) {
-              return docBancoLimpo.indexOf(digitadoLimpo) !== -1;
-          }
-          // Se não forem números, a API já trouxe por nome, então mantemos na lista
-          return true;
+          var docBancoLimpo = limparDoc(p.Documento);
+          var inputLimpo = limparDoc(v);
+          if (inputLimpo.length > 0) return docBancoLimpo.indexOf(inputLimpo) !== -1;
+          return true; 
       });
 
       if(!listaFiltrada.length) { dd.style.display='none'; return; }
-      
+
       dd.innerHTML = listaFiltrada.map(function(p){
-        var nomeMostra = p.None || p.Nome || 'Sem Nome';
+        var nomeMostra = p.Nome || p.None || 'Sem Nome';
         return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:.83rem" '
           +'onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'\'" '
           +'onclick="prontSelecionarPac('+p.pcod+')">'
@@ -180,45 +168,38 @@ document.getElementById('prontBuscaInput').addEventListener('input', function(){
           +'</div>';
       }).join('');
       dd.style.display = 'block';
-      
-    } catch(e){ console.error("Erro no autocomplete:", e); }
+    } catch(e){}
   }, 350);
 });
-  
+
 document.addEventListener('click', function(e){
   var dd = document.getElementById('prontDropdown');
   var inp = document.getElementById('prontBuscaInput');
   if(dd && inp && !dd.contains(e.target) && e.target !== inp) dd.style.display='none';
 });
 
-/* ── Botão Buscar (CORRIGIDO PARA NÃO TRAVAR EM CPF) ─────────────────── */
 window.prontBuscar = async function() {
-  var input = document.getElementById('prontBuscaInput').value.trim();
-  if(!input) return;
-
-  var apenasNumeros = input.replace(/\D/g, ''); 
-
-  // Se for um PCOD pequeno (até 5 dígitos), vai direto. 
-  // Se for maior, tratamos como CPF e deixamos a API buscar.
-  if (apenasNumeros.length > 0 && apenasNumeros.length <= 5) {
-      prontSelecionarPac(apenasNumeros); 
-      return; 
+  var v = document.getElementById('prontBuscaInput').value.trim();
+  if(!v) return;
+  
+  var vLimpo = limparDoc(v);
+  if(vLimpo.length > 0 && vLimpo.length <= 6) { 
+    prontSelecionarPac(parseInt(vLimpo)); 
+    return; 
   }
 
   try {
-    var termoEnvio = (apenasNumeros.length > 5) ? apenasNumeros : input;
+    var termoEnvio = (vLimpo.length > 6) ? vLimpo : v;
     var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoEnvio));
     var lista = await r.json();
-    if(Array.isArray(lista) && lista.length) {
-        prontSelecionarPac(lista[0].pcod);
-    } else {
-        Swal.fire({icon:'info', title:'Não encontrado', text:'Paciente não localizado.', confirmButtonColor:'#0dcaf0'});
-    }
-  } catch(e){ console.error("Erro na busca:", e); }
+    if(Array.isArray(lista) && lista.length) prontSelecionarPac(lista[0].pcod);
+    else Swal.fire({icon:'info',title:'Não encontrado',confirmButtonColor:'#0dcaf0'});
+  } catch(e){}
 };
 
 window.prontSelecionarPac = async function(pcod) {
-  document.getElementById('prontDropdown').style.display='none';
+  var dd = document.getElementById('prontDropdown');
+  if(dd) dd.style.display='none';
   PRONT.pcod = pcod;
   await _carregarProntuario(pcod);
 };
@@ -255,18 +236,11 @@ async function _carregarProntuario(pcod) {
 function _preencherPainelPac(pac, pcod) {
   document.getElementById('prontPacPanel').classList.remove('d-none');
   document.getElementById('prontPacPcod').textContent = 'PCOD ' + pcod;
-  
-  if(!pac) { 
-    document.getElementById('prontPacNome').textContent = 'Paciente #'+pcod; 
-    return; 
-  }
-
-  // Ajuste para bater com as colunas do seu banco (None, Documento, Convenio)
-  document.getElementById('prontPacNome').textContent = pac.None || pac.Nome || '—';
+  if(!pac) { document.getElementById('prontPacNome').textContent = 'Paciente #'+pcod; return; }
+  document.getElementById('prontPacNome').textContent = pac.Nome || pac.None || '—';
   document.getElementById('prontPacCPF').textContent  = pac.Documento || '—';
   document.getElementById('prontPacCel').textContent  = pac.Celular || pac.Telefone || '—';
-  document.getElementById('prontPacConv').textContent = pac.Convenio || pac.convenio || pac.CONVENIO || '—';
-
+  document.getElementById('prontPacConv').textContent = pac.Convenio || pac.convenio || '—';
   if(pac.Data_Nascimento) {
     var nasc = new Date(pac.Data_Nascimento+'T12:00:00');
     var hoje = new Date();
@@ -297,6 +271,7 @@ function _renderConsultas(lista) {
 
     var resumoTexto = _extrairResumo(c);
 
+    // ── TAGS rápidas ──────────────────────────────────────────
     var tags = '';
     if(c.prescricoes && c.prescricoes.length) {
       tags += '<span class="pront-tag" style="background:#e8f0ff;color:#0d6efd">💊 '+c.prescricoes.length+' rx</span>';
@@ -339,99 +314,21 @@ function _extrairResumo(c) {
       var linha = txt.trim().split('\n')[0];
       return linha.length > 80 ? linha.substring(0,80)+'…' : linha;
     }
-    var comps = c['bloco'+n+'_componentes'];
-    if(comps && typeof comps === 'object') {
-      var vals = Object.values(comps).filter(Boolean);
-      if(vals.length) return (c['bloco'+n+'_nome']||'Bloco '+n)+': '+vals.slice(0,3).join(' · ');
-    }
   }
-  return c.tipo_consulta_nome ? 'Consulta — '+c.tipo_consulta_nome : 'Consulta registrada';
+  return 'Consulta registrada';
 }
 
 function _renderDetalhe(c) {
   var html = '';
-  if(c.medico_inicio_nome || c.medico_fim_nome) {
-    html += '<div class="d-flex gap-3 mb-3 p-2 rounded" style="background:#f0fff4;border:1px solid #d1e7dd;font-size:.8rem">';
-    if(c.medico_inicio_nome) html += '<span><i class="bi bi-person-badge text-success me-1"></i><strong>Iniciado por:</strong> '+esc(c.medico_inicio_nome)+'</span>';
-    if(c.medico_fim_nome && c.medico_fim_nome !== c.medico_inicio_nome) {
-      html += '<span class="text-muted ms-2"><i class="bi bi-check-circle me-1"></i><strong>Encerrado por:</strong> '+esc(c.medico_fim_nome)+'</span>';
-    }
-    html += '</div>';
-  }
-
-  var temBlocos = false;
   for(var n = 1; n <= 6; n++) {
     var nomBloco = c['bloco'+n+'_nome'];
-    var tipBloco = c['bloco'+n+'_tipo'];
     var txtBloco = c['bloco'+n+'_texto'];
-    var cmpBloco = c['bloco'+n+'_componentes'];
-
-    var temConteudo = (txtBloco && txtBloco.trim()) ||
-      (cmpBloco && typeof cmpBloco === 'object' && Object.values(cmpBloco).some(Boolean));
-    if(!temConteudo) continue;
-    temBlocos = true;
-
-    var meta = _metaBloco(tipBloco);
-    html += '<div class="bloco-pr">';
-    html += '<div class="bloco-pr-hd"><i class="bi '+meta.ico+'" style="color:'+meta.cor+'"></i> '
-      + esc(nomBloco || tipBloco || 'Bloco '+n)+'</div>';
-
-    if(cmpBloco && typeof cmpBloco === 'object') {
-      var compHtml = '';
-      Object.entries(cmpBloco).forEach(function(kv) {
-        if(kv[1]) compHtml += '<span class="comp-badge"><i class="bi bi-dot"></i> '+esc(kv[1])+'</span>';
-      });
-      if(compHtml) html += '<div class="mb-2">'+compHtml+'</div>';
-    }
-
     if(txtBloco && txtBloco.trim()) {
-      html += '<div class="bloco-pr-corpo">'+esc(txtBloco.trim())+'</div>';
+      html += '<div class="bloco-pr"><div class="bloco-pr-hd">'+esc(nomBloco || 'Bloco '+n)+'</div>'
+            + '<div class="bloco-pr-corpo">'+esc(txtBloco.trim())+'</div></div>';
     }
-    html += '</div>';
   }
-
-  if(c.prescricoes && c.prescricoes.length) {
-    html += '<div class="bloco-pr" style="border-left-color:#0d6efd">';
-    html += '<div class="bloco-pr-hd"><i class="bi bi-capsule-pill text-primary"></i> Prescrições ('+c.prescricoes.length+')</div>';
-    c.prescricoes.forEach(function(p){
-      html += '<div class="presc-row-pr"><strong>'+esc(p.medicamento||'')+'</strong>';
-      var det = [p.dosagem,p.posologia,p.duracao].filter(Boolean).join(' · ');
-      if(det) html += ' <span class="text-muted" style="font-size:.78rem">'+esc(det)+'</span>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
-
-  if(c.exames_solicitados && c.exames_solicitados.length) {
-    var ICON = { LAB:'🔬', IMG:'🖼', OUT:'📋' };
-    html += '<div class="bloco-pr" style="border-left-color:#ffc107">';
-    html += '<div class="bloco-pr-hd"><i class="bi bi-microscope text-warning"></i> Exames Solicitados ('+c.exames_solicitados.length+')</div>';
-    c.exames_solicitados.forEach(function(e){
-      html += '<div class="exame-row-pr">'+(ICON[e.subtipo]||'📋')+' <strong>'+esc(e.exame||'')+'</strong>';
-      if(e.grupo) html += ' <span class="text-muted" style="font-size:.75rem">'+esc(e.grupo)+'</span>';
-      if(e.observacao) html += '<div style="font-size:.78rem;color:#666">'+esc(e.observacao)+'</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
-
-  if(!temBlocos && !c.prescricoes?.length && !c.exames_solicitados?.length) {
-    html += '<p class="text-muted small">Nenhum conteúdo registrado nesta consulta.</p>';
-  }
-  return html;
-}
-
-var BLOCO_META_PR = {
-  SINAIS_VITAIS: { ico:'bi-heart-pulse-fill',    cor:'#dc3545' },
-  ANAMNESE:      { ico:'bi-chat-left-text-fill',  cor:'#0dcaf0' },
-  EXAME_FISICO:  { ico:'bi-clipboard2-pulse-fill',cor:'#198754' },
-  DIAGNOSTICO:   { ico:'bi-journal-medical',      cor:'#6f42c1' },
-  CONDUTA:       { ico:'bi-check2-square',        cor:'#198754' },
-  OBSERVACOES:   { ico:'bi-sticky-fill',          cor:'#6c757d' },
-  EXAMES:        { ico:'bi-microscope',           cor:'#ffc107' },
-};
-function _metaBloco(tipo) {
-  return BLOCO_META_PR[tipo] || { ico:'bi-grid', cor:'#adb5bd' };
+  return html || '<p class="text-muted small">Sem conteúdo detalhado.</p>';
 }
 
 window.prontToggle = function(i) {
@@ -446,15 +343,12 @@ window.prontToggle = function(i) {
 async function inicializarProntuario() {
   PRONT.pcod    = window._prontuarioPcod    || null;
   PRONT.retorno = window._prontuarioRetorno || null;
-  var btnLabel = document.getElementById('prontBtnLabel');
-  if(btnLabel) btnLabel.textContent = PRONT.retorno === 'atendimento.html' ? 'Atendimento' : 'Agenda';
   if(PRONT.pcod) {
     document.getElementById('prontBuscaInput').value = String(PRONT.pcod);
     await _carregarProntuario(PRONT.pcod);
   }
 }
 
-window.inicializarPaginaProntuario = inicializarProntuario;
 inicializarProntuario();
 
 })();
