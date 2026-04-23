@@ -122,18 +122,27 @@ window.prontVoltar = function() {
   else window.history.back();
 };
 
-/* ── Busca autocomplete ─────────────────────────────────────── */
+/* ── Busca autocomplete (CORRIGIDO PARA CPF) ─────────────────── */
 var _bTmr = null;
 document.getElementById('prontBuscaInput').addEventListener('input', function(){
   var v = this.value.trim();
   var dd = document.getElementById('prontDropdown');
+  
   if(_bTmr) clearTimeout(_bTmr);
   if(v.length < 2){ dd.style.display='none'; return; }
+  
   _bTmr = setTimeout(async function(){
     try {
-      var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(v));
+      // ── AJUSTE AQUI ──
+      // Criamos uma variável que remove pontos e traços. 
+      // Assim, se o usuário digitar "263659", a API recebe isso limpo.
+      var termoBusca = v.replace(/\D/g, '').length > 5 ? v.replace(/\D/g, '') : v;
+
+      var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(termoBusca));
       var lista = await r.json();
+      
       if(!Array.isArray(lista)||!lista.length){ dd.style.display='none'; return; }
+      
       dd.innerHTML = lista.map(function(p){
         return '<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f5f5f5;font-size:.83rem" '
           +'onmouseover="this.style.background=\'#f0f4ff\'" onmouseout="this.style.background=\'\'" '
@@ -147,6 +156,8 @@ document.getElementById('prontBuscaInput').addEventListener('input', function(){
     } catch(e){}
   }, 350);
 });
+
+  
 document.addEventListener('click', function(e){
   var dd = document.getElementById('prontDropdown');
   var inp = document.getElementById('prontBuscaInput');
