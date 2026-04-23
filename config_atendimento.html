@@ -882,13 +882,19 @@ window.cfgAdicionarSecao = function(tc) {
   cfgMudarSecao(tc);
 };
 
+/* ════════════════════════════════════════════════════════════════
+    COMPONENTES (COM FILTRO DE SEÇÃO)
+════════════════════════════════════════════════════════════════ */
+
 async function cfgCarregarComponentes(secao) {
   secao = secao || CFG.secaoAtual;
   try {
     var data = await cfgApi({ action: 'componentes', secao: secao });
     CFG.componentes[secao] = Array.isArray(data) ? data : [];
     if (secao === CFG.secaoAtual) cfgRenderComponentes();
-  } catch (e) { console.error('cfgCarregarComponentes', e); }
+  } catch (e) { 
+    console.error('cfgCarregarComponentes', e); 
+  }
 }
 
 window.cfgMudarSecao = function (secao) {
@@ -905,8 +911,13 @@ window.cfgMudarSecao = function (secao) {
 
 function cfgRenderComponentes() {
   var lista = CFG.componentes[CFG.secaoAtual] || [];
-  var tbody = document.getElementById('cfgListaComp');
+  var tbody = document.getElementById('cfgListaComp'); // O elemento que causa o erro
   var meta = TIPOS_CONTEUDO_LABELS[CFG.secaoAtual] || { label: CFG.secaoAtual };
+
+  // ── TRAVA DE SEGURANÇA ──
+  // Se você trocou de página, o 'tbody' é null. O return evita o erro.
+  if (!tbody) return; 
+
   if (!lista.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">'
       + '<i class="bi bi-grid fs-3 d-block mb-2 opacity-25"></i>'
@@ -914,9 +925,10 @@ function cfgRenderComponentes() {
       + 'Clique em <strong>Novo Componente</strong>.</td></tr>';
     return;
   }
+
   tbody.innerHTML = lista.map(function (c) {
     return '<tr>'
-      + '<td class="text-center text-muted">' + c.ordem + '</td>'
+      + '<td class="text-center text-muted">' + (c.ordem || 0) + '</td>'
       + '<td class="text-center"><i class="bi ' + esc(c.icone || 'bi-circle') + ' fs-5"></i></td>'
       + '<td><strong>' + esc(c.nome) + '</strong></td>'
       + '<td class="text-muted">' + esc(c.valor_default || '—') + '</td>'
