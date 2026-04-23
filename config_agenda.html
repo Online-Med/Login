@@ -200,18 +200,26 @@ async function apiFetch(url, opts) {
   return r.json();
 }
 
+
 /* ── Inicializa ── */
 async function inicializar() {
   _renderDiasBtns();
   _renderTempoOpts();
 
-  var data = await apiFetch('/api/usuarios?perfil=MEDICO');
-  // Pega todos que têm tem_agenda=SIM
-  var todos = await apiFetch('/api/configuracoes?_lista=1'); // não existe, vamos pegar de usuarios
-  // Usa endpoint de agenda (lista profissionais com agenda)
-  var r = await apiFetch('/api/agenda?action=profissionais');
-  CFG.profs = Array.isArray(r) ? r : [];
-  _renderListaProfs();
+  try {
+    // 1. Busca a lista de profissionais que já possuem agenda configurada
+    // Usamos o endpoint de agenda que você já tem validado
+    var r = await apiFetch('/api/agenda?action=profissionais');
+    CFG.profs = Array.isArray(r) ? r : [];
+    
+    // 2. Renderiza a lista na coluna da esquerda
+    _renderListaProfs();
+
+  } catch (err) {
+    console.error("Erro ao carregar profissionais:", err);
+    var cont = document.getElementById('cfgListaProfs');
+    cont.innerHTML = '<p class="text-danger small text-center p-3">Erro ao carregar lista.</p>';
+  }
 }
 
 /* ── Renderiza botões de dias ── */
