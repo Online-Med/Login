@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       if (action === 'buscar_pacientes') {
         const t = encodeURIComponent(termo || '');
         const { ok, data: d } = await sb(
-          `pacientes?or=(Nome.ilike.*${t}*,Documento.ilike.*${t}*)&select=pcod,Nome,Documento,Celular,Telefone&order=Nome&limit=10`
+          `pacientes?or=(Nome.ilike.*${t}*,Documento.ilike.*${t}*)&select=pcod,Nome,Documento,Celular,Telefone,Convenio&order=Nome&limit=10`
         );
         return res.status(200).json(ok ? (d || []) : []);
       }
