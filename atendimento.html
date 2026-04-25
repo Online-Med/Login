@@ -404,7 +404,23 @@ function _preencherPainel(pac, ag) {
   document.getElementById('panelNome').textContent  = nome;
   document.getElementById('panelPcod').textContent  = 'PCOD ' + ((pac&&pac.pcod)||(ag&&ag.paciente_id)||'—');
   if(ag) {
-    document.getElementById('panelConv').textContent = ag.convenio || '—';
+  // Convênio: usa o da agenda (já como nome), ou resolve se vier como número (ID)
+  var convAg = ag ? (ag.convenio || '') : '';
+  var convPac = pac ? (pac.Convenio || '') : '';
+  // Prioridade: convenio da agenda (que já foi selecionado da lista = nome)
+  // Se parecer um ID numérico, resolve o nome da tabela
+  var convDisplay = convAg || convPac;
+  if(convDisplay && /^\d+$/.test(String(convDisplay).trim())) {
+    // É um ID, resolve o nome assincronamente
+    fetch('/api/convenios?id='+convDisplay)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var nome = j && j.sucesso && j.convenio ? j.convenio.CONVENIO : convDisplay;
+        var el = document.getElementById('panelConv');
+        if(el) el.textContent = nome;
+      }).catch(function(){});
+  }
+  document.getElementById('panelConv').textContent = /^\d+$/.test(String(convDisplay).trim()) ? '…' : (convDisplay || '—');
     document.getElementById('panelTipo').textContent = (ag.tipo||'Consulta') + ' / ' + (ag.modalidade||'Presencial');
   }
   if(pac) {
@@ -419,7 +435,8 @@ function _preencherPainel(pac, ag) {
     }
     document.getElementById('panelCPF').textContent = pac.Documento || '—';
     document.getElementById('panelCel').textContent = pac.Celular || pac.Telefone || '—';
-    if(pac.Convenio) document.getElementById('panelConv').textContent = pac.Convenio;
+    // Convênio do paciente: só usa se a agenda não tiver convênio definido
+    // (já tratado acima no bloco de ag)
   }
   // Resumo dados agenda
   var resumo = '';
@@ -878,20 +895,26 @@ window.atUpdPresc = function(i,c,v){ if(AT.presc[i]) AT.presc[i][c]=v; };
 window.atDelPresc = function(i){ AT.presc.splice(i,1); _renderPresc(); };
 
 window.atBuscarMed = function(v) {
-  var termo = (v||'').toLowerCase().trim();  // antes do setTimeout para uso no delay
+  var termo = (v||'').toLowerCase().trim();
   if(AT.prescBuscaTmr) clearTimeout(AT.prescBuscaTmr);
   AT.prescBuscaTmr = setTimeout(function(){
     var drop = document.getElementById('prescDrop');
     if(!drop) return;
     var lista = AT.medsConfig || [];
     var tipoId = AT.tipoId;
+
+    // Exclui medicamentos já adicionados (evita duplicidade)
+    var jaAdicionados = AT.presc.map(function(p){ return (p.medicamento||'').toLowerCase(); });
+
     var favs = lista.filter(function(m){
       return Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1
-        && (!termo || m.nome.toLowerCase().includes(termo));
+        && (!termo || m.nome.toLowerCase().includes(termo))
+        && jaAdicionados.indexOf(m.nome.toLowerCase()) === -1;
     });
     var outros = lista.filter(function(m){
       var ehFav = Array.isArray(m.favorito_tipos) && m.favorito_tipos.indexOf(tipoId) !== -1;
       if(ehFav) return false;
+      if(jaAdicionados.indexOf(m.nome.toLowerCase()) !== -1) return false;
       if(!termo) return true;
       return m.nome.toLowerCase().includes(termo);
     });
@@ -900,7 +923,8 @@ window.atBuscarMed = function(v) {
     var idx = 0;
     if(favs.length) { html += '<div class="dd-sep"><i class="bi bi-star-fill text-warning"></i> Favoritos</div>'; favs.forEach(function(m){ html += _medItem(m, idx++); }); }
     if(outros.length) { if(favs.length) html += '<div class="dd-sep">Todos</div>'; outros.forEach(function(m){ html += _medItem(m, idx++); }); }
-    if(!AT._medDropList.length) html = '<div class="dd-item text-muted py-2 text-center">Nenhum medicamento</div>';
+    if(!AT._medDropList.length && !termo) html = '<div class="dd-item text-muted py-2 text-center">Todos os medicamentos já foram adicionados</div>';
+    if(!AT._medDropList.length && termo) html = '<div class="dd-item text-muted py-2 text-center">Nenhum medicamento encontrado</div>';
     if(termo) html += '<div class="dd-sep"></div><div class="dd-item" data-add-med="'+esc(termo)+'"><span class="dd-nome"><i class="bi bi-plus-circle text-primary"></i> Adicionar "'+esc(termo)+'" manualmente</span></div>';
     drop.innerHTML = html;
     drop.querySelectorAll('[data-add-med]').forEach(function(el){
