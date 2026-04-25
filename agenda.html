@@ -1297,19 +1297,35 @@ window._agSelecionarPac = function(p) {
   document.getElementById('agPacId').value     = p.pcod||'';
   document.getElementById('agPacTel').value    = tel;
   document.getElementById('agTelefone').value  = tel;
-  // Seleciona o convênio do paciente no select
-  var convSel = document.getElementById('agConvenio');
-  if(convSel && conv) {
-    // Tenta encontrar por nome (texto) ou valor
-    var opt = Array.from(convSel.options).find(function(o){
-      return o.textContent.trim().toUpperCase() === conv.toUpperCase() || o.value === conv;
-    });
-    if(opt) convSel.value = opt.value;
-  }
   document.getElementById('agTagNome').textContent = p.Nome||'';
   document.getElementById('agTagDoc').textContent  = p.Documento||'';
   document.getElementById('agInfoPac').classList.remove('d-none');
   document.getElementById('agDropdownBusca').style.display='none';
+
+  // Seleciona o convênio do paciente no select
+  // O paciente pode ter Convenio como ID (número) ou nome — resolve ambos
+  var convSel = document.getElementById('agConvenio');
+  if(!convSel || !conv) return;
+
+  function _tentarSelecionarConv(valorBusca) {
+    var str = String(valorBusca||'').trim().toUpperCase();
+    var opt = Array.from(convSel.options).find(function(o){
+      return o.textContent.trim().toUpperCase() === str || String(o.value).toUpperCase() === str;
+    });
+    if(opt) { convSel.value = opt.value; return true; }
+    return false;
+  }
+
+  // 1. Tenta direto pelo nome/valor
+  if(!_tentarSelecionarConv(conv) && /^\d+$/.test(String(conv).trim())) {
+    // 2. Se for ID numérico, busca o nome na API e seleciona
+    fetch('/api/convenios?id='+conv)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var nome = j && j.sucesso && j.convenio ? j.convenio.CONVENIO : '';
+        if(nome) _tentarSelecionarConv(nome);
+      }).catch(function(){});
+  }
 };
 
 function agLimparPac() {
