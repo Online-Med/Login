@@ -165,3 +165,122 @@ if (action === 'config' && query.id_profissional) {
     return res.status(500).json({ sucesso: false, erro: error.message });
   }
 }
+
+
+
+
+
+// ─── CARGA DE DADOS (Importação de Planilhas) ────────────────────
+if (method === 'POST' && action === 'importar_planilha') {
+  const { registros } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
+  if (!Array.isArray(registros) || registros.length === 0) {
+    return res.status(400).json({ sucesso: false, erro: 'Nenhum registro para importar' });
+  }
+
+  const resultados = {
+    agenda: { sucesso: 0, erro: 0, detalhes: [] },
+    atendimentos: { sucesso: 0, erro: 0, detalhes: [] }
+  };
+
+  for (const reg of registros) {
+    try {
+      // ─── Buscar nome do paciente ─────
+      let pacienteNome = '';
+      if (reg.pcod) {
+        const rPac = await sb(`pacientes?pcod=eq.${reg.pcod}&select=Nome`);
+        pacienteNome = rPac.ok && rPac.data && rPac.data[0] 
+          ? rPac.data[0].Nome 
+          : `Paciente #${reg.pcod}`;
+      }
+
+      // ─── Converter data de dd/mm/yyyy para yyyy-MM-dd ─────
+      let dataFormatada = '';
+      if (reg.data) {
+        const [dia, mes, ano] = String(reg.data).split('/');
+        if (dia && mes && ano) {
+          dataFormatada = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        }
+      }
+
+      if (!dataFormatada) {
+        resultados.agenda.erro++;
+        resultados.agenda.detalhes.push({
+          pcod: reg.pcod,
+          status: 'Data inválida'
+        });
+        continue;
+      }
+
+      // ─── Inserir na tabela AGENDA ─────
+      const agendaPayload = {
+        id_profissional: 1,
+        data_agenda: dataFormatada,
+        paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
+        paciente_nome: pacienteNome,
+        hora_agenda: '12:00',
+        tipo: reg.consulta || 'CONSULTA',
+        modalidade: 'PRESENCIAL',
+        status: 'ATENDIDO',
+        convenio: reg.convenio || '',
+        observacao: reg.obs || '',
+        is_encaixe: false,
+        is_bloqueado: false
+      };
+
+      const rAgenda = await sb('agenda', 'POST', agendaPayload, { 'Prefer': 'return=representation' });
+      const agendaId = rAgenda.ok && rAgenda.data && rAgenda.data[0] ? rAgenda.data[0].id : null;
+
+      if (rAgenda.ok && agendaId) {
+        resultados.agenda.sucesso++;
+        resultados.agenda.detalhes.push({
+          pcod: reg.pcod,
+          nome: pacienteNome,
+          data: dataFormatada,
+          status: 'Inserido com sucesso'
+        });
+
+        // ─── Inserir na tabela ATENDIMENTOS ─────
+        const atendimentoPayload = {
+          agenda_id: agendaId,
+          paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
+          data_atendimento: dataFormatada,
+          tipo_consulta_nome: reg.consulta || 'CONSULTA',
+          medico_inicio_nome: reg.medico || 'Dr. Francesco Zanotto',
+          medico_fim_nome: 'Dr. Francesco Zanotto',
+          bloco1_texto: reg.obs || '',
+          bloco2_texto: reg.convenio || '',
+          status: 'ENCERRADO'
+        };
+
+        const rAtend = await sb('atendimentos', 'POST', atendimentoPayload, { 'Prefer': 'return=representation' });
+
+        if (rAtend.ok) {
+          resultados.atendimentos.sucesso++;
+        } else {
+          resultados.atendimentos.erro++;
+          resultados.atendimentos.detalhes.push({
+            pcod: reg.pcod,
+            status: 'Erro ao inserir atendimento'
+          });
+        }
+      } else {
+        resultados.agenda.erro++;
+        resultados.agenda.detalhes.push({
+          pcod: reg.pcod,
+          status: 'Erro ao inserir agenda'
+        });
+      }
+    } catch (e) {
+      resultados.agenda.erro++;
+      resultados.atendimentos.erro++;
+      console.error('Erro ao processar registro:', e);
+    }
+  }
+
+  return res.status(200).json({
+    sucesso: true,
+    message: 'Importação concluída',
+    resultados
+  });
+}
