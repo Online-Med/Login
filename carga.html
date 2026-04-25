@@ -104,220 +104,300 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
 (function() {
-  let dadosCarregados = [];
-
-  window.carregaArquivo = async function() {
-    const arquivo = document.getElementById('arquivoUpload').files[0];
-    if (!arquivo) return;
-
-    const leitor = new FileReader();
-    
-    leitor.onload = function(e) {
-      try {
-        let dados = [];
-
-        if (arquivo.name.endsWith('.csv')) {
-          const csv = e.target.result;
-          const linhas = csv.split('\n');
-          const cabecalho = linhas[0].split(',').map(c => c.trim().toLowerCase());
-          
-          for (let i = 1; i < linhas.length; i++) {
-            if (!linhas[i].trim()) continue;
-            const valores = linhas[i].split(',').map(v => v.trim());
-            const obj = {};
-            cabecalho.forEach((col, idx) => {
-              obj[col] = valores[idx] || '';
-            });
-            dados.push(obj);
-          }
-        } else {
-          const workbook = XLSX.read(e.target.result, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          dados = XLSX.utils.sheet_to_json(worksheet);
-        }
-
-        dadosCarregados = dados.map(reg => ({
-          data: reg.data || reg.DATA || '',
-          pcod: reg.pcod || reg.PCOD || '',
-          consulta: reg.consulta || reg.CONSULTA || '',
-          medico: reg.medico || reg.MEDICO || '',
-          convenio: reg.convenio || reg.CONVENIO || '',
-          obs: reg.obs || reg.OBS || ''
-        }));
-
-        window.mostrarPreview(dadosCarregados);
-        
-        document.getElementById('previewContainer').classList.remove('d-none');
-        document.getElementById('btnLimpar').disabled = false;
-        document.getElementById('btnImportar').disabled = false;
-        document.getElementById('emptyState').classList.add('d-none');
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'Arquivo carregado!',
-          text: `${dadosCarregados.length} registros encontrados`,
-          timer: 1500,
-          showConfirmButton: false
-        });
-
-      } catch (erro) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Erro ao processar arquivo',
-          text: erro.message
-        });
+  'use strict';
+  
+  // Carrega XLSX
+  function carregarXLSX() {
+    return new Promise((resolve) => {
+      if (typeof XLSX !== 'undefined') {
+        resolve();
+        return;
       }
-    };
-
-    leitor.readAsArrayBuffer(arquivo);
-  };
-
-  window.mostrarPreview = function(dados) {
-    const headerRow = document.getElementById('headerRow');
-    const bodyPreview = document.getElementById('bodyPreview');
-
-    headerRow.innerHTML = `
-      <th class="ps-2">DATA</th>
-      <th>PCOD</th>
-      <th>CONSULTA</th>
-      <th>MÉDICO</th>
-      <th>CONVÊNIO</th>
-      <th>OBS</th>
-    `;
-
-    bodyPreview.innerHTML = '';
-    dados.slice(0, 10).forEach(reg => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="ps-2 small">${reg.data}</td>
-        <td class="small">${reg.pcod}</td>
-        <td class="small">${reg.consulta}</td>
-        <td class="small">${reg.medico}</td>
-        <td class="small">${reg.convenio}</td>
-        <td class="small text-truncate" title="${reg.obs}">${reg.obs}</td>
-      `;
-      bodyPreview.appendChild(tr);
-    });
-
-    if (dados.length > 10) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="6" class="text-center text-muted small">... e ${dados.length - 10} registros mais</td>`;
-      bodyPreview.appendChild(tr);
-    }
-  };
-
-  window.importarDados = function() {
-    if (dadosCarregados.length === 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Nenhum dado carregado',
-        text: 'Por favor, selecione um arquivo primeiro'
-      });
-      return;
-    }
-
-    const invalidos = dadosCarregados.filter(reg => !reg.data || !reg.pcod);
-    if (invalidos.length > 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Dados inválidos',
-        text: `${invalidos.length} registro(s) sem DATA ou PCOD serão ignorados`,
-        showCancelButton: true,
-        confirmButtonText: 'Continuar',
-        cancelButtonText: 'Cancelar'
-      }).then(result => {
-        if (!result.isConfirmed) return;
-        _executarImportacao();
-      });
-    } else {
-      _executarImportacao();
-    }
-  };
-
-  function _executarImportacao() {
-    const loading = Swal.fire({
-      title: 'Importando...',
-      html: '<div class="spinner-border text-info" role="status"></div>',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    fetch('/api/config_atendimento?action=importar_planilha', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ registros: dadosCarregados })
-    })
-    .then(resposta => resposta.json())
-    .then(resultado => {
-      if (resultado.sucesso) {
-        loading.close();
-        window.mostrarResultado(resultado.resultados);
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Erro na importação',
-          text: resultado.erro
-        });
-      }
-    })
-    .catch(erro => {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erro na conexão',
-        text: erro.message
-      });
+      
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      script.onload = resolve;
+      script.onerror = function() {
+        console.error('Erro ao carregar XLSX');
+        resolve();
+      };
+      document.head.appendChild(script);
     });
   }
 
-  window.mostrarResultado = function(resultados) {
-    const { agenda, atendimentos } = resultados;
-
-    document.getElementById('resultContainer').classList.remove('d-none');
-    document.getElementById('emptyState').classList.add('d-none');
-
-    document.getElementById('agendaSucesso').textContent = agenda.sucesso;
-    document.getElementById('agendaErro').textContent = agenda.erro;
-    document.getElementById('atendSucesso').textContent = atendimentos.sucesso;
-    document.getElementById('atendErro').textContent = atendimentos.erro;
-
-    const alertClass = agenda.erro === 0 && atendimentos.erro === 0 ? 'alert-success' : 'alert-warning';
-    const alertText = agenda.erro === 0 && atendimentos.erro === 0 
-      ? '✓ Importação concluída com sucesso!'
-      : '⚠ Importação concluída com alguns erros';
-    
-    document.getElementById('resultAlert').className = `alert ${alertClass}`;
-    document.getElementById('resultAlert').textContent = alertText;
-
-    let detalhes = '<ul class="list-unstyled small">';
-    agenda.detalhes.forEach(d => {
-      detalhes += `<li><i class="bi bi-${d.status.includes('sucesso') ? 'check-circle text-success' : 'exclamation-circle text-danger'}"></i> PCOD ${d.pcod}: ${d.status}</li>`;
+  // Carrega SweetAlert
+  function carregarSweetAlert() {
+    return new Promise((resolve) => {
+      if (typeof Swal !== 'undefined') {
+        resolve();
+        return;
+      }
+      
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.onload = resolve;
+      script.onerror = function() {
+        console.error('Erro ao carregar SweetAlert');
+        resolve();
+      };
+      document.head.appendChild(script);
     });
-    detalhes += '</ul>';
+  }
 
-    document.getElementById('detalhesTexto').innerHTML = detalhes;
+  // Carrega as bibliotecas
+  Promise.all([carregarXLSX(), carregarSweetAlert()]).then(function() {
+    window._cargaApp = {
+      dadosCarregados: []
+    };
 
-    Swal.fire({
-      icon: agenda.erro === 0 ? 'success' : 'info',
-      title: 'Importação finalizada',
-      text: `Agendas: ${agenda.sucesso} OK, ${agenda.erro} erros | Atendimentos: ${atendimentos.sucesso} OK, ${atendimentos.erro} erros`
-    });
-  };
+    window.carregaArquivo = function() {
+      var arquivo = document.getElementById('arquivoUpload').files[0];
+      if (!arquivo) return;
 
-  window.limparArquivo = function() {
-    document.getElementById('arquivoUpload').value = '';
-    document.getElementById('previewContainer').classList.add('d-none');
-    document.getElementById('resultContainer').classList.add('d-none');
-    document.getElementById('emptyState').classList.remove('d-none');
-    document.getElementById('btnLimpar').disabled = true;
-    document.getElementById('btnImportar').disabled = true;
-    dadosCarregados = [];
-  };
+      var leitor = new FileReader();
+      
+      leitor.onload = function(e) {
+        try {
+          var dados = [];
+
+          if (arquivo.name.endsWith('.csv')) {
+            var csv = e.target.result;
+            var linhas = csv.split('\n');
+            var cabecalho = linhas[0].split(',').map(function(c) { return c.trim().toLowerCase(); });
+            
+            for (var i = 1; i < linhas.length; i++) {
+              if (!linhas[i].trim()) continue;
+              var valores = linhas[i].split(',').map(function(v) { return v.trim(); });
+              var obj = {};
+              cabecalho.forEach(function(col, idx) {
+                obj[col] = valores[idx] || '';
+              });
+              dados.push(obj);
+            }
+          } else {
+            // Excel
+            if (typeof XLSX === 'undefined') {
+              alert('Erro: XLSX não foi carregado. Tente novamente.');
+              return;
+            }
+            
+            var workbook = XLSX.read(e.target.result, { type: 'array' });
+            var sheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[sheetName];
+            dados = XLSX.utils.sheet_to_json(worksheet);
+          }
+
+          window._cargaApp.dadosCarregados = dados.map(function(reg) {
+            return {
+              data: reg.data || reg.DATA || '',
+              pcod: reg.pcod || reg.PCOD || '',
+              consulta: reg.consulta || reg.CONSULTA || '',
+              medico: reg.medico || reg.MEDICO || '',
+              convenio: reg.convenio || reg.CONVENIO || '',
+              obs: reg.obs || reg.OBS || ''
+            };
+          });
+
+          window.mostrarPreview(window._cargaApp.dadosCarregados);
+          
+          document.getElementById('previewContainer').classList.remove('d-none');
+          document.getElementById('btnLimpar').disabled = false;
+          document.getElementById('btnImportar').disabled = false;
+          document.getElementById('emptyState').classList.add('d-none');
+          
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'success',
+              title: 'Arquivo carregado!',
+              text: window._cargaApp.dadosCarregados.length + ' registros encontrados',
+              timer: 1500,
+              showConfirmButton: false
+            });
+          } else {
+            alert('Arquivo carregado! ' + window._cargaApp.dadosCarregados.length + ' registros encontrados');
+          }
+
+        } catch (erro) {
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Erro ao processar arquivo',
+              text: erro.message
+            });
+          } else {
+            alert('Erro: ' + erro.message);
+          }
+        }
+      };
+
+      leitor.readAsArrayBuffer(arquivo);
+    };
+
+    window.mostrarPreview = function(dados) {
+      var headerRow = document.getElementById('headerRow');
+      var bodyPreview = document.getElementById('bodyPreview');
+
+      headerRow.innerHTML = '<th class="ps-2">DATA</th><th>PCOD</th><th>CONSULTA</th><th>MÉDICO</th><th>CONVÊNIO</th><th>OBS</th>';
+
+      bodyPreview.innerHTML = '';
+      dados.slice(0, 10).forEach(function(reg) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = 
+          '<td class="ps-2 small">' + reg.data + '</td>' +
+          '<td class="small">' + reg.pcod + '</td>' +
+          '<td class="small">' + reg.consulta + '</td>' +
+          '<td class="small">' + reg.medico + '</td>' +
+          '<td class="small">' + reg.convenio + '</td>' +
+          '<td class="small text-truncate" title="' + reg.obs + '">' + reg.obs + '</td>';
+        bodyPreview.appendChild(tr);
+      });
+
+      if (dados.length > 10) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" class="text-center text-muted small">... e ' + (dados.length - 10) + ' registros mais</td>';
+        bodyPreview.appendChild(tr);
+      }
+    };
+
+    window.importarDados = function() {
+      if (window._cargaApp.dadosCarregados.length === 0) {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Nenhum dado carregado',
+            text: 'Por favor, selecione um arquivo primeiro'
+          });
+        } else {
+          alert('Nenhum dado carregado. Selecione um arquivo primeiro.');
+        }
+        return;
+      }
+
+      var invalidos = window._cargaApp.dadosCarregados.filter(function(reg) { 
+        return !reg.data || !reg.pcod; 
+      });
+      
+      if (invalidos.length > 0) {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Dados inválidos',
+            text: invalidos.length + ' registro(s) sem DATA ou PCOD serão ignorados',
+            showCancelButton: true,
+            confirmButtonText: 'Continuar',
+            cancelButtonText: 'Cancelar'
+          }).then(function(result) {
+            if (result.isConfirmed) {
+              window._executarImportacao();
+            }
+          });
+        } else {
+          window._executarImportacao();
+        }
+      } else {
+        window._executarImportacao();
+      }
+    };
+
+    window._executarImportacao = function() {
+      var loading = null;
+      if (typeof Swal !== 'undefined') {
+        loading = Swal.fire({
+          title: 'Importando...',
+          html: '<div class="spinner-border text-info" role="status"></div>',
+          allowOutsideClick: false,
+          didOpen: function() { Swal.showLoading(); }
+        });
+      }
+
+      fetch('/api/config_atendimento?action=importar_planilha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registros: window._cargaApp.dadosCarregados })
+      })
+      .then(function(resposta) { return resposta.json(); })
+      .then(function(resultado) {
+        if (resultado.sucesso) {
+          if (loading) loading.close();
+          window.mostrarResultado(resultado.resultados);
+        } else {
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'error',
+              title: 'Erro na importação',
+              text: resultado.erro
+            });
+          } else {
+            alert('Erro: ' + resultado.erro);
+          }
+        }
+      })
+      .catch(function(erro) {
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Erro na conexão',
+            text: erro.message
+          });
+        } else {
+          alert('Erro: ' + erro.message);
+        }
+      });
+    };
+
+    window.mostrarResultado = function(resultados) {
+      var agenda = resultados.agenda;
+      var atendimentos = resultados.atendimentos;
+
+      document.getElementById('resultContainer').classList.remove('d-none');
+      document.getElementById('emptyState').classList.add('d-none');
+
+      document.getElementById('agendaSucesso').textContent = agenda.sucesso;
+      document.getElementById('agendaErro').textContent = agenda.erro;
+      document.getElementById('atendSucesso').textContent = atendimentos.sucesso;
+      document.getElementById('atendErro').textContent = atendimentos.erro;
+
+      var alertClass = (agenda.erro === 0 && atendimentos.erro === 0) ? 'alert-success' : 'alert-warning';
+      var alertText = (agenda.erro === 0 && atendimentos.erro === 0) 
+        ? '✓ Importação concluída com sucesso!'
+        : '⚠ Importação concluída com alguns erros';
+      
+      document.getElementById('resultAlert').className = 'alert ' + alertClass;
+      document.getElementById('resultAlert').textContent = alertText;
+
+      var detalhes = '<ul class="list-unstyled small">';
+      agenda.detalhes.forEach(function(d) {
+        var icon = d.status.includes('sucesso') ? 'check-circle text-success' : 'exclamation-circle text-danger';
+        detalhes += '<li><i class="bi bi-' + icon + '"></i> PCOD ' + d.pcod + ': ' + d.status + '</li>';
+      });
+      detalhes += '</ul>';
+
+      document.getElementById('detalhesTexto').innerHTML = detalhes;
+
+      if (typeof Swal !== 'undefined') {
+        var icon = (agenda.erro === 0) ? 'success' : 'info';
+        Swal.fire({
+          icon: icon,
+          title: 'Importação finalizada',
+          text: 'Agendas: ' + agenda.sucesso + ' OK, ' + agenda.erro + ' erros | Atendimentos: ' + atendimentos.sucesso + ' OK, ' + atendimentos.erro + ' erros'
+        });
+      } else {
+        alert('Importação finalizada!\nAgendas: ' + agenda.sucesso + ' OK, ' + agenda.erro + ' erros\nAtendimentos: ' + atendimentos.sucesso + ' OK, ' + atendimentos.erro + ' erros');
+      }
+    };
+
+    window.limparArquivo = function() {
+      document.getElementById('arquivoUpload').value = '';
+      document.getElementById('previewContainer').classList.add('d-none');
+      document.getElementById('resultContainer').classList.add('d-none');
+      document.getElementById('emptyState').classList.remove('d-none');
+      document.getElementById('btnLimpar').disabled = true;
+      document.getElementById('btnImportar').disabled = true;
+      window._cargaApp.dadosCarregados = [];
+    };
+  });
 
 })();
 </script>
