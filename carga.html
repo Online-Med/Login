@@ -340,51 +340,66 @@ window._cargaApp.dadosCarregados = dados.map(function(reg) {
       }
     };
 
-    window._executarImportacao = function() {
-      var loading = null;
-      if (typeof Swal !== 'undefined') {
-        loading = Swal.fire({
-          title: 'Importando...',
-          html: '<div class="spinner-border text-info" role="status"></div>',
-          allowOutsideClick: false,
-          didOpen: function() { Swal.showLoading(); }
-        });
-      }
+   window._executarImportacao = async function() {
+  var registros = window._cargaApp.dadosCarregados;
+  
+  if (!registros || registros.length === 0) {
+    Swal.fire('Aviso', 'Nenhum dado carregado para importar.', 'warning');
+    return;
+  }
 
-      fetch('/api/config_atendimento?action=importar_planilha', {
+  var loading = Swal.fire({
+    title: 'Importando Dados...',
+    html: 'Processando registro <b id="progresso-cont">0</b> de ' + registros.length,
+    allowOutsideClick: false,
+    didOpen: function() { Swal.showLoading(); }
+  });
+
+  var TAMANHO_BLOCO = 50;
+  var totalResultados = {
+    agenda: { sucesso: 0, erro: 0, detalhes: [] },
+    atendimentos: { sucesso: 0, erro: 0, detalhes: [] }
+  };
+
+  try {
+    for (var i = 0; i < registros.length; i += TAMANHO_BLOCO) {
+      var bloco = registros.slice(i, i + TAMANHO_BLOCO);
+      
+      // Atualiza o texto do contador no alerta
+      var progressoTexto = document.getElementById('progresso-cont');
+      if (progressoTexto) progressoTexto.innerText = i;
+
+      var resposta = await fetch('/api/config_atendimento?action=importar_planilha', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registros: window._cargaApp.dadosCarregados })
-      })
-      .then(function(resposta) { return resposta.json(); })
-      .then(function(resultado) {
-        if (resultado.sucesso) {
-          if (loading) loading.close();
-          window.mostrarResultado(resultado.resultados);
-        } else {
-          if (typeof Swal !== 'undefined') {
-            Swal.fire({
-              icon: 'error',
-              title: 'Erro na importação',
-              text: resultado.erro
-            });
-          } else {
-            alert('Erro: ' + resultado.erro);
-          }
-        }
-      })
-      .catch(function(erro) {
-        if (typeof Swal !== 'undefined') {
-          Swal.fire({
-            icon: 'error',
-            title: 'Erro na conexão',
-            text: erro.message
-          });
-        } else {
-          alert('Erro: ' + erro.message);
-        }
+        body: JSON.stringify({ registros: bloco })
       });
-    };
+
+      var resultado = await resposta.json();
+
+      if (resultado.sucesso) {
+        totalResultados.agenda.sucesso += resultado.resultados.agenda.sucesso;
+        totalResultados.agenda.erro += resultado.resultados.agenda.erro;
+        totalResultados.atendimentos.sucesso += resultado.resultados.atendimentos.sucesso;
+        totalResultados.atendimentos.erro += resultado.resultados.atendimentos.erro;
+      }
+    }
+
+    // Fecha o loading e mostra o resumo final
+    if (loading) loading.close();
+    window.mostrarResultado(totalResultados);
+
+  } catch (erro) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro na conexão',
+      text: 'A importação parou no meio: ' + erro.message
+    });
+  }
+};
+
+
+    
 
     window.mostrarResultado = function(resultados) {
       var agenda = resultados.agenda;
