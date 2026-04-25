@@ -195,15 +195,42 @@
 // Logo abaixo, no map que organiza os dados, adicione esta função de limpeza:
 window._cargaApp.dadosCarregados = dados.map(function(reg) {
     var dataBruta = reg.data || reg.DATA || '';
-    
-    // Se a data ainda vier como número do Excel (fallback), converte manualmente
-    if (!isNaN(dataBruta) && dataBruta !== '') {
-        var dataConvertida = new Date(Math.round((dataBruta - 25569) * 86400 * 1000));
-        dataBruta = dataConvertida.toLocaleDateString('pt-BR');
+    var dataFormatada = '';
+
+    if (dataBruta) {
+        // Se for um objeto Date (gerado pelo cellDates: true)
+        if (dataBruta instanceof Date) {
+            var dia = String(dataBruta.getDate()).padStart(2, '0');
+            var mes = String(dataBruta.getMonth() + 1).padStart(2, '0');
+            var ano = dataBruta.getFullYear();
+            dataFormatada = dia + '/' + mes + '/' + ano;
+        } 
+        // Se ainda for o número serial do Excel (ex: 42594)
+        else if (!isNaN(dataBruta) && dataBruta !== '') {
+            var dateObj = new Date(Math.round((dataBruta - 25569) * 86400 * 1000));
+            var dia = String(dateObj.getDate()).padStart(2, '0');
+            var mes = String(dateObj.getMonth() + 1).padStart(2, '0');
+            var ano = dateObj.getFullYear();
+            dataFormatada = dia + '/' + mes + '/' + ano;
+        }
+        // Se vier como string "mm/dd/yy" ou similar
+        else if (typeof dataBruta === 'string' && dataBruta.includes('/')) {
+            var partes = dataBruta.split('/');
+            // Verifica se o primeiro item parece ser um mês (formato americano)
+            if (parseInt(partes[0]) <= 12 && partes[2].length <= 2) {
+                // Tenta converter mm/dd/yy para dd/mm/yyyy
+                var anoFull = parseInt(partes[2]) < 70 ? '20' + partes[2] : '19' + partes[2];
+                dataFormatada = partes[1].padStart(2, '0') + '/' + partes[0].padStart(2, '0') + '/' + anoFull;
+            } else {
+                dataFormatada = dataBruta;
+            }
+        } else {
+            dataFormatada = dataBruta;
+        }
     }
 
     return {
-        data: dataBruta,
+        data: dataFormatada,
         pcod: reg.pcod || reg.PCOD || '',
         consulta: reg.consulta || reg.CONSULTA || '',
         medico: reg.medico || reg.MEDICO || '',
