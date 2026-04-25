@@ -1,0 +1,322 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><i class="bi bi-house-door-fill me-1"></i> INÍCIO</li>
+      <li class="breadcrumb-item">Ferramentas</li>
+      <li class="breadcrumb-item active fw-bold text-primary">IMPORTAR DADOS</li>
+    </ol>
+  </nav>
+</div>
+
+<div class="row g-3">
+  <!-- Painel de Upload -->
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white py-3">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>Carregar Planilha</h5>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info small mb-3">
+          <i class="bi bi-info-circle"></i>
+          A planilha deve conter as colunas: <strong>DATA, PCOD, CONSULTA, MEDICO, CONVENIO, OBS</strong>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Selecione o arquivo (Excel ou CSV)</label>
+          <input type="file" class="form-control form-control-lg" id="arquivoUpload"
+                 accept=".xlsx,.xls,.csv" onchange="carregaArquivo()">
+          <small class="text-muted">Formatos aceitos: .xlsx, .xls, .csv</small>
+        </div>
+
+        <div id="previewContainer" class="d-none">
+          <label class="form-label fw-bold">Preview dos dados:</label>
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-sm table-hover" id="tablePreview">
+              <thead class="table-light sticky-top">
+                <tr id="headerRow"></tr>
+              </thead>
+              <tbody id="bodyPreview"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-outline-secondary" onclick="limparArquivo()" id="btnLimpar" disabled>
+            <i class="bi bi-trash"></i> Limpar
+          </button>
+          <button class="btn btn-success" onclick="importarDados()" id="btnImportar" disabled>
+            <i class="bi bi-cloud-upload"></i> Importar Dados
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel de Resultado -->
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white py-3">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check text-primary me-2"></i>Resultado da Importação</h5>
+      </div>
+      <div class="card-body">
+        <div id="resultContainer" class="d-none">
+          <div class="alert alert-success" id="resultAlert"></div>
+
+          <div class="row g-3 text-center mb-3">
+            <div class="col-md-6">
+              <div class="border rounded p-3">
+                <div class="fs-5 fw-bold text-success" id="agendaSucesso">0</div>
+                <div class="small text-muted">Agendas Inseridas</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded p-3">
+                <div class="fs-5 fw-bold text-primary" id="atendSucesso">0</div>
+                <div class="small text-muted">Atendimentos Inseridos</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded p-3">
+                <div class="fs-5 fw-bold text-danger" id="agendaErro">0</div>
+                <div class="small text-muted">Erros em Agendas</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded p-3">
+                <div class="fs-5 fw-bold text-warning" id="atendErro">0</div>
+                <div class="small text-muted">Erros em Atendimentos</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="detalhesContainer" class="mt-3">
+            <label class="fw-bold small">Detalhes:</label>
+            <div id="detalhesTexto" class="border rounded p-2" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;"></div>
+          </div>
+        </div>
+
+        <div id="emptyState" class="text-center text-muted py-5">
+          <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.2;"></i>
+          <p class="mt-3">Selecione um arquivo e clique em "Importar Dados"</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+let dadosCarregados = [];
+
+async function carregaArquivo() {
+  const arquivo = document.getElementById('arquivoUpload').files[0];
+  if (!arquivo) return;
+
+  const leitor = new FileReader();
+  
+  leitor.onload = function(e) {
+    try {
+      let dados = [];
+
+      if (arquivo.name.endsWith('.csv')) {
+        const csv = e.target.result;
+        const linhas = csv.split('\n');
+        const cabecalho = linhas[0].split(',').map(c => c.trim().toLowerCase());
+        
+        for (let i = 1; i < linhas.length; i++) {
+          if (!linhas[i].trim()) continue;
+          const valores = linhas[i].split(',').map(v => v.trim());
+          const obj = {};
+          cabecalho.forEach((col, idx) => {
+            obj[col] = valores[idx] || '';
+          });
+          dados.push(obj);
+        }
+      } else {
+        const workbook = XLSX.read(e.target.result, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        dados = XLSX.utils.sheet_to_json(worksheet);
+      }
+
+      dadosCarregados = dados.map(reg => ({
+        data: reg.data || reg.DATA || '',
+        pcod: reg.pcod || reg.PCOD || '',
+        consulta: reg.consulta || reg.CONSULTA || '',
+        medico: reg.medico || reg.MEDICO || '',
+        convenio: reg.convenio || reg.CONVENIO || '',
+        obs: reg.obs || reg.OBS || ''
+      }));
+
+      mostrarPreview(dadosCarregados);
+      
+      document.getElementById('previewContainer').classList.remove('d-none');
+      document.getElementById('btnLimpar').disabled = false;
+      document.getElementById('btnImportar').disabled = false;
+      document.getElementById('emptyState').classList.add('d-none');
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Arquivo carregado!',
+        text: `${dadosCarregados.length} registros encontrados`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+    } catch (erro) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro ao processar arquivo',
+        text: erro.message
+      });
+    }
+  };
+
+  leitor.readAsArrayBuffer(arquivo);
+}
+
+function mostrarPreview(dados) {
+  const headerRow = document.getElementById('headerRow');
+  const bodyPreview = document.getElementById('bodyPreview');
+
+  headerRow.innerHTML = `
+    <th class="ps-2">DATA</th>
+    <th>PCOD</th>
+    <th>CONSULTA</th>
+    <th>MÉDICO</th>
+    <th>CONVÊNIO</th>
+    <th>OBS</th>
+  `;
+
+  bodyPreview.innerHTML = '';
+  dados.slice(0, 10).forEach(reg => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="ps-2 small">${reg.data}</td>
+      <td class="small">${reg.pcod}</td>
+      <td class="small">${reg.consulta}</td>
+      <td class="small">${reg.medico}</td>
+      <td class="small">${reg.convenio}</td>
+      <td class="small text-truncate" title="${reg.obs}">${reg.obs}</td>
+    `;
+    bodyPreview.appendChild(tr);
+  });
+
+  if (dados.length > 10) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="6" class="text-center text-muted small">... e ${dados.length - 10} registros mais</td>`;
+    bodyPreview.appendChild(tr);
+  }
+}
+
+async function importarDados() {
+  if (dadosCarregados.length === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Nenhum dado carregado',
+      text: 'Por favor, selecione um arquivo primeiro'
+    });
+    return;
+  }
+
+  const invalidos = dadosCarregados.filter(reg => !reg.data || !reg.pcod);
+  if (invalidos.length > 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Dados inválidos',
+      text: `${invalidos.length} registro(s) sem DATA ou PCOD serão ignorados`,
+      showCancelButton: true,
+      confirmButtonText: 'Continuar',
+      cancelButtonText: 'Cancelar'
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      _executarImportacao();
+    });
+  } else {
+    _executarImportacao();
+  }
+}
+
+async function _executarImportacao() {
+  const loading = Swal.fire({
+    title: 'Importando...',
+    html: '<div class="spinner-border text-info" role="status"></div>',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    // Chama o endpoint integrado no config_atendimento.js
+    const resposta = await fetch('/api/config_atendimento?action=importar_planilha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registros: dadosCarregados })
+    });
+
+    const resultado = await resposta.json();
+
+    if (resultado.sucesso) {
+      loading.close();
+      mostrarResultado(resultado.resultados);
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro na importação',
+        text: resultado.erro
+      });
+    }
+  } catch (erro) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro na conexão',
+      text: erro.message
+    });
+  }
+}
+
+function mostrarResultado(resultados) {
+  const { agenda, atendimentos } = resultados;
+
+  document.getElementById('resultContainer').classList.remove('d-none');
+  document.getElementById('emptyState').classList.add('d-none');
+
+  document.getElementById('agendaSucesso').textContent = agenda.sucesso;
+  document.getElementById('agendaErro').textContent = agenda.erro;
+  document.getElementById('atendSucesso').textContent = atendimentos.sucesso;
+  document.getElementById('atendErro').textContent = atendimentos.erro;
+
+  const alertClass = agenda.erro === 0 && atendimentos.erro === 0 ? 'alert-success' : 'alert-warning';
+  const alertText = agenda.erro === 0 && atendimentos.erro === 0 
+    ? '✓ Importação concluída com sucesso!'
+    : '⚠ Importação concluída com alguns erros';
+  
+  document.getElementById('resultAlert').className = `alert ${alertClass}`;
+  document.getElementById('resultAlert').textContent = alertText;
+
+  let detalhes = '<ul class="list-unstyled small">';
+  agenda.detalhes.forEach(d => {
+    detalhes += `<li><i class="bi bi-${d.status.includes('sucesso') ? 'check-circle text-success' : 'exclamation-circle text-danger'}"></i> PCOD ${d.pcod}: ${d.status}</li>`;
+  });
+  detalhes += '</ul>';
+
+  document.getElementById('detalhesTexto').innerHTML = detalhes;
+
+  Swal.fire({
+    icon: agenda.erro === 0 ? 'success' : 'info',
+    title: 'Importação finalizada',
+    text: `Agendas: ${agenda.sucesso} OK, ${agenda.erro} erros | Atendimentos: ${atendimentos.sucesso} OK, ${atendimentos.erro} erros`
+  });
+}
+
+function limparArquivo() {
+  document.getElementById('arquivoUpload').value = '';
+  document.getElementById('previewContainer').classList.add('d-none');
+  document.getElementById('resultContainer').classList.add('d-none');
+  document.getElementById('emptyState').classList.remove('d-none');
+  document.getElementById('btnLimpar').disabled = true;
+  document.getElementById('btnImportar').disabled = true;
+  dadosCarregados = [];
+}
+</script>
