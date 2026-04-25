@@ -170,117 +170,113 @@ if (action === 'config' && query.id_profissional) {
 
 
 
+
+
 // ─── CARGA DE DADOS (Importação de Planilhas) ────────────────────
 if (method === 'POST' && action === 'importar_planilha') {
-  const { registros } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-
-  if (!Array.isArray(registros) || registros.length === 0) {
-    return res.status(400).json({ sucesso: false, erro: 'Nenhum registro para importar' });
-  }
-
-  const resultados = {
-    agenda: { sucesso: 0, erro: 0, detalhes: [] },
-    atendimentos: { sucesso: 0, erro: 0, detalhes: [] }
-  };
-
-  for (const reg of registros) {
     try {
-      // ─── Buscar nome do paciente ─────
-      let pacienteNome = '';
-      if (reg.pcod) {
-        const rPac = await sb(`pacientes?pcod=eq.${reg.pcod}&select=Nome`);
-        pacienteNome = rPac.ok && rPac.data && rPac.data[0] 
-          ? rPac.data[0].Nome 
-          : `Paciente #${reg.pcod}`;
-      }
+        // Correção 1: Garantir que o body seja tratado corretamente
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const { registros } = body;
 
-      // ─── Converter data de dd/mm/yyyy para yyyy-MM-dd ─────
-      let dataFormatada = '';
-      if (reg.data) {
-        const [dia, mes, ano] = String(reg.data).split('/');
-        if (dia && mes && ano) {
-          dataFormatada = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        if (!Array.isArray(registros) || registros.length === 0) {
+            return res.status(400).json({ sucesso: false, erro: 'Nenhum registro para importar' });
         }
-      }
 
-      if (!dataFormatada) {
-        resultados.agenda.erro++;
-        resultados.agenda.detalhes.push({
-          pcod: reg.pcod,
-          status: 'Data inválida'
-        });
-        continue;
-      }
-
-      // ─── Inserir na tabela AGENDA ─────
-      const agendaPayload = {
-        id_profissional: 1,
-        data_agenda: dataFormatada,
-        paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
-        paciente_nome: pacienteNome,
-        hora_agenda: '12:00',
-        tipo: reg.consulta || 'CONSULTA',
-        modalidade: 'PRESENCIAL',
-        status: 'ATENDIDO',
-        convenio: reg.convenio || '',
-        observacao: reg.obs || '',
-        is_encaixe: false,
-        is_bloqueado: false
-      };
-
-      const rAgenda = await sb('agenda', 'POST', agendaPayload, { 'Prefer': 'return=representation' });
-      const agendaId = rAgenda.ok && rAgenda.data && rAgenda.data[0] ? rAgenda.data[0].id : null;
-
-      if (rAgenda.ok && agendaId) {
-        resultados.agenda.sucesso++;
-        resultados.agenda.detalhes.push({
-          pcod: reg.pcod,
-          nome: pacienteNome,
-          data: dataFormatada,
-          status: 'Inserido com sucesso'
-        });
-
-        // ─── Inserir na tabela ATENDIMENTOS ─────
-        const atendimentoPayload = {
-          agenda_id: agendaId,
-          paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
-          data_atendimento: dataFormatada,
-          tipo_consulta_nome: reg.consulta || 'CONSULTA',
-          medico_inicio_nome: reg.medico || 'Dr. Francesco Zanotto',
-          medico_fim_nome: 'Dr. Francesco Zanotto',
-          bloco1_texto: reg.obs || '',
-          bloco2_texto: reg.convenio || '',
-          status: 'ENCERRADO'
+        const resultados = {
+            agenda: { sucesso: 0, erro: 0, detalhes: [] },
+            atendimentos: { sucesso: 0, erro: 0, detalhes: [] }
         };
 
-        const rAtend = await sb('atendimentos', 'POST', atendimentoPayload, { 'Prefer': 'return=representation' });
+        for (const reg of registros) {
+            try {
+                // ─── Buscar nome do paciente ─────
+                let pacienteNome = '';
+                if (reg.pcod) {
+                    // Nota: Certifique-se que a função 'sb' está disponível no escopo
+                    const rPac = await sb(`pacientes?pcod=eq.${reg.pcod}&select=Nome`);
+                    pacienteNome = rPac.ok && rPac.data && rPac.data[0] 
+                        ? rPac.data[0].Nome 
+                        : `Paciente #${reg.pcod}`;
+                }
 
-        if (rAtend.ok) {
-          resultados.atendimentos.sucesso++;
-        } else {
-          resultados.atendimentos.erro++;
-          resultados.atendimentos.detalhes.push({
-            pcod: reg.pcod,
-            status: 'Erro ao inserir atendimento'
-          });
+                // ─── Converter data (Tratamento robusto) ─────
+                let dataFormatada = '';
+                if (reg.data) {
+                    const partes = String(reg.data).split('/');
+                    if (partes.length === 3) {
+                        const [dia, mes, ano] = partes;
+                        dataFormatada = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+                    }
+                }
+
+                if (!dataFormatada || dataFormatada.includes('undefined')) {
+                    resultados.agenda.erro++;
+                    resultados.agenda.detalhes.push({ pcod: reg.pcod, status: 'Data inválida ou vazia' });
+                    continue;
+                }
+
+                // ─── Inserir na tabela AGENDA ─────
+                const agendaPayload = {
+                    id_profissional: 1,
+                    data_agenda: dataFormatada,
+                    paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
+                    paciente_nome: pacienteNome,
+                    hora_agenda: '12:00',
+                    tipo: reg.consulta || 'CONSULTA',
+                    modalidade: 'PRESENCIAL',
+                    status: 'ATENDIDO',
+                    convenio: reg.convenio || '',
+                    observacao: reg.obs || '',
+                    is_encaixe: false,
+                    is_bloqueado: false
+                };
+
+                const rAgenda = await sb('agenda', 'POST', agendaPayload, { 'Prefer': 'return=representation' });
+                const agendaId = rAgenda.ok && rAgenda.data && rAgenda.data[0] ? rAgenda.data[0].id : null;
+
+                if (rAgenda.ok && agendaId) {
+                    resultados.agenda.sucesso++;
+                    
+                    // ─── Inserir na tabela ATENDIMENTOS ─────
+                    const atendimentoPayload = {
+                        agenda_id: agendaId,
+                        paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
+                        data_atendimento: dataFormatada,
+                        tipo_consulta_nome: reg.consulta || 'CONSULTA',
+                        medico_inicio_nome: reg.medico || 'Dr. Francesco Zanotto',
+                        medico_fim_nome: 'Dr. Francesco Zanotto',
+                        bloco1_texto: reg.obs || '',
+                        bloco2_texto: reg.convenio || '',
+                        status: 'ENCERRADO'
+                    };
+
+                    const rAtend = await sb('atendimentos', 'POST', atendimentoPayload);
+
+                    if (rAtend.ok) {
+                        resultados.atendimentos.sucesso++;
+                    } else {
+                        resultados.atendimentos.erro++;
+                    }
+                } else {
+                    resultados.agenda.erro++;
+                    resultados.agenda.detalhes.push({ pcod: reg.pcod, status: 'Erro ao inserir na tabela agenda' });
+                }
+            } catch (innerError) {
+                console.error('Erro no loop:', innerError);
+                resultados.agenda.erro++;
+            }
         }
-      } else {
-        resultados.agenda.erro++;
-        resultados.agenda.detalhes.push({
-          pcod: reg.pcod,
-          status: 'Erro ao inserir agenda'
-        });
-      }
-    } catch (e) {
-      resultados.agenda.erro++;
-      resultados.atendimentos.erro++;
-      console.error('Erro ao processar registro:', e);
-    }
-  }
 
-  return res.status(200).json({
-    sucesso: true,
-    message: 'Importação concluída',
-    resultados
-  });
+        return res.status(200).json({
+            sucesso: true,
+            message: 'Importação concluída',
+            resultados
+        });
+
+    } catch (e) {
+        console.error('Erro fatal na importação:', e);
+        // Correção 3: Garante que o erro retorne como JSON e não trave a IA
+        return res.status(500).json({ sucesso: false, erro: 'Erro interno no servidor: ' + e.message });
+    }
 }
