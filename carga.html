@@ -104,219 +104,220 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-let dadosCarregados = [];
+(function() {
+  let dadosCarregados = [];
 
-async function carregaArquivo() {
-  const arquivo = document.getElementById('arquivoUpload').files[0];
-  if (!arquivo) return;
+  window.carregaArquivo = async function() {
+    const arquivo = document.getElementById('arquivoUpload').files[0];
+    if (!arquivo) return;
 
-  const leitor = new FileReader();
-  
-  leitor.onload = function(e) {
-    try {
-      let dados = [];
+    const leitor = new FileReader();
+    
+    leitor.onload = function(e) {
+      try {
+        let dados = [];
 
-      if (arquivo.name.endsWith('.csv')) {
-        const csv = e.target.result;
-        const linhas = csv.split('\n');
-        const cabecalho = linhas[0].split(',').map(c => c.trim().toLowerCase());
-        
-        for (let i = 1; i < linhas.length; i++) {
-          if (!linhas[i].trim()) continue;
-          const valores = linhas[i].split(',').map(v => v.trim());
-          const obj = {};
-          cabecalho.forEach((col, idx) => {
-            obj[col] = valores[idx] || '';
-          });
-          dados.push(obj);
+        if (arquivo.name.endsWith('.csv')) {
+          const csv = e.target.result;
+          const linhas = csv.split('\n');
+          const cabecalho = linhas[0].split(',').map(c => c.trim().toLowerCase());
+          
+          for (let i = 1; i < linhas.length; i++) {
+            if (!linhas[i].trim()) continue;
+            const valores = linhas[i].split(',').map(v => v.trim());
+            const obj = {};
+            cabecalho.forEach((col, idx) => {
+              obj[col] = valores[idx] || '';
+            });
+            dados.push(obj);
+          }
+        } else {
+          const workbook = XLSX.read(e.target.result, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          dados = XLSX.utils.sheet_to_json(worksheet);
         }
-      } else {
-        const workbook = XLSX.read(e.target.result, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        dados = XLSX.utils.sheet_to_json(worksheet);
+
+        dadosCarregados = dados.map(reg => ({
+          data: reg.data || reg.DATA || '',
+          pcod: reg.pcod || reg.PCOD || '',
+          consulta: reg.consulta || reg.CONSULTA || '',
+          medico: reg.medico || reg.MEDICO || '',
+          convenio: reg.convenio || reg.CONVENIO || '',
+          obs: reg.obs || reg.OBS || ''
+        }));
+
+        window.mostrarPreview(dadosCarregados);
+        
+        document.getElementById('previewContainer').classList.remove('d-none');
+        document.getElementById('btnLimpar').disabled = false;
+        document.getElementById('btnImportar').disabled = false;
+        document.getElementById('emptyState').classList.add('d-none');
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Arquivo carregado!',
+          text: `${dadosCarregados.length} registros encontrados`,
+          timer: 1500,
+          showConfirmButton: false
+        });
+
+      } catch (erro) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro ao processar arquivo',
+          text: erro.message
+        });
       }
+    };
 
-      dadosCarregados = dados.map(reg => ({
-        data: reg.data || reg.DATA || '',
-        pcod: reg.pcod || reg.PCOD || '',
-        consulta: reg.consulta || reg.CONSULTA || '',
-        medico: reg.medico || reg.MEDICO || '',
-        convenio: reg.convenio || reg.CONVENIO || '',
-        obs: reg.obs || reg.OBS || ''
-      }));
+    leitor.readAsArrayBuffer(arquivo);
+  };
 
-      mostrarPreview(dadosCarregados);
-      
-      document.getElementById('previewContainer').classList.remove('d-none');
-      document.getElementById('btnLimpar').disabled = false;
-      document.getElementById('btnImportar').disabled = false;
-      document.getElementById('emptyState').classList.add('d-none');
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Arquivo carregado!',
-        text: `${dadosCarregados.length} registros encontrados`,
-        timer: 1500,
-        showConfirmButton: false
-      });
+  window.mostrarPreview = function(dados) {
+    const headerRow = document.getElementById('headerRow');
+    const bodyPreview = document.getElementById('bodyPreview');
 
-    } catch (erro) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erro ao processar arquivo',
-        text: erro.message
-      });
+    headerRow.innerHTML = `
+      <th class="ps-2">DATA</th>
+      <th>PCOD</th>
+      <th>CONSULTA</th>
+      <th>MÉDICO</th>
+      <th>CONVÊNIO</th>
+      <th>OBS</th>
+    `;
+
+    bodyPreview.innerHTML = '';
+    dados.slice(0, 10).forEach(reg => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ps-2 small">${reg.data}</td>
+        <td class="small">${reg.pcod}</td>
+        <td class="small">${reg.consulta}</td>
+        <td class="small">${reg.medico}</td>
+        <td class="small">${reg.convenio}</td>
+        <td class="small text-truncate" title="${reg.obs}">${reg.obs}</td>
+      `;
+      bodyPreview.appendChild(tr);
+    });
+
+    if (dados.length > 10) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="6" class="text-center text-muted small">... e ${dados.length - 10} registros mais</td>`;
+      bodyPreview.appendChild(tr);
     }
   };
 
-  leitor.readAsArrayBuffer(arquivo);
-}
+  window.importarDados = function() {
+    if (dadosCarregados.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Nenhum dado carregado',
+        text: 'Por favor, selecione um arquivo primeiro'
+      });
+      return;
+    }
 
-function mostrarPreview(dados) {
-  const headerRow = document.getElementById('headerRow');
-  const bodyPreview = document.getElementById('bodyPreview');
-
-  headerRow.innerHTML = `
-    <th class="ps-2">DATA</th>
-    <th>PCOD</th>
-    <th>CONSULTA</th>
-    <th>MÉDICO</th>
-    <th>CONVÊNIO</th>
-    <th>OBS</th>
-  `;
-
-  bodyPreview.innerHTML = '';
-  dados.slice(0, 10).forEach(reg => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="ps-2 small">${reg.data}</td>
-      <td class="small">${reg.pcod}</td>
-      <td class="small">${reg.consulta}</td>
-      <td class="small">${reg.medico}</td>
-      <td class="small">${reg.convenio}</td>
-      <td class="small text-truncate" title="${reg.obs}">${reg.obs}</td>
-    `;
-    bodyPreview.appendChild(tr);
-  });
-
-  if (dados.length > 10) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" class="text-center text-muted small">... e ${dados.length - 10} registros mais</td>`;
-    bodyPreview.appendChild(tr);
-  }
-}
-
-async function importarDados() {
-  if (dadosCarregados.length === 0) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Nenhum dado carregado',
-      text: 'Por favor, selecione um arquivo primeiro'
-    });
-    return;
-  }
-
-  const invalidos = dadosCarregados.filter(reg => !reg.data || !reg.pcod);
-  if (invalidos.length > 0) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Dados inválidos',
-      text: `${invalidos.length} registro(s) sem DATA ou PCOD serão ignorados`,
-      showCancelButton: true,
-      confirmButtonText: 'Continuar',
-      cancelButtonText: 'Cancelar'
-    }).then(result => {
-      if (!result.isConfirmed) return;
+    const invalidos = dadosCarregados.filter(reg => !reg.data || !reg.pcod);
+    if (invalidos.length > 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Dados inválidos',
+        text: `${invalidos.length} registro(s) sem DATA ou PCOD serão ignorados`,
+        showCancelButton: true,
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar'
+      }).then(result => {
+        if (!result.isConfirmed) return;
+        _executarImportacao();
+      });
+    } else {
       _executarImportacao();
+    }
+  };
+
+  function _executarImportacao() {
+    const loading = Swal.fire({
+      title: 'Importando...',
+      html: '<div class="spinner-border text-info" role="status"></div>',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
     });
-  } else {
-    _executarImportacao();
-  }
-}
 
-async function _executarImportacao() {
-  const loading = Swal.fire({
-    title: 'Importando...',
-    html: '<div class="spinner-border text-info" role="status"></div>',
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading()
-  });
-
-  try {
-    // Chama o endpoint integrado no config_atendimento.js
-    const resposta = await fetch('/api/config_atendimento?action=importar_planilha', {
+    fetch('/api/config_atendimento?action=importar_planilha', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ registros: dadosCarregados })
-    });
-
-    const resultado = await resposta.json();
-
-    if (resultado.sucesso) {
-      loading.close();
-      mostrarResultado(resultado.resultados);
-    } else {
+    })
+    .then(resposta => resposta.json())
+    .then(resultado => {
+      if (resultado.sucesso) {
+        loading.close();
+        window.mostrarResultado(resultado.resultados);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro na importação',
+          text: resultado.erro
+        });
+      }
+    })
+    .catch(erro => {
       Swal.fire({
         icon: 'error',
-        title: 'Erro na importação',
-        text: resultado.erro
+        title: 'Erro na conexão',
+        text: erro.message
       });
-    }
-  } catch (erro) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Erro na conexão',
-      text: erro.message
     });
   }
-}
 
-function mostrarResultado(resultados) {
-  const { agenda, atendimentos } = resultados;
+  window.mostrarResultado = function(resultados) {
+    const { agenda, atendimentos } = resultados;
 
-  document.getElementById('resultContainer').classList.remove('d-none');
-  document.getElementById('emptyState').classList.add('d-none');
+    document.getElementById('resultContainer').classList.remove('d-none');
+    document.getElementById('emptyState').classList.add('d-none');
 
-  document.getElementById('agendaSucesso').textContent = agenda.sucesso;
-  document.getElementById('agendaErro').textContent = agenda.erro;
-  document.getElementById('atendSucesso').textContent = atendimentos.sucesso;
-  document.getElementById('atendErro').textContent = atendimentos.erro;
+    document.getElementById('agendaSucesso').textContent = agenda.sucesso;
+    document.getElementById('agendaErro').textContent = agenda.erro;
+    document.getElementById('atendSucesso').textContent = atendimentos.sucesso;
+    document.getElementById('atendErro').textContent = atendimentos.erro;
 
-  const alertClass = agenda.erro === 0 && atendimentos.erro === 0 ? 'alert-success' : 'alert-warning';
-  const alertText = agenda.erro === 0 && atendimentos.erro === 0 
-    ? '✓ Importação concluída com sucesso!'
-    : '⚠ Importação concluída com alguns erros';
-  
-  document.getElementById('resultAlert').className = `alert ${alertClass}`;
-  document.getElementById('resultAlert').textContent = alertText;
+    const alertClass = agenda.erro === 0 && atendimentos.erro === 0 ? 'alert-success' : 'alert-warning';
+    const alertText = agenda.erro === 0 && atendimentos.erro === 0 
+      ? '✓ Importação concluída com sucesso!'
+      : '⚠ Importação concluída com alguns erros';
+    
+    document.getElementById('resultAlert').className = `alert ${alertClass}`;
+    document.getElementById('resultAlert').textContent = alertText;
 
-  let detalhes = '<ul class="list-unstyled small">';
-  agenda.detalhes.forEach(d => {
-    detalhes += `<li><i class="bi bi-${d.status.includes('sucesso') ? 'check-circle text-success' : 'exclamation-circle text-danger'}"></i> PCOD ${d.pcod}: ${d.status}</li>`;
-  });
-  detalhes += '</ul>';
+    let detalhes = '<ul class="list-unstyled small">';
+    agenda.detalhes.forEach(d => {
+      detalhes += `<li><i class="bi bi-${d.status.includes('sucesso') ? 'check-circle text-success' : 'exclamation-circle text-danger'}"></i> PCOD ${d.pcod}: ${d.status}</li>`;
+    });
+    detalhes += '</ul>';
 
-  document.getElementById('detalhesTexto').innerHTML = detalhes;
+    document.getElementById('detalhesTexto').innerHTML = detalhes;
 
-  Swal.fire({
-    icon: agenda.erro === 0 ? 'success' : 'info',
-    title: 'Importação finalizada',
-    text: `Agendas: ${agenda.sucesso} OK, ${agenda.erro} erros | Atendimentos: ${atendimentos.sucesso} OK, ${atendimentos.erro} erros`
-  });
-}
+    Swal.fire({
+      icon: agenda.erro === 0 ? 'success' : 'info',
+      title: 'Importação finalizada',
+      text: `Agendas: ${agenda.sucesso} OK, ${agenda.erro} erros | Atendimentos: ${atendimentos.sucesso} OK, ${atendimentos.erro} erros`
+    });
+  };
 
-function limparArquivo() {
-  document.getElementById('arquivoUpload').value = '';
-  document.getElementById('previewContainer').classList.add('d-none');
-  document.getElementById('resultContainer').classList.add('d-none');
-  document.getElementById('emptyState').classList.remove('d-none');
-  document.getElementById('btnLimpar').disabled = true;
-  document.getElementById('btnImportar').disabled = true;
-  dadosCarregados = [];
-}
+  window.limparArquivo = function() {
+    document.getElementById('arquivoUpload').value = '';
+    document.getElementById('previewContainer').classList.add('d-none');
+    document.getElementById('resultContainer').classList.add('d-none');
+    document.getElementById('emptyState').classList.remove('d-none');
+    document.getElementById('btnLimpar').disabled = true;
+    document.getElementById('btnImportar').disabled = true;
+    dadosCarregados = [];
+  };
+
+})();
 </script>
