@@ -332,7 +332,9 @@
           </div>
           <div class="col-md-6">
             <label class="form-label small fw-bold">Convênio</label>
-            <input type="text" class="form-control form-control-sm" id="agConvenio" placeholder="Particular, Unimed...">
+            <select class="form-select form-select-sm" id="agConvenio">
+              <option value="">Selecione...</option>
+            </select>
           </div>
 
           <!-- Obs -->
@@ -493,7 +495,9 @@
           </div>
           <div class="col-md-6">
             <label class="form-label small fw-bold">Convênio</label>
-            <input type="text" class="form-control form-control-sm" id="agEditConvenio" placeholder="Particular, Unimed...">
+            <select class="form-select form-select-sm" id="agEditConvenio">
+              <option value="">Selecione...</option>
+            </select>
           </div>
           <!-- Obs -->
           <div class="col-12">
@@ -556,7 +560,9 @@
           </div>
           <div class="col-12">
             <label class="form-label small fw-bold">Convênio</label>
-            <input type="text" class="form-control form-control-sm" id="cad1vConvenio" placeholder="Particular, Unimed...">
+            <select class="form-select form-select-sm" id="cad1vConvenio">
+              <option value="">Selecione...</option>
+            </select>
           </div>
         </div>
         <div id="cad1vMsg" class="mt-2 d-none"></div>
@@ -1095,7 +1101,7 @@ AG.abrirEditar = function(event, id) {
   document.getElementById('agEditData').value = ag.data_agenda||document.getElementById('agData').value;
   document.getElementById('agEditTipo').value = ag.tipo||'CONSULTA';
   document.getElementById('agEditTel').value  = ag.telefone_whatsapp||'';
-  document.getElementById('agEditConvenio').value = ag.convenio||'';
+  _agCarregarConveniosSelect('agEditConvenio', ag.convenio||'');
   document.getElementById('agEditObs').value  = ag.observacao||'';
 
   // Modalidade
@@ -1176,6 +1182,28 @@ async function agConfirmarEditar() {
 }
 window.agConfirmarEditar = agConfirmarEditar;
 
+// ── Carrega convenios no select do modal ─────────────────────────
+var _agConvenioCache = null;
+async function _agCarregarConveniosSelect(selectId, valorSelecionado) {
+  var sel = document.getElementById(selectId);
+  if(!sel) return;
+  try {
+    if(!_agConvenioCache) {
+      var r = await fetch('/api/convenios');
+      var j = await r.json();
+      _agConvenioCache = (j.sucesso && j.dados) ? j.dados : [];
+    }
+    sel.innerHTML = '<option value="">Selecione...</option>';
+    _agConvenioCache.forEach(function(c) {
+      var opt = document.createElement('option');
+      opt.value = c.CONVENIO;
+      opt.textContent = c.CONVENIO;
+      if(valorSelecionado && c.CONVENIO.toUpperCase() === String(valorSelecionado).toUpperCase()) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error('Erro convenios:', e); }
+}
+
 // ── Modal Agendamento ────────────────────────────────────────────
 AG.abrirModalAg = function(hora) {
   AG.horaSel = hora;
@@ -1185,12 +1213,13 @@ AG.abrirModalAg = function(hora) {
   document.getElementById('agPacId').value       = '';
   document.getElementById('agPacTel').value      = '';
   document.getElementById('agTelefone').value    = '';
-  document.getElementById('agConvenio').value    = '';
+  document.getElementById('agConvenio').selectedIndex = 0;
   document.getElementById('agObs').value         = '';
   document.getElementById('agModP').checked      = true;
   document.getElementById('agTipo').value        = 'CONSULTA';
   document.getElementById('agInfoPac').classList.add('d-none');
   document.getElementById('agDropdownBusca').style.display = 'none';
+  _agCarregarConveniosSelect('agConvenio');
   abrirModal('agModalAg');
 };
 window.abrirModalAgendamento = AG.abrirModalAg; // alias
@@ -1268,7 +1297,15 @@ window._agSelecionarPac = function(p) {
   document.getElementById('agPacId').value     = p.pcod||'';
   document.getElementById('agPacTel').value    = tel;
   document.getElementById('agTelefone').value  = tel;
-  if(conv) document.getElementById('agConvenio').value = conv;
+  // Seleciona o convênio do paciente no select
+  var convSel = document.getElementById('agConvenio');
+  if(convSel && conv) {
+    // Tenta encontrar por nome (texto) ou valor
+    var opt = Array.from(convSel.options).find(function(o){
+      return o.textContent.trim().toUpperCase() === conv.toUpperCase() || o.value === conv;
+    });
+    if(opt) convSel.value = opt.value;
+  }
   document.getElementById('agTagNome').textContent = p.Nome||'';
   document.getElementById('agTagDoc').textContent  = p.Documento||'';
   document.getElementById('agInfoPac').classList.remove('d-none');
@@ -1370,7 +1407,7 @@ AG.iniciarAtendimento = function(id) {
     // Pré-preenche o nome no modal
     document.getElementById('cad1vNome').value    = ag.paciente_nome || '';
     document.getElementById('cad1vCel').value     = ag.telefone_whatsapp || '';
-    document.getElementById('cad1vConvenio').value= ag.convenio || '';
+    _agCarregarConveniosSelect('cad1vConvenio', ag.convenio || '');
     document.getElementById('cad1vCPF').value     = '';
     document.getElementById('cad1vNasc').value    = '';
     document.getElementById('cad1vSexo').value    = '';
