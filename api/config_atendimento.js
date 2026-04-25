@@ -173,9 +173,10 @@ if (action === 'config' && query.id_profissional) {
 
 
 // ─── CARGA DE DADOS (Importação de Planilhas) ────────────────────
+// ─── CARGA DE DADOS (Importação de Planilhas) ────────────────────
 if (method === 'POST' && action === 'importar_planilha') {
     try {
-        // Correção 1: Garantir que o body seja tratado corretamente
+        // Garante que o body seja tratado corretamente, independente do formato enviado
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
         const { registros } = body;
 
@@ -190,37 +191,43 @@ if (method === 'POST' && action === 'importar_planilha') {
 
         for (const reg of registros) {
             try {
-                // ─── Buscar nome do paciente ─────
+                // 1. Tratamento do PCOD (Garante que seja um número limpo)
+                const pcodNumerico = reg.pcod ? parseInt(String(reg.pcod).replace(/\D/g, '')) : null;
+
+                // 2. Buscar nome do paciente no banco de dados
                 let pacienteNome = '';
-                if (reg.pcod) {
-                    // Nota: Certifique-se que a função 'sb' está disponível no escopo
-                    const rPac = await sb(`pacientes?pcod=eq.${reg.pcod}&select=Nome`);
+                if (pcodNumerico) {
+                    const rPac = await sb(`pacientes?pcod=eq.${pcodNumerico}&select=Nome`);
                     pacienteNome = rPac.ok && rPac.data && rPac.data[0] 
                         ? rPac.data[0].Nome 
-                        : `Paciente #${reg.pcod}`;
+                        : `Paciente #${pcodNumerico}`;
+                } else {
+                    pacienteNome = 'Paciente não identificado';
                 }
 
-                // ─── Converter data (Tratamento robusto) ─────
+                // 3. Conversão de data (dd/mm/yyyy -> yyyy-mm-dd)
                 let dataFormatada = '';
                 if (reg.data) {
                     const partes = String(reg.data).split('/');
                     if (partes.length === 3) {
                         const [dia, mes, ano] = partes;
+                        // Garante o formato ISO para o banco de dados
                         dataFormatada = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                     }
                 }
 
-                if (!dataFormatada || dataFormatada.includes('undefined')) {
+                // Validação de segurança para a data
+                if (!dataFormatada || dataFormatada.includes('NaN') || dataFormatada.includes('undefined')) {
                     resultados.agenda.erro++;
                     resultados.agenda.detalhes.push({ pcod: reg.pcod, status: 'Data inválida ou vazia' });
                     continue;
                 }
 
-                // ─── Inserir na tabela AGENDA ─────
+                // 4. Inserir na tabela AGENDA
                 const agendaPayload = {
                     id_profissional: 1,
                     data_agenda: dataFormatada,
-                    paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
+                    paciente_id: pcodNumerico,
                     paciente_nome: pacienteNome,
                     hora_agenda: '12:00',
                     tipo: reg.consulta || 'CONSULTA',
@@ -232,16 +239,17 @@ if (method === 'POST' && action === 'importar_planilha') {
                     is_bloqueado: false
                 };
 
+                // Executa a inserção na agenda e retorna o ID criado
                 const rAgenda = await sb('agenda', 'POST', agendaPayload, { 'Prefer': 'return=representation' });
                 const agendaId = rAgenda.ok && rAgenda.data && rAgenda.data[0] ? rAgenda.data[0].id : null;
 
                 if (rAgenda.ok && agendaId) {
                     resultados.agenda.sucesso++;
                     
-                    // ─── Inserir na tabela ATENDIMENTOS ─────
+                    // 5. Inserir na tabela ATENDIMENTOS vinculando ao ID da agenda
                     const atendimentoPayload = {
                         agenda_id: agendaId,
-                        paciente_id: reg.pcod ? parseInt(reg.pcod) : null,
+                        paciente_id: pcodNumerico,
                         data_atendimento: dataFormatada,
                         tipo_consulta_nome: reg.consulta || 'CONSULTA',
                         medico_inicio_nome: reg.medico || 'Dr. Francesco Zanotto',
@@ -257,26 +265,30 @@ if (method === 'POST' && action === 'importar_planilha') {
                         resultados.atendimentos.sucesso++;
                     } else {
                         resultados.atendimentos.erro++;
+                        console.error(`Erro ao criar atendimento para PCOD ${pcodNumerico}:`, rAtend.statusText);
                     }
                 } else {
                     resultados.agenda.erro++;
-                    resultados.agenda.detalhes.push({ pcod: reg.pcod, status: 'Erro ao inserir na tabela agenda' });
+                    resultados.agenda.detalhes.push({ pcod: reg.pcod, status: 'Erro ao inserir na tabela agenda: ' + (rAgenda.statusText || 'Erro desconhecido') });
                 }
+
             } catch (innerError) {
-                console.error('Erro no loop:', innerError);
+                console.error('Erro no processamento da linha:', innerError);
                 resultados.agenda.erro++;
             }
         }
 
         return res.status(200).json({
             sucesso: true,
-            message: 'Importação concluída',
+            message: 'Processamento concluído',
             resultados
         });
 
     } catch (e) {
         console.error('Erro fatal na importação:', e);
-        // Correção 3: Garante que o erro retorne como JSON e não trave a IA
-        return res.status(500).json({ sucesso: false, erro: 'Erro interno no servidor: ' + e.message });
+        return res.status(500).json({ 
+            sucesso: false, 
+            erro: 'Falha interna no processamento da planilha: ' + e.message 
+        });
     }
 }
