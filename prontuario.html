@@ -156,12 +156,23 @@ document.addEventListener('click', function(e){
 window.prontBuscar = async function() {
   var v = document.getElementById('prontBuscaInput').value.trim();
   if(!v) return;
-  if(!isNaN(v)) { prontSelecionarPac(parseInt(v)); return; }
+  // PCOD numérico
+  if(/^\d+$/.test(v) && v.length < 8) { prontSelecionarPac(parseInt(v)); return; }
   try {
+    // Tenta buscar diretamente
     var r = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(v));
     var lista = await r.json();
-    if(Array.isArray(lista)&&lista.length) prontSelecionarPac(lista[0].pcod);
-    else Swal.fire({icon:'info',title:'Não encontrado',confirmButtonColor:'#0dcaf0'});
+    if(Array.isArray(lista) && lista.length) { prontSelecionarPac(lista[0].pcod); return; }
+
+    // Se não encontrou e parece CPF (tem dígitos), tenta sem pontuação
+    var limpo = v.replace(/[.\-\/\s]/g, '');
+    if(limpo !== v && limpo.length >= 6) {
+      var r2 = await fetch('/api/atestados?action=buscar_paciente&termo='+encodeURIComponent(limpo));
+      var lista2 = await r2.json();
+      if(Array.isArray(lista2) && lista2.length) { prontSelecionarPac(lista2[0].pcod); return; }
+    }
+    Swal.fire({icon:'info', title:'Não encontrado',
+      text:'Tente pelo nome, PCOD ou CPF sem formatação.',confirmButtonColor:'#0dcaf0'});
   } catch(e){}
 };
 
@@ -263,7 +274,7 @@ function _renderConsultas(lista) {
         + (horaIni?'<span class="text-muted" style="font-size:.75rem;white-space:nowrap">'+horaIni+(horaFim?' – '+horaFim:'')+(duracao?' ('+duracao+')':'')+'</span>':'')
         + '<div class="pront-resumo">'
           + '<div class="r-texto">'
-            + (c.tipo_consulta_nome?'<span class="pront-tipo-badge me-2" style="background:#f0e6ff;color:#6f42c1;border-color:#6f42c1">'+esc(c.tipo_consulta_nome)+'</span>':'')
+            + _prontTipoBadge(c)
             + '<span>'+esc(resumoTexto)+'</span>'
           + '</div>'
           + (tags?'<div class="r-tags">'+tags+'</div>':'')
@@ -278,6 +289,27 @@ function _renderConsultas(lista) {
 
     container.appendChild(div);
   });
+}
+
+/* Badge do tipo de consulta (agenda tipo + config tipo) */
+function _prontTipoBadge(c) {
+  var html = '';
+  // Tipo da agenda (CONSULTA, RETORNO, PRIMEIRA_CONSULTA, PROCEDIMENTO)
+  var tipoAg = (c.tipo_agenda||'').toUpperCase();
+  var CORES = {
+    'CONSULTA':          'background:#dbeafe;color:#1d4ed8;border-color:#93c5fd',
+    'RETORNO':           'background:#dcfce7;color:#15803d;border-color:#86efac',
+    'PRIMEIRA_CONSULTA': 'background:#fff7ed;color:#c2410c;border-color:#fed7aa',
+    'PROCEDIMENTO':      'background:#f3e8ff;color:#7e22ce;border-color:#d8b4fe',
+  };
+  if(tipoAg && CORES[tipoAg]) {
+    html += '<span class="pront-tipo-badge me-1" style="'+CORES[tipoAg]+'">'+esc(tipoAg.replace(/_/g,' '))+'</span>';
+  }
+  // Tipo da configuração (ex: "CONSULTA PADRÃO", "PRIMEIRA CONSULTA (ZANOTTO)")
+  if(c.tipo_consulta_nome) {
+    html += '<span class="pront-tipo-badge me-2" style="background:#f0e6ff;color:#6f42c1;border-color:#6f42c1">'+esc(c.tipo_consulta_nome)+'</span>';
+  }
+  return html;
 }
 
 /* Extrai uma linha de resumo dos blocos */
