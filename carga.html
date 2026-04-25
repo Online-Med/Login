@@ -176,29 +176,41 @@
               });
               dados.push(obj);
             }
-          } else {
-            // Excel
-            if (typeof XLSX === 'undefined') {
-              alert('Erro: XLSX não foi carregado. Tente novamente.');
-              return;
-            }
-            
-            var workbook = XLSX.read(e.target.result, { type: 'array' });
-            var sheetName = workbook.SheetNames[0];
-            var worksheet = workbook.Sheets[sheetName];
-            dados = XLSX.utils.sheet_to_json(worksheet);
-          }
+       } else {
+    // Excel
+    if (typeof XLSX === 'undefined') {
+        alert('Erro: XLSX não foi carregado. Tente novamente.');
+        return;
+    }
+    
+    // ADICIONE { cellDates: true } para o XLSX tentar converter datas automaticamente
+    var workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+    var sheetName = workbook.SheetNames[0];
+    var worksheet = workbook.Sheets[sheetName];
+    
+    // Converte para JSON formatando as datas
+    dados = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'dd/mm/yyyy' });
+}
 
-          window._cargaApp.dadosCarregados = dados.map(function(reg) {
-            return {
-              data: reg.data || reg.DATA || '',
-              pcod: reg.pcod || reg.PCOD || '',
-              consulta: reg.consulta || reg.CONSULTA || '',
-              medico: reg.medico || reg.MEDICO || '',
-              convenio: reg.convenio || reg.CONVENIO || '',
-              obs: reg.obs || reg.OBS || ''
-            };
-          });
+// Logo abaixo, no map que organiza os dados, adicione esta função de limpeza:
+window._cargaApp.dadosCarregados = dados.map(function(reg) {
+    var dataBruta = reg.data || reg.DATA || '';
+    
+    // Se a data ainda vier como número do Excel (fallback), converte manualmente
+    if (!isNaN(dataBruta) && dataBruta !== '') {
+        var dataConvertida = new Date(Math.round((dataBruta - 25569) * 86400 * 1000));
+        dataBruta = dataConvertida.toLocaleDateString('pt-BR');
+    }
+
+    return {
+        data: dataBruta,
+        pcod: reg.pcod || reg.PCOD || '',
+        consulta: reg.consulta || reg.CONSULTA || '',
+        medico: reg.medico || reg.MEDICO || '',
+        convenio: reg.convenio || reg.CONVENIO || '',
+        obs: reg.obs || reg.OBS || ''
+    };
+});
 
           window.mostrarPreview(window._cargaApp.dadosCarregados);
           
