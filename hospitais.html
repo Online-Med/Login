@@ -143,22 +143,46 @@
   };
 
   // Carrega lista do servidor
-  H.carregarHospitais = function () {
-    var tbody = document.getElementById('tabelaHospitais');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
-    fetch('/api/hospitais')
-      .then(function (r) { return r.json(); })
-      .then(function (json) {
-        if (!json || !json.dados) { tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro ao carregar.</td></tr>'; return; }
-        H._lista = json.dados;
-        H._renderTabela();
-      })
-      .catch(function (err) {
-        console.error(err);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro ao carregar.</td></tr>';
+H.carregarHospitais = function () {
+  var tbody = document.getElementById('tabelaHospitais');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
+
+  // se tiver uma variável global com o e-mail do usuário, ajuste aqui:
+  // exemplo: window.__USER_EMAIL = 'seu@email';  -> só para teste
+  var userEmail = (window.__USER_EMAIL || window.USER_EMAIL || '').trim();
+
+  var headers = {};
+  if (userEmail) headers['x-user-email'] = userEmail;
+
+  console.log('[HOSP] fetching /api/hospitais, x-user-email present:', !!headers['x-user-email']);
+
+  fetch('/api/hospitais', { headers: headers })
+    .then(function (r) {
+      console.log('[HOSP] response status', r.status);
+      return r.text().then(function(t) {
+        // tenta parsear JSON, mas mostra o texto bruto primeiro
+        try { return { status: r.status, json: JSON.parse(t) }; }
+        catch(e) { return { status: r.status, text: t }; }
       });
-  };
+    })
+    .then(function (obj) {
+      console.log('[HOSP] fetch result:', obj);
+      // se não veio um JSON esperado
+      if (!obj || !obj.json || !obj.json.dados) {
+        var msg = (obj && obj.text) ? obj.text : (obj && obj.json ? JSON.stringify(obj.json) : 'Resposta inesperada');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro ao carregar: '+escapeHtml(String(msg).slice(0,200))+'</td></tr>';
+        return;
+      }
+      H._lista = obj.json.dados;
+      H._renderTabela();
+    })
+    .catch(function (err) {
+      console.error('[HOSP] fetch error', err);
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro de conexão: '+escapeHtml(err.message||err)+'</td></tr>';
+    });
+};
+  
 
   // Abrir modal novo
   H.novoHospital = function () {
