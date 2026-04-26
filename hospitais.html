@@ -16,7 +16,6 @@
   </div>
 </div>
 
-
 <div class="card shadow-sm mb-3">
   <div class="card-body p-0">
     <table class="table table-hover mb-0" style="font-size:.9rem">
@@ -35,9 +34,6 @@
     </table>
   </div>
 </div>
-
-
-
 
 <!-- Modal Hospital -->
 <div class="modal fade" id="modalHospital" tabindex="-1">
@@ -68,7 +64,7 @@
             <div class="col-12">
               <label class="form-label small fw-bold">Anexar documentos (PDF / DOC / DOCX) — opcionais</label>
               <input type="file" class="form-control form-control-sm" id="h_arquivos" multiple accept=".pdf,.doc,.docx">
-              <small class="text-muted">Selecione um ou mais arquivos e clique em salvar para enviar.</small>
+              <small class="text-muted">Selecione um ou mais arquivos e clique em salvar para enviar (apenas metadados serão gravados por enquanto).</small>
             </div>
 
             <div class="col-12">
@@ -108,7 +104,15 @@
     });
   }
 
-  // Namespace global
+  // Cabeçalhos padrão para chamadas API (inclui x-user-email se disponível)
+  function getApiHeaders(isJson) {
+    var headers = {};
+    if (isJson) headers['Content-Type'] = 'application/json';
+    var ue = (window.__USER_EMAIL || window.USER_EMAIL || '').trim();
+    if (ue) headers['x-user-email'] = ue;
+    return headers;
+  }
+
   window.HOSP = window.HOSP || {};
   var H = window.HOSP;
   H._lista = [];
@@ -142,49 +146,36 @@
     }).join('');
   };
 
-  // Carrega lista do servidor
-H.carregarHospitais = function () {
-  var tbody = document.getElementById('tabelaHospitais');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
+  // GET lista
+  H.carregarHospitais = function () {
+    var tbody = document.getElementById('tabelaHospitais');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
 
-  // se tiver uma variável global com o e-mail do usuário, ajuste aqui:
-  // exemplo: window.__USER_EMAIL = 'seu@email';  -> só para teste
-  var userEmail = (window.__USER_EMAIL || window.USER_EMAIL || '').trim();
+    var headers = getApiHeaders(true);
+    console.log('[HOSP] fetching /api/configuracoes?action=hospitais, x-user-email present:', !!headers['x-user-email']);
 
-  var headers = {};
-  if (userEmail) headers['x-user-email'] = userEmail;
-
-  console.log('[HOSP] fetching /api/hospitais, x-user-email present:', !!headers['x-user-email']);
-
-  fetch('/api/hospitais', { headers: headers })
-    .then(function (r) {
-      console.log('[HOSP] response status', r.status);
-      return r.text().then(function(t) {
-        // tenta parsear JSON, mas mostra o texto bruto primeiro
-        try { return { status: r.status, json: JSON.parse(t) }; }
-        catch(e) { return { status: r.status, text: t }; }
+    fetch('/api/configuracoes?action=hospitais', { headers: headers })
+      .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
+      .then(function (obj) {
+        console.log('[HOSP] response status', obj.status);
+        try {
+          var json = JSON.parse(obj.text);
+          if (!json || !json.dados) throw new Error('Resposta sem dados');
+          H._lista = json.dados;
+          H._renderTabela();
+        } catch (e) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro ao carregar: ' + escapeHtml(String(obj.text).slice(0,300)) + '</td></tr>';
+          console.error('[HOSP] parse/load error:', e, obj.text);
+        }
+      })
+      .catch(function (err) {
+        console.error('[HOSP] fetch error', err);
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro de conexão: ' + escapeHtml(err.message || err) + '</td></tr>';
       });
-    })
-    .then(function (obj) {
-      console.log('[HOSP] fetch result:', obj);
-      // se não veio um JSON esperado
-      if (!obj || !obj.json || !obj.json.dados) {
-        var msg = (obj && obj.text) ? obj.text : (obj && obj.json ? JSON.stringify(obj.json) : 'Resposta inesperada');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro ao carregar: '+escapeHtml(String(msg).slice(0,200))+'</td></tr>';
-        return;
-      }
-      H._lista = obj.json.dados;
-      H._renderTabela();
-    })
-    .catch(function (err) {
-      console.error('[HOSP] fetch error', err);
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro de conexão: '+escapeHtml(err.message||err)+'</td></tr>';
-    });
-};
-  
+  };
 
-  // Abrir modal novo
+  // Novo
   H.novoHospital = function () {
     document.getElementById('h_id').value = '';
     document.getElementById('h_nome').value = '';
@@ -196,21 +187,22 @@ H.carregarHospitais = function () {
     showModal('modalHospital');
   };
 
-  // Preenche modal para editar
+  // Editar
   H.editarHospital = function (id) {
     var h = (H._lista || []).find(function (x) { return x.id == id; });
-    if (h) {
-      fillModal(h);
-      showModal('modalHospital');
-      return;
-    }
-    fetch('/api/hospitais?id=' + encodeURIComponent(id))
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        var hosp = j && j.hospital ? j.hospital : (j && j.dados && j.dados[0] ? j.dados[0] : null);
-        if (!hosp) { alert('Hospital não encontrado'); return; }
-        fillModal(hosp);
-        showModal('modalHospital');
+    if (h) { fillModal(h); showModal('modalHospital'); return; }
+
+    var headers = getApiHeaders(true);
+    fetch('/api/configuracoes?action=hospitais&id=' + encodeURIComponent(id), { headers: headers })
+      .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
+      .then(function (obj) {
+        try {
+          var json = JSON.parse(obj.text);
+          var hosp = json && json.dados && json.dados[0] ? json.dados[0] : null;
+          if (!hosp) throw new Error('Hospital não encontrado');
+          fillModal(hosp);
+          showModal('modalHospital');
+        } catch (e) { alert('Erro ao carregar hospital: ' + (obj.text || e.message)); }
       }).catch(function (e) { console.error(e); alert('Erro ao carregar hospital'); });
 
     function fillModal(hosp) {
@@ -236,32 +228,51 @@ H.carregarHospitais = function () {
     if (btn) btn.disabled = true;
 
     var method = id ? 'PATCH' : 'POST';
-    var url = '/api/hospitais' + (id ? ('?id=' + encodeURIComponent(id)) : '');
+    var url = '/api/configuracoes?action=hospitais' + (id ? ('&id=' + encodeURIComponent(id)) : '');
 
     fetch(url, {
       method: method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: getApiHeaders(true),
       body: JSON.stringify(payload)
     })
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        if (!res || !res.sucesso) throw new Error(res && res.erro ? res.erro : 'Erro ao salvar');
-        var newId = id || res.id || (res.dados && res.dados[0] && res.dados[0].id);
-        var filesInput = document.getElementById('h_arquivos');
-        if (filesInput && filesInput.files && filesInput.files.length && newId) {
-          uploadAnexos(newId, filesInput.files).then(function () {
-            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo com anexos', timer: 1200, showConfirmButton: false });
-            hideModal('modalHospital'); H.carregarHospitais(); if (btn) btn.disabled = false;
-          }).catch(function (e) {
-            console.error(e);
-            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Salvo, mas erro no upload de anexos' });
-            hideModal('modalHospital'); H.carregarHospitais(); if (btn) btn.disabled = false;
-          });
-        } else {
-          if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo', timer: 900, showConfirmButton: false });
-          hideModal('modalHospital');
-          H.carregarHospitais();
+      .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
+      .then(function (obj) {
+        try {
+          var res = JSON.parse(obj.text);
+          if (!res || !res.sucesso) throw new Error(res && res.erro ? res.erro : 'Resposta de erro');
+          var newId = id || res.id || (res.dados && res.dados[0] && res.dados[0].id);
+          var filesInput = document.getElementById('h_arquivos');
+          if (filesInput && filesInput.files && filesInput.files.length && newId) {
+            var meta = Array.prototype.slice.call(filesInput.files).map(function (f) {
+              return { nome: f.name, url: '', content_type: f.type || '', size: f.size || 0 };
+            });
+            return fetch('/api/configuracoes?action=attachments&hospital_id=' + encodeURIComponent(newId), {
+              method: 'POST',
+              headers: getApiHeaders(true),
+              body: JSON.stringify({ anexos: meta })
+            }).then(function (r2) { return r2.text().then(function (t2) { return { status: r2.status, text: t2 }; }); })
+              .then(function (obj2) {
+                try {
+                  var j2 = JSON.parse(obj2.text);
+                  if (!j2 || !j2.sucesso) throw new Error(j2 && j2.erro ? j2.erro : obj2.text);
+                  if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo com anexos', timer: 1200, showConfirmButton: false });
+                  hideModal('modalHospital'); H.carregarHospitais(); if (btn) btn.disabled = false;
+                } catch (e) {
+                  console.error(e);
+                  if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Salvo, mas erro no upload de anexos' });
+                  hideModal('modalHospital'); H.carregarHospitais(); if (btn) btn.disabled = false;
+                }
+              });
+          } else {
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo', timer: 900, showConfirmButton: false });
+            hideModal('modalHospital');
+            H.carregarHospitais();
+            if (btn) btn.disabled = false;
+          }
+        } catch (e) {
+          console.error('[HOSP.salvar] parse/error', e, obj.text);
           if (btn) btn.disabled = false;
+          if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Erro ao salvar', text: String(obj.text).slice(0,1000) }); else alert('Erro: ' + (obj.text || e.message));
         }
       })
       .catch(function (err) {
@@ -275,16 +286,17 @@ H.carregarHospitais = function () {
   H.excluirHospital = function (id, nomeEscaped) {
     var nome = decodeURIComponent(nomeEscaped || '');
     var doDelete = function () {
-      fetch('/api/hospitais?id=' + encodeURIComponent(id), { method: 'DELETE' })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-          if (res && res.sucesso) {
-            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Excluído', timer: 900, showConfirmButton: false });
-            H.carregarHospitais();
-          } else throw new Error(res && res.erro ? res.erro : 'Não foi possível excluir');
-        }).catch(function (err) {
-          if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Erro', text: err.message || err }); else alert('Erro: ' + (err.message || err));
-        });
+      fetch('/api/configuracoes?action=hospitais&id=' + encodeURIComponent(id), { method: 'DELETE', headers: getApiHeaders(true) })
+        .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
+        .then(function (obj) {
+          try {
+            var res = JSON.parse(obj.text);
+            if (res && res.sucesso) {
+              if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Excluído', timer: 900, showConfirmButton: false });
+              H.carregarHospitais();
+            } else throw new Error(res && res.erro ? res.erro : obj.text);
+          } catch (e) { alert('Erro ao excluir: ' + (obj.text || e.message)); }
+        }).catch(function (e) { console.error(e); alert('Erro ao excluir'); });
     };
 
     if (typeof Swal !== 'undefined') {
@@ -301,19 +313,6 @@ H.carregarHospitais = function () {
       if (confirm('Excluir hospital "' + nome + '"?')) doDelete();
     }
   };
-
-  // Upload de anexos
-  function uploadAnexos(hospitalId, filesList) {
-    return new Promise(function (resolve, reject) {
-      var fd = new FormData();
-      for (var i = 0; i < filesList.length; i++) fd.append('files[]', filesList[i]);
-      var url = '/api/hospitais/attachments?hospital_id=' + encodeURIComponent(hospitalId);
-      fetch(url, { method: 'POST', body: fd })
-        .then(function (r) { return r.json(); })
-        .then(function (res) { if (res && res.sucesso) resolve(res.anexos || []); else reject(new Error(res && res.erro ? res.erro : 'Erro upload')); })
-        .catch(function (err) { reject(err); });
-    });
-  }
 
   // Renderiza anexos no modal
   function renderAnexos(anexos) {
@@ -341,44 +340,31 @@ H.carregarHospitais = function () {
         confirmButtonText: 'Excluir'
       }).then(function (r) {
         if (!r.isConfirmed) return;
-        fetch('/api/hospitais/attachments?id=' + encodeURIComponent(attachId), { method: 'DELETE' })
-          .then(function (rr) { return rr.json(); })
-          .then(function (res) {
-            if (res && res.sucesso) { Swal.fire({ icon: 'success', title: 'Anexo excluído', timer: 800, showConfirmButton: false }); H.carregarHospitais(); }
-            else throw new Error('Erro');
+        fetch('/api/configuracoes?action=attachments&id=' + encodeURIComponent(attachId), { method: 'DELETE', headers: getApiHeaders(true) })
+          .then(function (rr) { return rr.text().then(function (t) { return { status: rr.status, text: t }; }); })
+          .then(function (obj) {
+            try {
+              var res = JSON.parse(obj.text);
+              if (res && res.sucesso) { Swal.fire({ icon: 'success', title: 'Anexo excluído', timer: 800, showConfirmButton: false }); H.carregarHospitais(); }
+              else throw new Error(res && res.erro ? res.erro : obj.text);
+            } catch (e) { Swal.fire({ icon: 'error', title: 'Erro', text: obj.text || e.message }); }
           })
           .catch(function (e) { Swal.fire({ icon: 'error', title: 'Erro', text: e.message || e }); });
       });
     } else {
       if (!confirm('Excluir anexo?')) return;
-      fetch('/api/hospitais/attachments?id=' + encodeURIComponent(attachId), { method: 'DELETE' }).then(function () { H.carregarHospitais(); });
+      fetch('/api/configuracoes?action=attachments&id=' + encodeURIComponent(attachId), { method: 'DELETE', headers: getApiHeaders(true) }).then(function () { H.carregarHospitais(); });
     }
   };
 
   // Modal helpers (Bootstrap 5)
-  function showModal(id) {
-    var el = document.getElementById(id); if (!el) return;
-    var m = bootstrap.Modal.getOrCreateInstance(el); m.show();
-  }
-  function hideModal(id) {
-    var el = document.getElementById(id); if (!el) return;
-    var m = bootstrap.Modal.getInstance(el); if (m) m.hide();
-  }
+  function showModal(id) { var el = document.getElementById(id); if (!el) return; var m = bootstrap.Modal.getOrCreateInstance(el); m.show(); }
+  function hideModal(id) { var el = document.getElementById(id); if (!el) return; var m = bootstrap.Modal.getInstance(el); if (m) m.hide(); }
 
   // Init: carrega bibliotecas necessárias e lista
   loadSwalIfNeeded().finally(function () {
-    // carrega a lista quando DOM estiver pronto
     document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { H.carregarHospitais(); }, 80); });
   });
-
-
-  function getApiHeaders() {
-  const headers = { 'Content-Type': 'application/json' };
-  // se você tem a variável global com o email do usuário (setada no login), inclua:
-  const ue = window.__USER_EMAIL || window.USER_EMAIL || '';
-  if (ue) headers['x-user-email'] = ue;
-  return headers;
-}
 
 })();
 </script>
