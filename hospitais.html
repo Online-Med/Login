@@ -58,15 +58,15 @@
             </div>
             <div class="col-md-3">
               <label class="form-label small fw-bold">Endereço</label>
-              <input type="text" id="h_endereco" class="form-control form-control-sm" placeholder="Cidade - UF">
+              <input type="text" id="h_endereco" class="form-control form-control-sm" placeholder="Rua, Bairro, Cidade - UF">
             </div>
           </div>
 
           <hr>
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <h6 class="mb-0">Contatos</h6>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_contact_btn"><i class="bi bi-plus"></i> Adicionar</button>
+              <h6 class="mb-0">Contatos (local — nome — telefone)</h6>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_contact_btn"><i class="bi bi-plus"></i> Adicionar contato</button>
             </div>
             <div id="h_contacts" class="mt-2"></div>
           </div>
@@ -74,7 +74,7 @@
           <hr>
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <h6 class="mb-0">Itens de Anexo</h6>
+              <h6 class="mb-0">Itens de Anexo (ex.: "termo de cesaria")</h6>
               <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_attachment_item_btn"><i class="bi bi-plus"></i> Novo item</button>
             </div>
             <div id="h_attachment_items" class="mt-2"></div>
@@ -96,29 +96,31 @@
 (function () {
   'use strict';
 
-  // Utils
   function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function $(sel, ctx) { return (ctx||document).querySelector(sel); }
   function $all(sel, ctx) { return Array.from((ctx||document).querySelectorAll(sel)); }
 
-  function getApiHeaders() {
+  function getApiHeaders(isJson) {
+    var headers = {};
+    if (isJson) headers['Content-Type'] = 'application/json';
     var ue = (window.__USER_EMAIL || window.USER_EMAIL || '').trim();
-    return ue ? { 'x-user-email': ue } : {};
+    if (ue) headers['x-user-email'] = ue;
+    return headers;
   }
 
   window.HOSP = window.HOSP || {};
   var H = window.HOSP;
   H._lista = [];
-  H._files = {};
+  H._files = {}; 
   H._nextItemId = 1;
 
-  // --- Renderização e Carregamento ---
+  // --- TABELA ---
   H.carregarHospitais = function () {
     var tbody = $('#tabelaHospitais');
     if (!tbody) return;
-    var headers = getApiHeaders();
-    
-    fetch('/api/configuracoes?action=hospitais', { headers: headers })
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
+
+    fetch('/api/configuracoes?action=hospitais', { headers: getApiHeaders(true) })
       .then(r => r.json())
       .then(json => {
         H._lista = json.dados || [];
@@ -130,19 +132,28 @@
 
   H._renderTabela = function () {
     var tbody = $('#tabelaHospitais');
+    if (!H._lista.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4">Nenhum hospital cadastrado.</td></tr>';
+      return;
+    }
     tbody.innerHTML = H._lista.map(h => `
       <tr>
-        <td class="ps-3"><button class="btn btn-sm btn-outline-primary" onclick="HOSP.editarHospital(${h.id})"><i class="bi bi-pencil"></i></button></td>
-        <td>${escapeHtml(h.nome)}</td>
-        <td>${escapeHtml(h.telefones)}</td>
-        <td>${escapeHtml(h.endereco)}</td>
-        <td>${h.contatos ? h.contatos.length : 0}</td>
-        <td class="text-center">${h.anexos ? h.anexos.length : 0}</td>
+        <td class="ps-3 pe-1">
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-primary" onclick="HOSP.editarHospital(${h.id})"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="HOSP.excluirHospital(${h.id}, '${encodeURIComponent(h.nome)}')"><i class="bi bi-trash"></i></button>
+          </div>
+        </td>
+        <td class="align-middle">${escapeHtml(h.nome)}</td>
+        <td class="align-middle small text-muted">${escapeHtml(h.telefones)}</td>
+        <td class="align-middle small text-muted">${escapeHtml(h.endereco)}</td>
+        <td class="align-middle small text-muted"><span class="badge bg-secondary">${h.contatos ? h.contatos.length : 0}</span></td>
+        <td class="text-center align-middle"><span class="badge bg-secondary">${h.anexos ? h.anexos.length : 0}</span></td>
       </tr>
     `).join('');
   };
 
-  // --- Lógica de Salvamento com Segurança (Server-side Upload) ---
+  // --- SALVAR COM UPLOAD SEGURO ---
   H.salvarHospital = async function () {
     var btn = $('#h_btnSalvar');
     btn.disabled = true;
@@ -152,42 +163,44 @@
       var payload = {
         nome: $('#h_nome').value.trim(),
         telefones: $('#h_telefones').value.trim(),
-        endereco: $('#h_endereco').value.trim()
+        endereco: $('#h_endereco').value.trim(),
+        contatos: getContactsFromDOM()
       };
 
-      // 1. Salvar dados básicos do hospital
+      if (!payload.nome) throw new Error('O nome é obrigatório');
+
       var res = await fetch('/api/configuracoes?action=hospitais' + (id ? '&id='+id : ''), {
         method: id ? 'PATCH' : 'POST',
-        headers: { ...getApiHeaders(), 'Content-Type': 'application/json' },
+        headers: getApiHeaders(true),
         body: JSON.stringify(payload)
       }).then(r => r.json());
 
-      if (!res.sucesso) throw new Error(res.erro);
-      var hospitalId = id || res.id;
+      if (!res.sucesso) throw new Error(res.erro || 'Erro ao salvar');
+      var hospitalId = id || res.id || (res.dados && res.dados[0].id);
 
-      // 2. Upload de Arquivos via BACKEND (Protegendo as chaves)
+      // Upload de Arquivos via servidor (action=upload_anexo)
       var items = getAttachmentItemsFromDOM();
       for (var it of items) {
         var filesArr = H._files[it._id] || [];
         for (var fobj of filesArr) {
+          if (!fobj.file) continue; // ignora se já estava no banco e não mudou
+          
           var formData = new FormData();
           formData.append('file', fobj.file);
           formData.append('hospital_id', hospitalId);
           formData.append('titulo_item', it.title);
 
-          // Envia para a API do Vercel, que tem a chave do Supabase escondida no servidor
           await fetch('/api/configuracoes?action=upload_anexo', {
             method: 'POST',
-            headers: getApiHeaders(),
-            body: formData // Nota: FormData não precisa de Content-Type header manual
+            headers: getApiHeaders(false),
+            body: formData
           });
         }
       }
 
-      Swal.fire({ icon: 'success', title: 'Salvo com sucesso!', timer: 1500 });
-      bootstrap.Modal.getInstance($('#modalHospital')).hide();
+      Swal.fire({ icon: 'success', title: 'Salvo!', timer: 1500, showConfirmButton: false });
+      bootstrap.Modal.getOrCreateInstance($('#modalHospital')).hide();
       H.carregarHospitais();
-
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'Erro', text: err.message });
     } finally {
@@ -195,44 +208,126 @@
     }
   };
 
-  // --- Funções de UI para Contatos e Anexos (Simplificadas) ---
+  // --- AUXILIARES DE INTERFACE ---
+  function getContactsFromDOM() {
+    return $all('#h_contacts .contact-row').map(r => ({
+      local: r.querySelector('.contact-local').value.trim(),
+      nome: r.querySelector('.contact-name').value.trim(),
+      telefone: r.querySelector('.contact-phone').value.trim()
+    })).filter(c => c.local || c.nome || c.telefone);
+  }
+
   function getAttachmentItemsFromDOM() {
     return $all('#h_attachment_items .card').map(n => ({
       _id: n.dataset.itemId,
-      title: n.querySelector('.attachment-title').value
+      title: n.querySelector('.attachment-title').value.trim()
     }));
   }
 
   H.novoHospital = function() {
     $('#formHospital').reset();
     $('#h_id').value = '';
-    $('#h_contacts').innerHTML = '';
-    $('#h_attachment_items').innerHTML = '';
+    $('#h_contacts').innerHTML = '<div class="small text-muted">Nenhum contato.</div>';
+    $('#h_attachment_items').innerHTML = '<div class="small text-muted">Nenhum item.</div>';
     H._files = {};
-    new bootstrap.Modal($('#modalHospital')).show();
+    document.getElementById('modalHospitalTitulo').textContent = 'Novo Hospital';
+    bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
   };
 
-  // Delegação de eventos para botões dinâmicos
-  document.addEventListener('click', function(e) {
-    if (e.target.id === 'h_add_contact_btn') {
-       const div = document.createElement('div');
-       div.className = 'row g-2 mb-2 contact-row';
-       div.innerHTML = '<div class="col-4"><input class="form-control form-control-sm contact-local" placeholder="Local"></div><div class="col-4"><input class="form-control form-control-sm contact-name" placeholder="Nome"></div><div class="col-3"><input class="form-control form-control-sm contact-phone" placeholder="Tel"></div><div class="col-1"><button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.parentElement.remove()"><i class="bi bi-x"></i></button></div>';
-       $('#h_contacts').appendChild(div);
-    }
-    if (e.target.id === 'h_add_attachment_item_btn') {
-       const itemId = 'item_' + Date.now();
-       const div = document.createElement('div');
-       div.className = 'card mb-2';
-       div.dataset.itemId = itemId;
-       div.innerHTML = `<div class="card-body py-2"><div class="d-flex gap-2"><input class="form-control form-control-sm attachment-title" placeholder="Título do anexo"><input type="file" class="form-control form-control-sm w-auto" onchange="HOSP.vincularArquivo('${itemId}', this.files)"></div></div>`;
-       $('#h_attachment_items').appendChild(div);
-    }
-  });
+  H.editarHospital = function(id) {
+    fetch('/api/configuracoes?action=hospitais&id=' + id, { headers: getApiHeaders(true) })
+      .then(r => r.json())
+      .then(json => {
+        var h = json.dados[0];
+        $('#h_id').value = h.id;
+        $('#h_nome').value = h.nome || '';
+        $('#h_telefones').value = h.telefones || '';
+        $('#h_endereco').value = h.endereco || '';
+        
+        renderContacts(h.contatos || []);
+        renderAttachments(h.anexos || []);
+        
+        document.getElementById('modalHospitalTitulo').textContent = 'Editar Hospital';
+        bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
+      });
+  };
+
+  H.excluirHospital = function(id, nomeEnc) {
+    var nome = decodeURIComponent(nomeEnc);
+    Swal.fire({
+      title: 'Excluir?',
+      text: 'Deseja remover o hospital ' + nome + '?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, excluir',
+      confirmButtonColor: '#d33'
+    }).then(res => {
+      if (res.isConfirmed) {
+        fetch('/api/configuracoes?action=hospitais&id=' + id, { method: 'DELETE', headers: getApiHeaders(true) })
+          .then(() => { H.carregarHospitais(); Swal.fire('Excluído!', '', 'success'); });
+      }
+    });
+  };
+
+  function renderContacts(list) {
+    var cont = $('#h_contacts');
+    cont.innerHTML = list.length ? '' : '<div class="small text-muted">Nenhum contato.</div>';
+    list.forEach(c => addContactRow(c));
+  }
+
+  function addContactRow(c = {}) {
+    var cont = $('#h_contacts');
+    if (cont.querySelector('.text-muted')) cont.innerHTML = '';
+    var div = document.createElement('div');
+    div.className = 'row g-2 mb-2 contact-row';
+    div.innerHTML = `
+      <div class="col-md-4"><input type="text" class="form-control form-control-sm contact-local" value="${escapeHtml(c.local)}" placeholder="Local"></div>
+      <div class="col-md-4"><input type="text" class="form-control form-control-sm contact-name" value="${escapeHtml(c.nome)}" placeholder="Nome"></div>
+      <div class="col-md-3"><input type="text" class="form-control form-control-sm contact-phone" value="${escapeHtml(c.telefone)}" placeholder="Telefone"></div>
+      <div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.contact-row').remove()"><i class="bi bi-x"></i></button></div>
+    `;
+    cont.appendChild(div);
+  }
+
+  function renderAttachments(list) {
+    var cont = $('#h_attachment_items');
+    cont.innerHTML = list.length ? '' : '<div class="small text-muted">Nenhum item.</div>';
+    list.forEach(a => {
+      var itemId = 'db_' + a.id;
+      H._files[itemId] = [{ name: a.nome, url: a.url }];
+      addAttachmentRow({ _id: itemId, title: a.titulo_item || a.nome, files: H._files[itemId] });
+    });
+  }
+
+  function addAttachmentRow(it = {}) {
+    var cont = $('#h_attachment_items');
+    if (cont.querySelector('.text-muted')) cont.innerHTML = '';
+    var itemId = it._id || 'item_' + (H._nextItemId++);
+    var div = document.createElement('div');
+    div.className = 'card mb-2';
+    div.dataset.itemId = itemId;
+    div.innerHTML = `
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center gap-2">
+          <input type="text" class="form-control form-control-sm attachment-title" value="${escapeHtml(it.title)}" placeholder="Título">
+          <input type="file" class="form-control form-control-sm w-auto" onchange="HOSP.vincularArquivo('${itemId}', this.files)">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.card').remove()"><i class="bi bi-trash"></i></button>
+        </div>
+        <div class="small mt-1 files-list">${it.files ? it.files.map(f => `<a href="${f.url}" target="_blank" class="me-2">${f.name}</a>`).join('') : ''}</div>
+      </div>
+    `;
+    cont.appendChild(div);
+  }
 
   H.vincularArquivo = function(itemId, files) {
     H._files[itemId] = [{ file: files[0] }];
+    var card = document.querySelector(`[data-item-id="${itemId}"] .files-list`);
+    card.innerHTML = `<span class="text-primary">${files[0].name} (Pronto para salvar)</span>`;
   };
+
+  // Eventos de clique
+  document.getElementById('h_add_contact_btn').onclick = () => addContactRow();
+  document.getElementById('h_add_attachment_item_btn').onclick = () => addAttachmentRow();
 
   H.carregarHospitais();
 })();
