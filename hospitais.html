@@ -1,0 +1,88 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
+      <li class="breadcrumb-item">Configurações</li>
+      <li class="breadcrumb-item active fw-bold">HOSPITAIS</li>
+    </ol>
+  </nav>
+  <div>
+    <button class="btn btn-outline-secondary btn-sm me-2" onclick="HOSP.carregarHospitais()">
+      <i class="bi bi-arrow-clockwise"></i>
+    </button>
+    <button class="btn btn-info text-white btn-sm" onclick="HOSP.novoHospital()">
+      <i class="bi bi-plus-lg"></i> Novo Hospital
+    </button>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" style="font-size:.9rem">
+      <thead class="table-light">
+        <tr>
+          <th style="width:110px">Ações</th>
+          <th>Nome</th>
+          <th>Telefones</th>
+          <th>Endereço</th>
+          <th style="width:120px" class="text-center">Anexos</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaHospitais">
+        <tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Hospital -->
+<div class="modal fade" id="modalHospital" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#0d6efd,#4361ee);color:#fff;">
+        <h6 class="modal-title mb-0" id="modalHospitalTitulo"><i class="bi bi-building"></i> Novo Hospital</h6>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formHospital">
+          <input type="hidden" id="h_id">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label small fw-bold">Nome do Hospital <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" id="h_nome" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold">Telefones (separe por ,)</label>
+              <input type="text" class="form-control form-control-sm" id="h_telefones" placeholder="(11) 2222-3333, (11) 98888-7777">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-bold">Endereço</label>
+              <input type="text" class="form-control form-control-sm" id="h_endereco" placeholder="Rua, número, bairro, cidade - UF">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-bold">Anexar documentos (PDF / DOC / DOCX) — opcionais</label>
+              <input type="file" class="form-control form-control-sm" id="h_arquivos" multiple accept=".pdf,.doc,.docx">
+              <small class="text-muted">Selecione um ou mais arquivos e clique em salvar para enviar.</small>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-bold">Anexos existentes</label>
+              <div id="h_lista_anexos" class="border rounded p-2" style="min-height:48px">
+                <small class="text-muted">Nenhum anexo</small>
+              </div>
+            </div>
+
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-info text-white btn-sm" id="h_btnSalvar" onclick="HOSP.salvarHospital()">
+          <i class="bi bi-save"></i> Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
