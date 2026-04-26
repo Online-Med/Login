@@ -1,10 +1,5 @@
 {
-  "crons": [
-    {
-      "path": "/api/keep-alive",
-      "schedule": "0 3 * * *"
-    }
-  ],
+
   "functions": {
     "api/*.js": {
       "runtime": "nodejs20.x"
