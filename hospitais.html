@@ -371,5 +371,14 @@ H.carregarHospitais = function () {
     document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { H.carregarHospitais(); }, 80); });
   });
 
+
+  function getApiHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  // se você tem a variável global com o email do usuário (setada no login), inclua:
+  const ue = window.__USER_EMAIL || window.USER_EMAIL || '';
+  if (ue) headers['x-user-email'] = ue;
+  return headers;
+}
+
 })();
 </script>
