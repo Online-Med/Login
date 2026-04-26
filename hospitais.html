@@ -1,3 +1,4 @@
+<!-- hospitais.html (com UI redesenhada: contatos + itens de anexo) -->
 <div class="d-flex justify-content-between align-items-center mb-3">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb mb-0">
@@ -21,65 +22,82 @@
     <table class="table table-hover mb-0" style="font-size:.9rem">
       <thead class="table-light">
         <tr>
-          <th style="width:110px">Ações</th>
+          <th style="width:120px">Ações</th>
           <th>Nome</th>
           <th>Telefones</th>
           <th>Endereço</th>
-          <th style="width:120px" class="text-center">Anexos</th>
+          <th>Contatos</th>
+          <th class="text-center">Itens de Anexo</th>
         </tr>
       </thead>
       <tbody id="tabelaHospitais">
-        <tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>
+        <tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- Modal Hospital -->
+<!-- Modal Hospital (novo / editar) -->
 <div class="modal fade" id="modalHospital" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header py-2" style="background:linear-gradient(135deg,#0d6efd,#4361ee);color:#fff;">
-        <h6 class="modal-title mb-0" id="modalHospitalTitulo"><i class="bi bi-building"></i> Novo Hospital</h6>
+        <h6 class="modal-title mb-0" id="modalHospitalTitulo"><i class="bi bi-hospital"></i> Novo Hospital</h6>
         <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
+
       <div class="modal-body">
         <form id="formHospital">
           <input type="hidden" id="h_id">
           <div class="row g-3">
-            <div class="col-md-8">
+            <div class="col-md-6">
               <label class="form-label small fw-bold">Nome do Hospital <span class="text-danger">*</span></label>
-              <input type="text" class="form-control form-control-sm" id="h_nome" required>
+              <input type="text" id="h_nome" class="form-control form-control-sm" required>
             </div>
-            <div class="col-md-4">
-              <label class="form-label small fw-bold">Telefones (separe por ,)</label>
-              <input type="text" class="form-control form-control-sm" id="h_telefones" placeholder="(11) 2222-3333, (11) 98888-7777">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Telefones (visível)</label>
+              <input type="text" id="h_telefones" class="form-control form-control-sm" placeholder="(11) 2222-3333, (11) 98888-7777">
             </div>
-
-            <div class="col-12">
+            <div class="col-md-3">
               <label class="form-label small fw-bold">Endereço</label>
-              <input type="text" class="form-control form-control-sm" id="h_endereco" placeholder="Rua, número, bairro, cidade - UF">
+              <input type="text" id="h_endereco" class="form-control form-control-sm" placeholder="Rua, número, bairro, cidade - UF">
             </div>
-
-            <div class="col-12">
-              <label class="form-label small fw-bold">Anexar documentos (PDF / DOC / DOCX) — opcionais</label>
-              <input type="file" class="form-control form-control-sm" id="h_arquivos" multiple accept=".pdf,.doc,.docx">
-              <small class="text-muted">Selecione um ou mais arquivos e clique em salvar para enviar (apenas metadados serão gravados por enquanto).</small>
-            </div>
-
-            <div class="col-12">
-              <label class="form-label small fw-bold">Anexos existentes</label>
-              <div id="h_lista_anexos" class="border rounded p-2" style="min-height:48px">
-                <small class="text-muted">Nenhum anexo</small>
-              </div>
-            </div>
-
           </div>
+
+          <hr>
+
+          <!-- Contatos: lista dinâmica -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <h6 class="mb-0">Contatos (local — nome — telefone)</h6>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_contact_btn"><i class="bi bi-plus"></i> Adicionar contato</button>
+            </div>
+            <div id="h_contacts" class="mt-2">
+              <!-- linhas adicionadas via JS -->
+              <div class="small text-muted">Nenhum contato. Clique em "Adicionar contato".</div>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Itens de anexo: cada item tem título e arquivos -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <h6 class="mb-0">Itens de Anexo (ex.: "termo de cesaria")</h6>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_attachment_item_btn"><i class="bi bi-plus"></i> Novo item</button>
+            </div>
+            <div id="h_attachment_items" class="mt-2">
+              <div class="small text-muted">Nenhum item. Clique em "Novo item".</div>
+            </div>
+            <small class="text-muted d-block mt-2">Ao salvar, metadados dos arquivos são gravados. Para armazenar o conteúdo permanente, ative o upload para Storage (veja notas).</small>
+          </div>
+
         </form>
       </div>
+
       <div class="modal-footer py-2">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-        <button class="btn btn-info text-white btn-sm" id="h_btnSalvar" onclick="HOSP.salvarHospital()">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-info text-white btn-sm" id="h_btnSalvar" onclick="HOSP.salvarHospital()">
           <i class="bi bi-save"></i> Salvar
         </button>
       </div>
@@ -87,24 +105,29 @@
   </div>
 </div>
 
-<!-- Frontend script: coloca este bloco AO FINAL do hospitals fragment -->
+<!-- Script frontend redesenhado -->
 <script>
 (function () {
   'use strict';
 
-  // Carrega SweetAlert2 se não existir (opcional)
-  function loadSwalIfNeeded() {
-    return new Promise(function (resolve) {
-      if (typeof Swal !== 'undefined') return resolve();
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
-      s.onload = resolve;
-      s.onerror = resolve;
-      document.head.appendChild(s);
-    });
-  }
+  // --- Configurações opcionais (para upload direto ao Storage)
+  // Se você quiser que o cliente faça upload direto para o Supabase Storage,
+  // defina estas variáveis globais antes de carregar a página:
+  // window.SUPABASE_URL = 'https://...supabase.co';
+  // window.SUPABASE_ANON_KEY = 'public-anon-key';
+  // window.SUPABASE_BUCKET = 'nome-do-bucket';
+  //
+  // Sem essas variáveis, o código só gravará metadados (nome, size, type) no banco.
+  //
+  // Também é necessário setar:
+  // window.__USER_EMAIL = 'usuario@exemplo'  // para validarSessao do servidor
 
-  // Cabeçalhos padrão para chamadas API (inclui x-user-email se disponível)
+  // --- Utils
+  function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function $(sel, ctx) { return (ctx||document).querySelector(sel); }
+  function $all(sel, ctx) { return Array.from((ctx||document).querySelectorAll(sel)); }
+
+  // Headers helper (inclui x-user-email se presente)
   function getApiHeaders(isJson) {
     var headers = {};
     if (isJson) headers['Content-Type'] = 'application/json';
@@ -113,192 +136,409 @@
     return headers;
   }
 
+  // --- Estado em memória para arquivos (temporário)
+  // structure: H._files[itemId] = [{ file: File, url: blobUrl }]
   window.HOSP = window.HOSP || {};
   var H = window.HOSP;
   H._lista = [];
+  H._files = {};      // temp files until uploaded
+  H._nextItemId = 1;  // unique id for attachment items in the modal (client-side)
 
-  // Util
-  function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-  // Render tabela
+  // --- Render da tabela principal
   H._renderTabela = function () {
-    var tbody = document.getElementById('tabelaHospitais');
+    var tbody = $('#tabelaHospitais');
     if (!tbody) return;
     if (!H._lista || !H._lista.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4">Nenhum hospital cadastrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4">Nenhum hospital cadastrado.</td></tr>';
       return;
     }
+
     tbody.innerHTML = H._lista.map(function (h) {
+      // try to show contacts count and items count (if server returned them)
+      var contatosCount = Array.isArray(h.contatos) ? h.contatos.length : (h.contatos_count || 0);
+      var anexosCount = Array.isArray(h.anexos) ? h.anexos.length : (h.anexos_count || 0);
       var telefones = h.telefones || '';
       var endereco = h.endereco || '';
-      var anexosCount = Array.isArray(h.anexos) ? h.anexos.length : (h.anexos_count || 0);
-      var nomeEsc = encodeURIComponent(h.nome || '');
+      var nome = h.nome || '';
       return '<tr>'
         + '<td class="ps-3 pe-1"><div class="btn-group" role="group">'
-        + '<button class="btn btn-sm btn-outline-primary" title="Editar" onclick="HOSP.editarHospital(' + h.id + ')"><i class="bi bi-pencil"></i></button>'
-        + '<button class="btn btn-sm btn-outline-danger" title="Excluir" onclick="HOSP.excluirHospital(' + h.id + ',\'' + nomeEsc + '\')"><i class="bi bi-trash"></i></button>'
+          + '<button class="btn btn-sm btn-outline-primary" title="Editar" onclick="HOSP.editarHospital(' + h.id + ')"><i class="bi bi-pencil"></i></button>'
+          + '<button class="btn btn-sm btn-outline-danger" title="Excluir" onclick="HOSP.excluirHospital(' + h.id + ',\'' + encodeURIComponent(nome) + '\')"><i class="bi bi-trash"></i></button>'
         + '</div></td>'
-        + '<td class="align-middle">' + escapeHtml(h.nome || '') + '</td>'
+        + '<td class="align-middle">' + escapeHtml(nome) + '</td>'
         + '<td class="align-middle small text-muted">' + escapeHtml(telefones) + '</td>'
         + '<td class="align-middle small text-muted">' + escapeHtml(endereco) + '</td>'
+        + '<td class="align-middle small text-muted">' + (contatosCount ? ('<span class="badge bg-secondary">' + contatosCount + '</span>') : '<small class="text-muted">0</small>') + '</td>'
         + '<td class="text-center align-middle">' + (anexosCount ? ('<span class="badge bg-secondary">' + anexosCount + '</span>') : '<small class="text-muted">0</small>') + '</td>'
         + '</tr>';
     }).join('');
   };
 
-  // GET lista
+  // --- Carregar lista
   H.carregarHospitais = function () {
-    var tbody = document.getElementById('tabelaHospitais');
+    var tbody = $('#tabelaHospitais');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>';
 
     var headers = getApiHeaders(true);
-    console.log('[HOSP] fetching /api/configuracoes?action=hospitais, x-user-email present:', !!headers['x-user-email']);
+    console.log('[HOSP] GET list, x-user-email present:', !!headers['x-user-email']);
 
     fetch('/api/configuracoes?action=hospitais', { headers: headers })
       .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
       .then(function (obj) {
-        console.log('[HOSP] response status', obj.status);
         try {
           var json = JSON.parse(obj.text);
           if (!json || !json.dados) throw new Error('Resposta sem dados');
           H._lista = json.dados;
           H._renderTabela();
         } catch (e) {
-          tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro ao carregar: ' + escapeHtml(String(obj.text).slice(0,300)) + '</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3 text-danger">Erro ao carregar: ' + escapeHtml(String(obj.text).slice(0,300)) + '</td></tr>';
           console.error('[HOSP] parse/load error:', e, obj.text);
         }
       })
       .catch(function (err) {
         console.error('[HOSP] fetch error', err);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-3 text-danger">Erro de conexão: ' + escapeHtml(err.message || err) + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3 text-danger">Erro de conexão: ' + escapeHtml(err.message || err) + '</td></tr>';
       });
   };
 
-  // Novo
-  H.novoHospital = function () {
-    document.getElementById('h_id').value = '';
-    document.getElementById('h_nome').value = '';
-    document.getElementById('h_telefones').value = '';
-    document.getElementById('h_endereco').value = '';
-    document.getElementById('h_arquivos').value = '';
-    document.getElementById('h_lista_anexos').innerHTML = '<small class="text-muted">Nenhum anexo</small>';
-    document.getElementById('modalHospitalTitulo').textContent = 'Novo Hospital';
-    showModal('modalHospital');
+  // --- Modal helpers
+  function showModal(id) { var el = document.getElementById(id); if (!el) return; var m = bootstrap.Modal.getOrCreateInstance(el); m.show(); }
+  function hideModal(id) { var el = document.getElementById(id); if (!el) return; var m = bootstrap.Modal.getInstance(el); if (m) m.hide(); }
+
+  // --- Contacts UI (add / remove)
+  function renderContactsContainer(contacts) {
+    var cont = document.getElementById('h_contacts');
+    cont.innerHTML = '';
+    if (!contacts || !contacts.length) {
+      cont.innerHTML = '<div class="small text-muted">Nenhum contato. Clique em "Adicionar contato".</div>';
+      return;
+    }
+    contacts.forEach(function (c, idx) {
+      var row = document.createElement('div');
+      row.className = 'row g-2 align-items-center mb-2 contact-row';
+      row.dataset.index = idx;
+      row.innerHTML =
+        '<div class="col-md-4"><input type="text" class="form-control form-control-sm contact-local" placeholder="Local (ex.: Centro cirúrgico)" value="' + escapeHtml(c.local || '') + '"></div>'
+        + '<div class="col-md-4"><input type="text" class="form-control form-control-sm contact-name" placeholder="Nome (ex.: José)" value="' + escapeHtml(c.nome || '') + '"></div>'
+        + '<div class="col-md-3"><input type="text" class="form-control form-control-sm contact-phone" placeholder="Telefone" value="' + escapeHtml(c.telefone || '') + '"></div>'
+        + '<div class="col-md-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-contact" title="Remover"><i class="bi bi-x"></i></button></div>';
+      cont.appendChild(row);
+    });
+  }
+
+  function getContactsFromDOM() {
+    var rows = $all('#h_contacts .contact-row');
+    return rows.map(function (r) {
+      return {
+        local: r.querySelector('.contact-local').value.trim(),
+        nome: r.querySelector('.contact-name').value.trim(),
+        telefone: r.querySelector('.contact-phone').value.trim()
+      };
+    }).filter(c => c.local || c.nome || c.telefone); // remove vazios
+  }
+
+  // --- Attachment items UI
+  // each item has: id (client), title, files (File objects in H._files[id])
+  function renderAttachmentItems(items) {
+    var cont = document.getElementById('h_attachment_items');
+    cont.innerHTML = '';
+    if (!items || !items.length) {
+      cont.innerHTML = '<div class="small text-muted">Nenhum item. Clique em "Novo item".</div>';
+      return;
+    }
+
+    items.forEach(function (it) {
+      var itemId = it._id || it.id || ('item' + (H._nextItemId++));
+      it._id = itemId;
+      // ensure H._files[itemId] exists (may store selected File objects)
+      H._files[itemId] = H._files[itemId] || [];
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'card mb-2';
+      wrapper.innerHTML =
+        '<div class="card-body py-2">'
+        + '<div class="d-flex align-items-center mb-2">'
+          + '<input type="text" class="form-control form-control-sm me-2 attachment-title" placeholder="Título do item (ex.: Termo de cesaria)" value="' + escapeHtml(it.title || '') + '">'
+          + '<div class="btn-group ms-auto" role="group">'
+            + '<label class="btn btn-sm btn-outline-secondary mb-0">'
+              + '<i class="bi bi-upload"></i> <input type="file" class="d-none attachment-file-input" multiple>'
+            + '</label>'
+            + '<button type="button" class="btn btn-sm btn-outline-danger btn-remove-attachment-item" title="Remover item"><i class="bi bi-trash"></i></button>'
+          + '</div>'
+        + '</div>'
+        + '<div class="attachment-files-list small"></div>'
+        + '</div>';
+
+      wrapper.dataset.itemId = itemId;
+      cont.appendChild(wrapper);
+
+      // after append, render selected files for this item
+      renderFilesListForItem(itemId);
+    });
+  }
+
+  function renderFilesListForItem(itemId) {
+    var wrapper = document.querySelector('[data-item-id="' + itemId + '"]');
+    if (!wrapper) return;
+    var list = wrapper.querySelector('.attachment-files-list');
+    var files = H._files[itemId] || [];
+    if (!files.length) {
+      list.innerHTML = '<div class="small text-muted">Nenhum arquivo selecionado</div>';
+      return;
+    }
+    list.innerHTML = files.map(function (f, i) {
+      var name = escapeHtml(f.file.name || f.name || 'arquivo');
+      var size = (f.file.size ? (Math.round(f.file.size/1024) + ' KB') : '');
+      var downloadBtn = f.url ? '<a class="btn btn-sm btn-outline-primary me-2" href="' + f.url + '" download>Baixar</a>' : '<button class="btn btn-sm btn-outline-secondary me-2" onclick="HOSP.downloadTempFile(\''+itemId+'\', '+i+')">Baixar</button>';
+      return '<div class="d-flex align-items-center justify-content-between mb-1">'
+        + '<div class="small text-truncate" style="max-width:70%;">' + name + ' <small class="text-muted">(' + size + ')</small></div>'
+        + '<div>'
+          + downloadBtn
+          + '<button class="btn btn-sm btn-outline-danger" onclick="HOSP.removeTempFile(\''+itemId+'\', '+i+')"><i class="bi bi-x"></i></button>'
+        + '</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  // --- Public functions to manage temp files for items
+  H.addAttachmentItem = function (initial) {
+    var items = getAttachmentItemsFromDOM(); // read existing items
+    items.push(initial || { title: '' });
+    renderAttachmentItems(items);
   };
 
-  // Editar
-  H.editarHospital = function (id) {
-    var h = (H._lista || []).find(function (x) { return x.id == id; });
-    if (h) { fillModal(h); showModal('modalHospital'); return; }
+  H.removeAttachmentItem = function (itemId) {
+    // remove files urls
+    if (H._files[itemId]) {
+      H._files[itemId].forEach(function (f) { if (f.url) URL.revokeObjectURL(f.url); });
+      delete H._files[itemId];
+    }
+    // remove DOM card
+    var el = document.querySelector('[data-item-id="'+itemId+'"]');
+    if (el) el.remove();
+  };
 
+  H.addTempFilesToItem = function (itemId, fileList) {
+    H._files[itemId] = H._files[itemId] || [];
+    Array.prototype.forEach.call(fileList, function (file) {
+      var url = URL.createObjectURL(file);
+      H._files[itemId].push({ file: file, url: url });
+    });
+    renderFilesListForItem(itemId);
+  };
+
+  H.removeTempFile = function (itemId, index) {
+    var arr = H._files[itemId] || [];
+    if (arr[index] && arr[index].url) URL.revokeObjectURL(arr[index].url);
+    arr.splice(index, 1);
+    renderFilesListForItem(itemId);
+  };
+
+  H.downloadTempFile = function (itemId, index) {
+    var arr = H._files[itemId] || [];
+    var f = arr[index];
+    if (!f) return;
+    var a = document.createElement('a');
+    a.href = f.url;
+    a.download = f.file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  // Expose small helpers for onclick attributes
+  window.HOSP = window.HOSP || {};
+  window.HOSP.addAttachmentItem = H.addAttachmentItem;
+  window.HOSP.removeAttachmentItem = H.removeAttachmentItem;
+  window.HOSP.addTempFilesToItem = H.addTempFilesToItem;
+  window.HOSP.removeTempFile = H.removeTempFile;
+  window.HOSP.downloadTempFile = H.downloadTempFile;
+
+  // --- Get current attachment items from DOM (reads titles)
+  function getAttachmentItemsFromDOM() {
+    var nodes = $all('#h_attachment_items .card');
+    if (!nodes || !nodes.length) return [];
+    return nodes.map(function (n) {
+      var id = n.dataset.itemId;
+      var title = (n.querySelector('.attachment-title') || { value: '' }).value || '';
+      // files metadata from H._files[id]
+      var filesMeta = (H._files[id] || []).map(function (f) {
+        return { name: f.file.name, size: f.file.size, content_type: f.file.type };
+      });
+      return { _id: id, title: title, filesMeta: filesMeta };
+    });
+  }
+
+  // --- Save hospital flow:
+  // 1) POST hospital basic (nome, telefones, endereco)
+  // 2) for each attachment item, either upload files to storage (if configured) then call attachments endpoint with urls,
+  //    or if not configured, call attachments endpoint with metadata only (url = '').
+  H.salvarHospital = async function () {
+    var btn = document.getElementById('h_btnSalvar'); if (btn) btn.disabled = true;
+    try {
+      var id = document.getElementById('h_id').value;
+      var nome = document.getElementById('h_nome').value.trim();
+      if (!nome) { alert('Informe o nome'); if (btn) btn.disabled = false; return; }
+      var telefones = document.getElementById('h_telefones').value.trim();
+      var endereco = document.getElementById('h_endereco').value.trim();
+
+      // contacts
+      var contatos = getContactsFromDOM();
+
+      // prepare payload for hospital: NOTE — server expects nome, telefones, endereco.
+      var payload = { nome: nome, telefones: telefones, endereco: endereco };
+
+      var method = id ? 'PATCH' : 'POST';
+      var url = '/api/configuracoes?action=hospitais' + (id ? ('&id=' + encodeURIComponent(id)) : '');
+      var headers = getApiHeaders(true);
+
+      var resText = await fetch(url, { method: method, headers: headers, body: JSON.stringify(payload) }).then(r => r.text());
+      var resJson;
+      try { resJson = JSON.parse(resText); } catch (e) { throw new Error('Resposta inválida do servidor: ' + resText); }
+      if (!resJson || !resJson.sucesso) throw new Error(resJson && resJson.erro ? resJson.erro : 'Erro ao salvar hospital');
+
+      var hospitalId = id || resJson.id || (resJson.dados && resJson.dados[0] && resJson.dados[0].id);
+      if (!hospitalId) throw new Error('ID do hospital não retornado');
+
+      // TODO: persistir contatos no banco — precisa de suporte backend (coluna JSONB ou tabela). 
+      // Aqui apenas mostramos um aviso se contatos foram adicionados.
+      if (contatos && contatos.length) {
+        console.log('[HOSP] contatos presentes (não persistidos sem backend):', contatos);
+        // If you want I can implement backend to persist these contacts (create column or table).
+      }
+
+      // attachments: collect items and for each file prepare metadata (and optionally upload files to storage)
+      var items = getAttachmentItemsFromDOM();
+      var attachmentsPayload = [];
+
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var idKey = it._id;
+        var filesArr = H._files[idKey] || [];
+        var title = (it.title || '').trim();
+        // for each selected file: attempt to upload to Storage if configured, otherwise set url = ''
+        for (var j = 0; j < filesArr.length; j++) {
+          var fobj = filesArr[j];
+          var file = fobj.file;
+          var urlFile = ''; // will be set if upload to storage is implemented
+
+          // Optional client upload to Supabase Storage if globals are set
+          if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY && window.SUPABASE_BUCKET) {
+            try {
+              // Generate a safe path: hospitals/{hospitalId}/{timestamp}_{filename}
+              var path = 'hospitais/' + hospitalId + '/' + Date.now() + '_' + encodeURIComponent(file.name);
+              // Supabase Storage: upload via POST /storage/v1/object/{bucket} with body = file (binary)
+              var upUrl = (window.SUPABASE_URL.replace(/\/$/, '')) + '/storage/v1/object/' + encodeURIComponent(window.SUPABASE_BUCKET) + '/' + path;
+              // Note: this endpoint may require direct form-data POST; some CORS servers accept simple PUT.
+              // Try to upload with PUT (works for many S3-like APIs); if fails, fallback will keep urlFile empty.
+              var putResp = await fetch(upUrl, {
+                method: 'POST', // some Supabase instances expect POST to /object/{bucket} with header 'x-upsert: true'
+                headers: {
+                  'Authorization': 'Bearer ' + window.SUPABASE_ANON_KEY,
+                  'apikey': window.SUPABASE_ANON_KEY
+                },
+                body: file
+              });
+              if (putResp.ok) {
+                // build public URL pattern (depends on your bucket policies). Supabase public url pattern:
+                // https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+                urlFile = (window.SUPABASE_URL.replace(/\/$/, '')) + '/storage/v1/object/public/' + encodeURIComponent(window.SUPABASE_BUCKET) + '/' + path;
+              } else {
+                console.warn('Upload to storage failed', putResp.status, await putResp.text());
+              }
+            } catch (uerr) {
+              console.warn('Upload error', uerr);
+            }
+          }
+
+          attachmentsPayload.push({
+            titulo_item: title || '',     // item title (will be saved in hospitais_attachments.nome if you want)
+            nome: file.name,
+            url: urlFile || '',           // empty if not uploaded
+            content_type: file.type || '',
+            size: file.size || 0
+          });
+        }
+      }
+
+      // If there are attachments metadata to save, call attachments endpoint (even if URLs are empty)
+      if (attachmentsPayload.length) {
+        var attUrl = '/api/configuracoes?action=attachments&hospital_id=' + encodeURIComponent(hospitalId);
+        var attRespText = await fetch(attUrl, {
+          method: 'POST',
+          headers: getApiHeaders(true),
+          body: JSON.stringify({ anexos: attachmentsPayload })
+        }).then(r => r.text());
+
+        try {
+          var attJson = JSON.parse(attRespText);
+          if (!attJson || !attJson.sucesso) {
+            console.warn('attachments save returned error', attJson, attRespText);
+            // not fatal for hospital save, but inform user
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Aviso', text: 'Hospital salvo, mas houve problema ao gravar anexos: ' + (attJson && attJson.erro ? attJson.erro : attRespText) });
+          } else {
+            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo', text: 'Hospital e metadados de anexos gravados', timer: 1200, showConfirmButton: false });
+          }
+        } catch (e) {
+          console.warn('attachments response parse failed', attRespText);
+          if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Aviso', text: 'Hospital salvo, resposta inválida ao gravar anexos.' });
+        }
+      } else {
+        if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo', timer: 900, showConfirmButton: false });
+      }
+
+      hideModal('modalHospital');
+      H.carregarHospitais();
+    } catch (err) {
+      console.error('Salvar erro', err);
+      if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Erro ao salvar', text: String(err.message || err) });
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  };
+
+  // --- Editar hospital: carrega dados e popula modal
+  H.editarHospital = function (id) {
     var headers = getApiHeaders(true);
     fetch('/api/configuracoes?action=hospitais&id=' + encodeURIComponent(id), { headers: headers })
-      .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
+      .then(r => r.text().then(t => ({ status: r.status, text: t })))
       .then(function (obj) {
         try {
           var json = JSON.parse(obj.text);
           var hosp = json && json.dados && json.dados[0] ? json.dados[0] : null;
           if (!hosp) throw new Error('Hospital não encontrado');
-          fillModal(hosp);
-          showModal('modalHospital');
-        } catch (e) { alert('Erro ao carregar hospital: ' + (obj.text || e.message)); }
-      }).catch(function (e) { console.error(e); alert('Erro ao carregar hospital'); });
-
-    function fillModal(hosp) {
-      document.getElementById('h_id').value = hosp.id || '';
-      document.getElementById('h_nome').value = hosp.nome || '';
-      document.getElementById('h_telefones').value = hosp.telefones || '';
-      document.getElementById('h_endereco').value = hosp.endereco || '';
-      renderAnexos(hosp.anexos || []);
-      document.getElementById('modalHospitalTitulo').textContent = 'Editar Hospital';
-    }
-  };
-
-  // Salvar (POST ou PATCH)
-  H.salvarHospital = function () {
-    var id = document.getElementById('h_id').value;
-    var nome = document.getElementById('h_nome').value.trim();
-    if (!nome) { if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Informe o nome' }); else alert('Informe o nome'); return; }
-    var telefones = document.getElementById('h_telefones').value.trim();
-    var endereco = document.getElementById('h_endereco').value.trim();
-
-    var payload = { nome: nome, telefones: telefones, endereco: endereco };
-    var btn = document.getElementById('h_btnSalvar');
-    if (btn) btn.disabled = true;
-
-    var method = id ? 'PATCH' : 'POST';
-    var url = '/api/configuracoes?action=hospitais' + (id ? ('&id=' + encodeURIComponent(id)) : '');
-
-    fetch(url, {
-      method: method,
-      headers: getApiHeaders(true),
-      body: JSON.stringify(payload)
-    })
-      .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
-      .then(function (obj) {
-        try {
-          var res = JSON.parse(obj.text);
-          if (!res || !res.sucesso) throw new Error(res && res.erro ? res.erro : 'Resposta de erro');
-          var newId = id || res.id || (res.dados && res.dados[0] && res.dados[0].id);
-          var filesInput = document.getElementById('h_arquivos');
-          if (filesInput && filesInput.files && filesInput.files.length && newId) {
-            var meta = Array.prototype.slice.call(filesInput.files).map(function (f) {
-              return { nome: f.name, url: '', content_type: f.type || '', size: f.size || 0 };
+          // populate fields
+          document.getElementById('h_id').value = hosp.id || '';
+          document.getElementById('h_nome').value = hosp.nome || '';
+          document.getElementById('h_telefones').value = hosp.telefones || '';
+          document.getElementById('h_endereco').value = hosp.endereco || '';
+          // contacts: if backend returns contactos in hosp.contatos (array), render; else empty
+          var contatos = hosp.contatos || [];
+          renderContactsContainer(contatos);
+          // attachments: if backend returned anexos (array) include as items with URL
+          H._files = {}; // clear temp files
+          var items = [];
+          if (Array.isArray(hosp.anexos) && hosp.anexos.length) {
+            hosp.anexos.forEach(function (a) {
+              var item = { title: a.titulo_item || (a.nome || '').split('.').shift(), _id: 'db' + (a.id || Math.random().toString(36).slice(2)) };
+              items.push(item);
+              // populate H._files with url only (no File object)
+              H._files[item._id] = [{ file: { name: a.nome }, url: a.url || '' }];
             });
-            return fetch('/api/configuracoes?action=attachments&hospital_id=' + encodeURIComponent(newId), {
-              method: 'POST',
-              headers: getApiHeaders(true),
-              body: JSON.stringify({ anexos: meta })
-            }).then(function (r2) { return r2.text().then(function (t2) { return { status: r2.status, text: t2 }; }); })
-              .then(function (obj2) {
-                try {
-                  var j2 = JSON.parse(obj2.text);
-                  if (!j2 || !j2.sucesso) throw new Error(j2 && j2.erro ? j2.erro : obj2.text);
-                  if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo com anexos', timer: 1200, showConfirmButton: false });
-                  hideModal('modalHospital'); H.carregarHospitais(); if (btn) btn.disabled = false;
-                } catch (e) {
-                  console.error(e);
-                  if (typeof Swal !== 'undefined') Swal.fire({ icon: 'warning', title: 'Salvo, mas erro no upload de anexos' });
-                  hideModal('modalHospital'); H.carregarHospitais(); if (btn) btn.disabled = false;
-                }
-              });
-          } else {
-            if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Salvo', timer: 900, showConfirmButton: false });
-            hideModal('modalHospital');
-            H.carregarHospitais();
-            if (btn) btn.disabled = false;
           }
+          renderAttachmentItems(items);
+          document.getElementById('modalHospitalTitulo').textContent = 'Editar Hospital';
+          showModal('modalHospital');
         } catch (e) {
-          console.error('[HOSP.salvar] parse/error', e, obj.text);
-          if (btn) btn.disabled = false;
-          if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Erro ao salvar', text: String(obj.text).slice(0,1000) }); else alert('Erro: ' + (obj.text || e.message));
+          alert('Erro ao carregar hospital: ' + (obj.text || e.message));
         }
-      })
-      .catch(function (err) {
-        console.error(err);
-        if (btn) btn.disabled = false;
-        if (typeof Swal !== 'undefined') Swal.fire({ icon: 'error', title: 'Erro ao salvar', text: err.message }); else alert('Erro: ' + err.message);
-      });
+      }).catch(e => { console.error(e); alert('Erro ao carregar hospital'); });
   };
 
-  // Excluir hospital
-  H.excluirHospital = function (id, nomeEscaped) {
-    var nome = decodeURIComponent(nomeEscaped || '');
-    var doDelete = function () {
-      fetch('/api/configuracoes?action=hospitais&id=' + encodeURIComponent(id), { method: 'DELETE', headers: getApiHeaders(true) })
-        .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
-        .then(function (obj) {
-          try {
-            var res = JSON.parse(obj.text);
-            if (res && res.sucesso) {
-              if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Excluído', timer: 900, showConfirmButton: false });
-              H.carregarHospitais();
-            } else throw new Error(res && res.erro ? res.erro : obj.text);
-          } catch (e) { alert('Erro ao excluir: ' + (obj.text || e.message)); }
-        }).catch(function (e) { console.error(e); alert('Erro ao excluir'); });
-    };
-
+  // --- Excluir hospital
+  H.excluirHospital = function (id, nomeEnc) {
+    var nome = decodeURIComponent(nomeEnc || '');
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         title: 'Excluir hospital?',
@@ -308,63 +548,96 @@
         confirmButtonText: 'Sim, excluir',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#d33'
-      }).then(function (result) { if (result.isConfirmed) doDelete(); });
-    } else {
-      if (confirm('Excluir hospital "' + nome + '"?')) doDelete();
-    }
-  };
-
-  // Renderiza anexos no modal
-  function renderAnexos(anexos) {
-    var cont = document.getElementById('h_lista_anexos');
-    if (!cont) return;
-    if (!anexos || !anexos.length) { cont.innerHTML = '<small class="text-muted">Nenhum anexo</small>'; return; }
-    cont.innerHTML = anexos.map(function (a) {
-      var nome = a.nome || a.filename || (a.url && a.url.split('/').pop()) || 'arquivo';
-      var url = a.url || '#';
-      return '<div class="d-flex align-items-center justify-content-between mb-1">'
-        + '<div class="small"><a href="' + escapeHtml(url) + '" target="_blank">' + escapeHtml(nome) + '</a></div>'
-        + '<div><button class="btn btn-sm btn-outline-danger" onclick="HOSP.excluirAnexo(' + a.id + ')"><i class="bi bi-x"></i></button></div>'
-        + '</div>';
-    }).join('');
-  }
-
-  // Excluir anexo
-  H.excluirAnexo = function (attachId) {
-    if (!attachId) return;
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        title: 'Excluir anexo?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Excluir'
-      }).then(function (r) {
-        if (!r.isConfirmed) return;
-        fetch('/api/configuracoes?action=attachments&id=' + encodeURIComponent(attachId), { method: 'DELETE', headers: getApiHeaders(true) })
-          .then(function (rr) { return rr.text().then(function (t) { return { status: rr.status, text: t }; }); })
-          .then(function (obj) {
+      }).then(function (result) {
+        if (!result.isConfirmed) return;
+        fetch('/api/configuracoes?action=hospitais&id=' + encodeURIComponent(id), { method: 'DELETE', headers: getApiHeaders(true) })
+          .then(r => r.text().then(t => ({ text: t })))
+          .then(obj => {
             try {
-              var res = JSON.parse(obj.text);
-              if (res && res.sucesso) { Swal.fire({ icon: 'success', title: 'Anexo excluído', timer: 800, showConfirmButton: false }); H.carregarHospitais(); }
-              else throw new Error(res && res.erro ? res.erro : obj.text);
-            } catch (e) { Swal.fire({ icon: 'error', title: 'Erro', text: obj.text || e.message }); }
-          })
-          .catch(function (e) { Swal.fire({ icon: 'error', title: 'Erro', text: e.message || e }); });
+              var j = JSON.parse(obj.text || obj);
+              if (j && j.sucesso) { if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Excluído', timer: 900, showConfirmButton: false }); H.carregarHospitais(); }
+              else throw new Error(j && j.erro ? j.erro : obj.text);
+            } catch (e) { alert('Erro ao excluir: ' + (obj.text || e.message)); }
+          }).catch(e => { console.error(e); alert('Erro ao excluir'); });
       });
     } else {
-      if (!confirm('Excluir anexo?')) return;
-      fetch('/api/configuracoes?action=attachments&id=' + encodeURIComponent(attachId), { method: 'DELETE', headers: getApiHeaders(true) }).then(function () { H.carregarHospitais(); });
+      if (!confirm('Excluir hospital "' + nome + '"?')) return;
+      fetch('/api/configuracoes?action=hospitais&id=' + encodeURIComponent(id), { method: 'DELETE', headers: getApiHeaders(true) }).then(function () { H.carregarHospitais(); });
     }
   };
 
-  // Modal helpers (Bootstrap 5)
-  function showModal(id) { var el = document.getElementById(id); if (!el) return; var m = bootstrap.Modal.getOrCreateInstance(el); m.show(); }
-  function hideModal(id) { var el = document.getElementById(id); if (!el) return; var m = bootstrap.Modal.getInstance(el); if (m) m.hide(); }
+  // --- Attachment item file input event delegation
+  document.addEventListener('click', function (ev) {
+    // add contact
+    if (ev.target && (ev.target.id === 'h_add_contact_btn' || ev.target.closest('#h_add_contact_btn'))) {
+      ev.preventDefault();
+      // add an empty contact
+      var cont = document.getElementById('h_contacts');
+      var contacts = getContactsFromDOM();
+      contacts.push({ local: '', nome: '', telefone: '' });
+      renderContactsContainer(contacts);
+      return;
+    }
 
-  // Init: carrega bibliotecas necessárias e lista
-  loadSwalIfNeeded().finally(function () {
-    document.addEventListener('DOMContentLoaded', function () { setTimeout(function () { H.carregarHospitais(); }, 80); });
+    // remove contact
+    var remBtn = ev.target.closest('.btn-remove-contact');
+    if (remBtn) {
+      ev.preventDefault();
+      var row = remBtn.closest('.contact-row');
+      if (row) row.remove();
+      return;
+    }
+
+    // add attachment item
+    if (ev.target && (ev.target.id === 'h_add_attachment_item_btn' || ev.target.closest('#h_add_attachment_item_btn'))) {
+      ev.preventDefault();
+      // add item with new id
+      var items = getAttachmentItemsFromDOM();
+      items.push({ title: '' });
+      renderAttachmentItems(items);
+      return;
+    }
+
+    // remove attachment item
+    var remItemBtn = ev.target.closest('.btn-remove-attachment-item');
+    if (remItemBtn) {
+      ev.preventDefault();
+      var card = remItemBtn.closest('.card');
+      if (!card) return;
+      var itemId = card.dataset.itemId;
+      // cleanup
+      if (H._files[itemId]) H._files[itemId].forEach(function (f) { if (f.url) URL.revokeObjectURL(f.url); });
+      delete H._files[itemId];
+      card.remove();
+      return;
+    }
   });
 
+  // file input change (delegated)
+  document.addEventListener('change', function (ev) {
+    var input = ev.target;
+    if (input && input.classList && input.classList.contains('attachment-file-input')) {
+      var card = input.closest('.card');
+      var itemId = card && card.dataset.itemId;
+      if (!itemId) return;
+      H.addTempFilesToItem(itemId, input.files);
+      // reset input so same file can be re-selected later
+      input.value = '';
+    }
+  });
+
+  // --- Initialization: call carregarHospitais when fragment is injected (handles AJAX injection)
+  function iniciarCarregamentoHospitais() { setTimeout(function () { H.carregarHospitais(); }, 80); }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      iniciarCarregamentoHospitais();
+    });
+  } else {
+    iniciarCarregamentoHospitais();
+  }
+
+  // expose H to global (already assigned) and some helpers for onclick usage
+  window.HOSP = H;
 })();
 </script>
