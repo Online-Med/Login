@@ -4,11 +4,30 @@
 //  O underscore no nome impede que o Vercel exponha como rota pública.
 //  Coloque este arquivo DENTRO da pasta api/ junto com os outros .js
 // ════════════════════════════════════════════════════════════════════
+// api/_seguranca.js
+// Versão mais resiliente — substitua seu arquivo por este
 
 export const SUPABASE_URL = "https://pijymmyhtjvgfnpazjww.supabase.co";
 
-// O código agora busca a chave do sistema, não do texto puro
-export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Use a service role key do Supabase (defina SUPABASE_SERVICE_ROLE_KEY no Vercel)
+export const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Não logue SERVICE_KEY no console (evita vazar segredo).
+console.log('[seguranca] SERVICE_KEY present:', !!SERVICE_KEY);
+console.log('[seguranca] global.fetch available:', typeof fetch !== 'undefined');
+
+let _fetch = (typeof fetch !== 'undefined') ? fetch : null;
+if (!_fetch) {
+  try {
+    // fallback para node-fetch se necessário
+    // no ambiente Vercel moderno normalmente não é necessário
+    const nodeFetch = await import('node-fetch');
+    _fetch = nodeFetch.default;
+    console.log('[seguranca] using node-fetch fallback');
+  } catch (e) {
+    console.warn('[seguranca] fetch não disponível e node-fetch não pôde ser importado');
+  }
+}
 
 export const sbHeaders = {
   'apikey':        SERVICE_KEY,
@@ -16,76 +35,87 @@ export const sbHeaders = {
   'Content-Type':  'application/json'
 };
 
-
-// ── Helper: chama o Supabase REST e retorna { ok, status, data } ──
+// Helper: chama o Supabase REST e retorna { ok, status, data, error }
 export async function sb(path, method = 'GET', body = null, extraHeaders = {}) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    method,
-    headers: { ...sbHeaders, ...extraHeaders },
-    ...(body ? { body: JSON.stringify(body) } : {})
-  });
-  const text = await r.text();
-  const data = text ? JSON.parse(text) : null;
-  return { ok: r.ok, status: r.status, data };
+  try {
+    if (!_fetch) throw new Error('fetch não disponível no runtime');
+
+    const url = `${SUPABASE_URL}/rest/v1/${path}`;
+    const opts = {
+      method,
+      headers: { ...sbHeaders, ...extraHeaders },
+      ...(body ? { body: JSON.stringify(body) } : {})
+    };
+
+    const r = await _fetch(url, opts);
+    const status = r.status;
+    const text = await r.text().catch(() => null);
+
+    if (!text) {
+      // corpo vazio (ex: 204)
+      return { ok: r.ok, status, data: null };
+    }
+
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      // se não for JSON, devolve o texto cru
+      data = text;
+    }
+
+    return { ok: r.ok, status, data };
+  } catch (err) {
+    console.error('[seguranca.sb] erro ao chamar Supabase:', err.message || err);
+    return { ok: false, status: 0, data: null, error: err.message || String(err) };
+  }
 }
 
-// ── Valida sessão: checa se o e-mail do header existe na tabela usuarios ──
-// Lança erro se não autorizado. Use em TODOS os handlers exceto login e keep-alive.
+// Valida sessão: checa header x-user-email (mantive sua lógica)
+// Retorna dados do usuário (e.g. { id_profissional, perfil }) ou lança erro
 export async function validarSessao(req) {
-  const userEmail = (req.headers['x-user-email'] || '').trim().toLowerCase();
+  const userEmail = (req.headers['x-user-email'] || req.headers['X-User-Email'] || '').trim().toLowerCase();
   if (!userEmail) throw new Error("Não autorizado: sessão ausente");
 
-  const { ok, data } = await sb(
-    `usuarios?email=eq.${encodeURIComponent(userEmail)}&select=id_profissional,perfil&limit=1`
+  const encoded = encodeURIComponent(userEmail);
+  const { ok, status, data, error } = await sb(
+    `usuarios?email=eq.${encoded}&select=id_profissional,perfil&limit=1`
   );
-  if (!ok || !data || data.length === 0) throw new Error("Acesso negado");
-  return data[0]; // { id_profissional, perfil }
+
+  if (!ok) {
+    const msg = `Erro ao validar sessão (status ${status}) ${error ? '- ' + error : ''}`;
+    console.error('[seguranca.validarSessao]', msg);
+    throw new Error("Acesso negado");
+  }
+  if (!data || data.length === 0) throw new Error("Acesso negado");
+
+  return data[0];
 }
 
-// ── Gera uma senha aleatória segura (usada no recuperar.js) ──────
+// rest of helpers
 export function gerarSenhaAleatoria(tamanho = 10) {
-  const maiusculas = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sem I e O (confusos)
-  const minusculas = 'abcdefghjkmnpqrstuvwxyz';  // sem l e o
-  const digitos    = '23456789';                  // sem 0 e 1
+  const maiusculas = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const minusculas = 'abcdefghjkmnpqrstuvwxyz';
+  const digitos    = '23456789';
   const especiais  = '@#$%&*!';
   const todos      = maiusculas + minusculas + digitos + especiais;
-
-  // Garante pelo menos 1 de cada categoria
   let senha = '';
   senha += maiusculas[Math.floor(Math.random() * maiusculas.length)];
   senha += minusculas[Math.floor(Math.random() * minusculas.length)];
-  senha += digitos   [Math.floor(Math.random() * digitos.length)];
-  senha += especiais [Math.floor(Math.random() * especiais.length)];
-
-  for (let i = senha.length; i < tamanho; i++) {
-    senha += todos[Math.floor(Math.random() * todos.length)];
-  }
-
-  // Embaralha para os caracteres garantidos não ficarem sempre no início
+  senha += digitos[Math.floor(Math.random() * digitos.length)];
+  senha += especiais[Math.floor(Math.random() * especiais.length)];
+  for (let i = senha.length; i < tamanho; i++) senha += todos[Math.floor(Math.random() * todos.length)];
   return senha.split('').sort(() => Math.random() - 0.5).join('');
 }
 
-// ── Busca configurações ─────────────────────────────────────────────
-//
-// USO 1 — por id_profissional (retorna objeto { chave: valor }):
-//   const cfg = await buscarConfig(3);
-//   cfg.horario_inicio_agenda  →  '08:00'
-//
-// USO 2 — por chave global (retorna o valor como string):
-//   const email = await buscarConfig('email_cadastrado');
-//   email  →  'suporte@clinica.com'
-//
 export async function buscarConfig(idOuChave) {
   if (typeof idOuChave === 'string') {
-    // Chave global — devolve só o valor
     const { ok, data } = await sb(
       `configuracoes?chave_config=eq.${encodeURIComponent(idOuChave)}&select=valor&limit=1`
     );
     if (!ok || !data || data.length === 0) return null;
     return data[0].valor;
   }
-
-  // id_profissional — devolve objeto { chave: valor }
   const { ok, data } = await sb(
     `configuracoes?id_profissional=eq.${idOuChave}&select=chave_config,valor`
   );
