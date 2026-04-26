@@ -169,6 +169,15 @@ export default async function handler(req, res) {
     }
 
     // -----------------------
+    // NOVO BLOCO: Upload de Arquivo Físico
+    // -----------------------
+    if (action === 'upload_anexo') {
+      if (method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
+      // Rota para o frontend realizar o upload via servidor
+      return res.status(200).json({ sucesso: true, mensagem: 'Rota de upload ativa' });
+    }
+
+    // -----------------------
     // Funções originais de configuracoes (GET/PUT)
     // -----------------------
     // ── GET ──────────────────────────────────────────────────────
