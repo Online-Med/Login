@@ -120,6 +120,7 @@ export default async function handler(req, res) {
     // ---------------------------------------------------------
     // SEÇÃO: UPLOAD DE ARQUIVO (ACTION: upload_anexo)
     // ---------------------------------------------------------
+
     if (action === 'upload_anexo') {
       if (method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
 
@@ -130,40 +131,42 @@ export default async function handler(req, res) {
         return res.status(400).json({ sucesso: false, erro: 'Dados incompletos para upload' });
       }
 
-      // 1. Converte a string Base64 vinda do cliente em um Buffer binário
+      // Converte Base64 para binário (Buffer)
       const buffer = Buffer.from(arquivo_base64, 'base64');
-      
-      // 2. Cria um caminho único no Storage usando o ID do hospital e um timestamp
       const timestamp = Date.now();
       const storagePath = `${hospital_id}/${timestamp}_${nome_arquivo}`;
 
-      // 3. Executa o upload físico para o Supabase Storage
+      // Monta a URL garantindo que não haja barras duplas
+      const baseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+      const storageUrl = `${baseUrl}/storage/v1/object/hospitais/${storagePath}`;
 
-const storageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${storagePath}`;
-const response = await fetch(storageUrl, {
-  method: 'POST',
-  body: buffer,
-  headers: {
-    'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
-    'Content-Type': tipo_arquivo || 'application/octet-stream',
-    'x-user-email': req.headers['x-user-email']
-  }
-});
+      console.log("Tentando upload para:", storageUrl); // Log para debug no Vercel
 
-const uploadOk = response.ok;
-const uploadStatus = response.status;
-// Adicionamos esta linha para capturar erros caso o upload falhe
-const uploadErr = uploadOk ? null : await response.text();
+      // 3. Executa o fetch manual para o Storage
+      const response = await fetch(storageUrl, {
+        method: 'POST',
+        body: buffer,
+        headers: {
+          'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+          'Content-Type': tipo_arquivo || 'application/octet-stream',
+          'x-user-email': req.headers['x-user-email'] || ''
+        }
+      });
 
+      const uploadOk = response.ok;
+      const uploadStatus = response.status;
+      
       if (!uploadOk) {
-        return res.status(uploadStatus || 500).json({ sucesso: false, erro: 'Erro no storage: ' + (uploadErr || uploadStatus) });
+        const uploadErr = await response.text();
+        // LOG CRÍTICO: Isso vai aparecer no seu painel da Vercel em tempo real
+        console.error("ERRO STORAGE SUPABASE:", uploadStatus, uploadErr);
+        return res.status(uploadStatus || 500).json({ sucesso: false, erro: `Storage Erro (${uploadStatus}): ${uploadErr}` });
       }
 
-      // 4. Constrói a URL pública do arquivo para acesso posterior
-      const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
+      // 4. URL pública para salvar no banco
+      const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
 
-      // 5. Registra os metadados do arquivo no banco de dados (Tabela de anexos)
+      // 5. Salva na tabela de metadados
       const metadata = {
         hospital_id: parseInt(hospital_id),
         titulo_item: titulo_item || nome_arquivo.split('.').shift(),
@@ -174,10 +177,19 @@ const uploadErr = uploadOk ? null : await response.text();
       };
 
       const { ok: dbOk, error: dbError } = await sb('hospitais_attachments', 'POST', metadata);
-      if (!dbOk) return res.status(500).json({ sucesso: false, erro: dbError || 'Erro ao salvar metadados' });
+      
+      if (!dbOk) {
+        console.error("ERRO BANCO METADADOS:", dbError);
+        return res.status(500).json({ sucesso: false, erro: 'Arquivo subiu, mas falhou ao registrar no banco.' });
+      }
 
       return res.status(200).json({ sucesso: true, url: publicUrl });
     }
+
+
+
+
+    
 
     // ---------------------------------------------------------
     // SEÇÃO: CONFIGURAÇÕES GERAIS E BUSCA DE CID
