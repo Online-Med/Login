@@ -283,5 +283,17 @@ H.salvarHospital = async function () {
   document.getElementById('h_add_attachment_item_btn').onclick = () => H.addAttachmentRow();
   H.carregarHospitais();
 
+
+
+// Nova função auxiliar para converter arquivo em Base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result); // Isso retorna algo como "data:image/png;base64,..."
+    reader.onerror = error => reject(error);
+  });
+}
+  
 })();
 </script>
