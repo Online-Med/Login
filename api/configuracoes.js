@@ -138,15 +138,22 @@ export default async function handler(req, res) {
       const storagePath = `${hospital_id}/${timestamp}_${nome_arquivo}`;
 
       // 3. Executa o upload físico para o Supabase Storage
-      const { ok: uploadOk, status: uploadStatus, error: uploadErr } = await sb(
-        `storage/v1/object/hospitais/${storagePath}`,
-        'POST',
-        buffer,
-        { 
-          'Content-Type': tipo_arquivo || 'application/octet-stream',
-          'x-user-email': req.headers['x-user-email'] // Necessário para políticas de RLS
-        }
-      );
+
+const storageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${storagePath}`;
+const response = await fetch(storageUrl, {
+  method: 'POST',
+  body: buffer,
+  headers: {
+    'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+    'Content-Type': tipo_arquivo || 'application/octet-stream',
+    'x-user-email': req.headers['x-user-email']
+  }
+});
+
+const uploadOk = response.ok;
+const uploadStatus = response.status;
+// Adicionamos esta linha para capturar erros caso o upload falhe
+const uploadErr = uploadOk ? null : await response.text();
 
       if (!uploadOk) {
         return res.status(uploadStatus || 500).json({ sucesso: false, erro: 'Erro no storage: ' + (uploadErr || uploadStatus) });
