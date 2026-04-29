@@ -137,21 +137,30 @@ export default async function handler(req, res) {
       const storagePath = `${hospital_id}/${timestamp}_${nome_arquivo}`;
 
       // Monta a URL garantindo que não haja barras duplas
+      // 3. Executa o fetch manual para o Storage
       const baseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+      if (!baseUrl) {
+          console.error("ERRO: Variável SUPABASE_URL não configurada no Vercel!");
+          return res.status(500).json({ sucesso: false, erro: "Erro de configuração no servidor (URL ausente)." });
+      }
+
       const storageUrl = `${baseUrl}/storage/v1/object/hospitais/${storagePath}`;
 
-      console.log("Tentando upload para:", storageUrl); // Log para debug no Vercel
-
-      // 3. Executa o fetch manual para o Storage
-      const response = await fetch(storageUrl, {
-        method: 'POST',
-        body: buffer,
-        headers: {
-          'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
-          'Content-Type': tipo_arquivo || 'application/octet-stream',
-          'x-user-email': req.headers['x-user-email'] || ''
-        }
-      });
+      let response;
+      try {
+          response = await fetch(storageUrl, {
+            method: 'POST',
+            body: buffer,
+            headers: {
+              'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+              'Content-Type': tipo_arquivo || 'application/octet-stream',
+              'x-user-email': req.headers['x-user-email'] || ''
+            }
+          });
+      } catch (err) {
+          console.error("ERRO AO DISPARAR FETCH:", err.message);
+          return res.status(500).json({ sucesso: false, erro: "Falha ao conectar com o Storage: " + err.message });
+      }
 
       const uploadOk = response.ok;
       const uploadStatus = response.status;
