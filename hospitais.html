@@ -167,47 +167,80 @@
       });
   };
 
-  H.salvarHospital = async function () {
-    var btn = $('#h_btnSalvar');
-    btn.disabled = true;
-    try {
-      var id = $('#h_id').value;
-      var payload = {
-        nome: $('#h_nome').value.trim(),
-        telefones: $('#h_telefones').value.trim(),
-        endereco: $('#h_endereco').value.trim(),
-        contatos: $all('#h_contacts .contact-row').map(r => ({
-          local: r.querySelector('.contact-local').value,
-          nome: r.querySelector('.contact-name').value,
-          telefone: r.querySelector('.contact-phone').value
-        }))
-      };
+H.salvarHospital = async function () {
+  const btn = $('#h_btnSalvar');
+  btn.disabled = true;
 
-      const res = await fetch('/api/configuracoes?action=hospitais' + (id ? '&id='+id : ''), {
-        method: id ? 'PATCH' : 'POST',
-        headers: getApiHeaders(true),
-        body: JSON.stringify(payload)
-      }).then(r => r.json());
+  try {
+    const id = $('#h_id').value;
+    const payload = {
+      nome: $('#h_nome').value.trim(),
+      telefones: $('#h_telefones').value.trim(),
+      endereco: $('#h_endereco').value.trim(),
+      contatos: $all('#h_contacts .contact-row').map(r => ({
+        local: r.querySelector('.contact-local').value,
+        nome: r.querySelector('.contact-name').value,
+        telefone: r.querySelector('.contact-phone').value
+      }))
+    };
 
-      if (!res.sucesso) throw new Error(res.erro);
+    // 1. Salva ou atualiza os dados básicos do hospital
+    const res = await fetch('/api/configuracoes?action=hospitais' + (id ? '&id=' + id : ''), {
+      method: id ? 'PATCH' : 'POST',
+      headers: getApiHeaders(true),
+      body: JSON.stringify(payload)
+    }).then(r => r.json());
 
-      // Tenta upload de anexos
-      const items = $all('#h_attachment_items .card');
-      for (const item of items) {
-        const fileInput = item.querySelector('input[type="file"]');
-        if (fileInput.files.length > 0) {
-          const formData = new FormData();
-          formData.append('file', fileInput.files[0]);
-          formData.append('hospital_id', id || res.id);
-          formData.append('titulo_item', item.querySelector('.attachment-title').value);
+    if (!res.sucesso) throw new Error(res.erro);
 
-          await fetch('/api/configuracoes?action=upload_anexo', {
-            method: 'POST',
-            headers: getApiHeaders(false),
-            body: formData
-          });
-        }
+    const hospitalId = id || res.id;
+
+    // 2. Processa os anexos (se houver arquivos selecionados)
+    const items = $all('#h_attachment_items .card');
+    
+    for (const item of items) {
+      const fileInput = item.querySelector('input[type="file"]');
+      const titulo = item.querySelector('.attachment-title').value;
+
+      if (fileInput.files.length > 0) {
+        const arquivo = fileInput.files[0];
+        
+        // Transformamos o arquivo em Base64 para enviar via JSON
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+          reader.readAsDataURL(arquivo);
+        });
+
+        const uploadPayload = {
+          hospital_id: hospitalId,
+          titulo_item: titulo,
+          nome_arquivo: arquivo.name,
+          tipo_arquivo: arquivo.type,
+          tamanho: arquivo.size,
+          arquivo_base64: base64
+        };
+
+        // Enviamos para a API processar o upload no Supabase
+        await fetch('/api/configuracoes?action=upload_anexo', {
+          method: 'POST',
+          headers: getApiHeaders(true), // Usamos JSON aqui
+          body: JSON.stringify(uploadPayload)
+        });
       }
+    }
+
+    Swal.fire('Sucesso!', 'Hospital e anexos salvos com sucesso.', 'success');
+    bootstrap.Modal.getInstance($('#modalHospital')).hide();
+    H.carregarHospitais();
+
+  } catch (e) {
+    console.error("Erro no salvamento:", e);
+    Swal.fire('Erro', e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+};
 
       bootstrap.Modal.getInstance($('#modalHospital')).hide();
       H.carregarHospitais();
