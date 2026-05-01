@@ -126,59 +126,69 @@ if (action === 'upload_anexo') {
 
       try {
         const body = (typeof req.body === 'string') ? JSON.parse(req.body) : req.body;
-        const { hospital_id, nome_arquivo, tipo_arquivo, arquivo_base64 } = body;
+        const { hospital_id, nome_arquivo, tipo_arquivo, arquivo_base64, titulo_item, tamanho } = body;
 
-        // LOG DE ENTRADA
-        console.log("Iniciando upload para Hospital ID:", hospital_id);
+        // Validação Manual das Variáveis (Impede o erro 500 silencioso)
+        const s_url = process.env.SUPABASE_URL;
+        const s_key = process.env.SUPABASE_KEY;
 
-        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
-          console.error("ERRO: Variáveis de ambiente faltando na Vercel!");
-          return res.status(500).json({ sucesso: false, erro: "Servidor não configurado corretamente (URL/Key)." });
+        if (!s_url || !s_key) {
+          console.error("ERRO CRÍTICO: Variáveis de ambiente não encontradas no processo!");
+          return res.status(500).json({ 
+            sucesso: false, 
+            erro: `Configuração incompleta. URL: ${!!s_url}, KEY: ${!!s_key}` 
+          });
         }
 
         const buffer = Buffer.from(arquivo_base64, 'base64');
         const storagePath = `${hospital_id}/${Date.now()}_${nome_arquivo}`;
-        const baseUrl = process.env.SUPABASE_URL.replace(/\/$/, '');
+        const baseUrl = s_url.replace(/\/$/, '');
         const storageUrl = `${baseUrl}/storage/v1/object/hospitais/${storagePath}`;
+
+        console.log("Iniciando fetch para Storage...");
 
         const response = await fetch(storageUrl, {
           method: 'POST',
           body: buffer,
           headers: {
-            'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
-            'Content-Type': tipo_arquivo || 'application/octet-stream'
+            'Authorization': `Bearer ${s_key}`,
+            'Content-Type': tipo_arquivo || 'application/octet-stream',
+            'x-user-email': req.headers['x-user-email'] || ''
           }
         });
 
         if (!response.ok) {
-          const textoErro = await response.text();
-          console.error("Erro no Supabase Storage:", response.status, textoErro);
-          return res.status(response.status).json({ sucesso: false, erro: `Supabase: ${textoErro}` });
+          const errorText = await response.text();
+          console.error("Supabase Storage recusou:", response.status, errorText);
+          return res.status(response.status).json({ sucesso: false, erro: "Supabase: " + errorText });
         }
 
         const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
         
-        // Registrar no banco
+        // Registro no banco
         const metadata = {
           hospital_id: parseInt(hospital_id),
-          titulo_item: nome_arquivo,
+          titulo_item: titulo_item || nome_arquivo,
           nome: nome_arquivo,
           url: publicUrl,
-          content_type: tipo_arquivo,
-          size: buffer.length
+          content_type: tipo_arquivo || '',
+          size: tamanho || buffer.length
         };
 
         const { ok: dbOk, error: dbError } = await sb('hospitais_attachments', 'POST', metadata);
-        if (!dbOk) throw new Error("Erro ao salvar metadados: " + dbError);
+        
+        if (!dbOk) {
+          console.error("Erro ao registrar metadados:", dbError);
+          return res.status(500).json({ sucesso: false, erro: "Arquivo subiu, mas falhou registro no banco." });
+        }
 
         return res.status(200).json({ sucesso: true, url: publicUrl });
 
       } catch (err) {
-        console.error("CRITICAL ERROR UPLOAD:", err.message);
-        return res.status(500).json({ sucesso: false, erro: err.message });
+        console.error("Falha total no upload:", err.message);
+        return res.status(500).json({ sucesso: false, erro: "Exceção no servidor: " + err.message });
       }
     }
-
 
     
 
