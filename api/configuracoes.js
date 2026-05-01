@@ -11,7 +11,6 @@ const DEFAULTS = {
 
 export default async function handler(req, res) {
   // --- SEGURANÇA ---
-  // Valida se o usuário está autenticado antes de prosseguir
   try { 
     await validarSessao(req); 
   } catch (e) { 
@@ -19,7 +18,6 @@ export default async function handler(req, res) {
   }
 
   const { method, query } = req;
-  // Define a ação baseada no parâmetro 'action' da URL (ex: ?action=hospitais)
   const action = (query && query.action) ? String(query.action).toLowerCase() : '';
 
   try {
@@ -27,11 +25,8 @@ export default async function handler(req, res) {
     // SEÇÃO: HOSPITAIS (CRUD)
     // ---------------------------------------------------------
     if (action === 'hospitais') {
-      
-      // LISTAGEM E BUSCA
       if (method === 'GET') {
         const { id } = query;
-        // Monta o caminho para buscar um hospital específico ou a lista completa
         const path = id 
           ? `hospitais?id=eq.${encodeURIComponent(id)}&select=*,contatos,telefones,endereco,created_at,updated_at` 
           : 'hospitais?select=*,contatos,telefones,endereco,created_at,updated_at&order=nome.asc';
@@ -40,24 +35,19 @@ export default async function handler(req, res) {
         if (!ok) return res.status(status || 500).json({ sucesso: false, erro: 'Erro ao consultar hospitais' });
 
         const hospitals = data || [];
-        if (!hospitals.length) return res.status(200).json({ sucesso: true, dados: hospitals });
-
-        // Coleta IDs para buscar os anexos (arquivos) vinculados a esses hospitais
-        const ids = hospitals.map(h => h.id).filter(Boolean);
-        if (ids.length > 0) {
+        if (hospitals.length > 0) {
+          const ids = hospitals.map(h => h.id).filter(Boolean);
           const idsList = ids.join(',');
           const attPath = `hospitais_attachments?hospital_id=in.(${idsList})&select=id,hospital_id,titulo_item,nome,url,content_type,size,created_at&order=created_at.asc`;
           const { ok: ok2, data: attachments } = await sb(attPath);
           const atts = ok2 && attachments ? attachments : [];
 
-          // Agrupa os anexos por ID de hospital para facilitar a mesclagem
           const map = {};
           atts.forEach(a => {
             if (!map[a.hospital_id]) map[a.hospital_id] = [];
             map[a.hospital_id].push(a);
           });
 
-          // Insere os anexos e faz o parse do JSON de contatos em cada hospital
           hospitals.forEach(h => {
             h.anexos = map[h.id] || [];
             if (typeof h.contatos === 'string') {
@@ -67,69 +57,49 @@ export default async function handler(req, res) {
             }
           });
         }
-
         return res.status(200).json({ sucesso: true, dados: hospitals });
       }
 
-      // CRIAÇÃO DE HOSPITAL
       if (method === 'POST') {
         const body = (typeof req.body === 'string') ? JSON.parse(req.body) : req.body;
         if (!body || !body.nome) return res.status(400).json({ sucesso:false, erro: 'Campo nome obrigatório' });
-
         const payload = {
           nome: String(body.nome).trim(),
           telefones: body.telefones || '',
           endereco: body.endereco || '',
           contatos: body.contatos || []
         };
-
         const { ok, status, data, error } = await sb('hospitais', 'POST', payload, { 'Prefer': 'return=representation' });
-        if (!ok) return res.status(status || 500).json({ sucesso:false, erro: error || 'Erro ao criar hospital' });
-
-        const newId = Array.isArray(data) && data[0] ? data[0].id : null;
-        return res.status(200).json({ sucesso: true, id: newId, dados: data });
+        return res.status(200).json({ sucesso: ok, id: data?.[0]?.id, dados: data, erro: error });
       }
 
-      // ATUALIZAÇÃO DE HOSPITAL
       if (method === 'PATCH') {
         const { id } = query;
-        if (!id) return res.status(400).json({ sucesso:false, erro: 'id obrigatório' });
         const body = (typeof req.body === 'string') ? JSON.parse(req.body) : req.body;
-
-        const allowed = {}; // Filtra apenas campos permitidos para evitar updates indevidos
+        const allowed = {};
         if ('nome' in body) allowed.nome = String(body.nome || '').trim();
         if ('telefones' in body) allowed.telefones = body.telefones || '';
         if ('endereco' in body) allowed.endereco = body.endereco || '';
         if ('contatos' in body) allowed.contatos = body.contatos || [];
-
-        const { ok, status, error } = await sb(`hospitais?id=eq.${encodeURIComponent(id)}`, 'PATCH', allowed, { 'Prefer': 'return=minimal' });
-        if (!ok) return res.status(status || 500).json({ sucesso:false, erro: error || 'Erro ao atualizar' });
-        return res.status(200).json({ sucesso: true });
+        const { ok, status, error } = await sb(`hospitais?id=eq.${encodeURIComponent(id)}`, 'PATCH', allowed);
+        return res.status(200).json({ sucesso: ok, erro: error });
       }
 
-      // EXCLUSÃO DE HOSPITAL
       if (method === 'DELETE') {
-        const { id } = query;
-        if (!id) return res.status(400).json({ sucesso:false, erro: 'id obrigatório' });
-        const { ok, status, error } = await sb(`hospitais?id=eq.${encodeURIComponent(id)}`, 'DELETE');
-        if (!ok) return res.status(status || 500).json({ sucesso:false, erro: error || 'Erro ao excluir' });
-        return res.status(200).json({ sucesso: true });
+        const { ok, error } = await sb(`hospitais?id=eq.${encodeURIComponent(query.id)}`, 'DELETE');
+        return res.status(200).json({ sucesso: ok, erro: error });
       }
     }
 
     // ---------------------------------------------------------
-    // SEÇÃO: UPLOAD DE ARQUIVO (ACTION: upload_anexo)
+    // SEÇÃO: ANEXOS (UPLOAD / EXCLUSÃO / EDIÇÃO)
     // ---------------------------------------------------------
-
-if (action === 'upload_anexo') {
-      if (method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
+    else if (action === 'upload_anexo') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       const { hospital_id, nome_arquivo, tipo_arquivo, arquivo_base64, titulo_item } = body;
-
       const buffer = Buffer.from(arquivo_base64, 'base64');
       const storagePath = `${hospital_id}/${Date.now()}_${nome_arquivo}`;
       
-      // Upload para Storage
       const storageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${storagePath}`;
       const up = await fetch(storageUrl, {
         method: 'POST',
@@ -138,10 +108,8 @@ if (action === 'upload_anexo') {
       });
 
       if (!up.ok) return res.status(up.status).json({ sucesso: false, erro: 'Erro no Storage' });
-
       const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/hospitais/${storagePath}`;
 
-      // Grava no Banco
       const { ok, error } = await sb('hospitais_attachments', 'POST', {
         hospital_id: parseInt(hospital_id),
         titulo_item: titulo_item || nome_arquivo,
@@ -150,16 +118,11 @@ if (action === 'upload_anexo') {
         content_type: tipo_arquivo,
         size: buffer.length
       });
-
       return res.status(200).json({ sucesso: ok, erro: error });
     }
 
-    // --- NOVA AÇÃO: EXCLUIR ANEXO ---
-    if (action === 'excluir_anexo') {
-      if (method !== 'DELETE') return res.status(405).json({ erro: 'Método não permitido' });
-      const { id } = query;
-      
-      const { data: anexo } = await sb(`hospitais_attachments?id=eq.${id}&select=url`);
+    else if (action === 'excluir_anexo') {
+      const { data: anexo } = await sb(`hospitais_attachments?id=eq.${query.id}&select=url`);
       if (anexo?.[0]) {
         const path = anexo[0].url.split('/public/hospitais/')[1];
         await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${path}`, {
@@ -167,77 +130,64 @@ if (action === 'upload_anexo') {
           headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}` }
         });
       }
-      const { ok } = await sb(`hospitais_attachments?id=eq.${id}`, 'DELETE');
+      const { ok } = await sb(`hospitais_attachments?id=eq.${query.id}`, 'DELETE');
       return res.status(200).json({ sucesso: ok });
     }
 
-    // --- NOVA AÇÃO: EDITAR TÍTULO DO ANEXO ---
-    if (action === 'editar_anexo') {
-      if (method !== 'PATCH') return res.status(405).json({ erro: 'Método não permitido' });
-      const { id } = query;
+    else if (action === 'editar_anexo') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { ok } = await sb(`hospitais_attachments?id=eq.${id}`, 'PATCH', { titulo_item: body.titulo_item });
+      const { ok } = await sb(`hospitais_attachments?id=eq.${query.id}`, 'PATCH', { titulo_item: body.titulo_item });
       return res.status(200).json({ sucesso: ok });
     }
 
-    return res.status(405).json({ erro: 'Ação não permitida' });
-  } catch (err) {
-    return res.status(500).json({ sucesso: false, erro: err.message });
-  }
-}
-
-    
-
     // ---------------------------------------------------------
-    // SEÇÃO: CONFIGURAÇÕES GERAIS E BUSCA DE CID
+    // SEÇÃO: CID E CONFIGURAÇÕES DE AGENDA
     // ---------------------------------------------------------
-    if (method === 'GET') {
-      const { id_profissional, action: act, termo } = query;
-
-      // Busca códigos CID por termo de pesquisa
-      if (act === 'buscar_cid') {
-        if (!termo) return res.status(200).json([]);
-        const t = encodeURIComponent(String(termo||'').trim());
-        const { ok, data } = await sb(`cid?or=(codigo.ilike.*${t}*,descricao.ilike.*${t}*)&limit=10&select=codigo,descricao`);
-        return res.status(200).json(ok ? data || [] : []);
-      }
-
-      // Retorna as configurações de agenda do profissional
-      if (!id_profissional) return res.status(400).json({ erro: 'id_profissional obrigatório.' });
-      const { ok, data } = await sb(`configuracoes?id_profissional=eq.${id_profissional}&select=chave_config,valor`);
-      const cfg = { ...DEFAULTS }; // Começa com os padrões e sobrescreve com o que houver no banco
-      if (ok && data) { 
-        data.forEach(r => { cfg[r.chave_config] = r.valor; }); 
-      }
-      return res.status(200).json({ sucesso: true, config: cfg });
+    else if (action === 'buscar_cid') {
+      const termo = query.termo;
+      if (!termo) return res.status(200).json([]);
+      const t = encodeURIComponent(String(termo).trim());
+      const { ok, data } = await sb(`cid?or=(codigo.ilike.*${t}*,descricao.ilike.*${t}*)&limit=10&select=codigo,descricao`);
+      return res.status(200).json(ok ? data || [] : []);
     }
 
-    // Salva ou atualiza configurações (Agenda)
-    if (method === 'PUT') {
+    // Se nenhuma "action" específica for disparada, tratamos a Agenda do Profissional
+    else {
       const { id_profissional } = query;
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const chaves = Object.keys(DEFAULTS);
-      const erros = [];
-
-      for (const chave of chaves) {
-        if (!(chave in body)) continue;
-        const valor = String(body[chave] || '').trim();
-        
-        // Verifica se a configuração já existe para decidir entre POST (novo) ou PATCH (atualizar)
-        const { data: exist } = await sb(`configuracoes?id_profissional=eq.${id_profissional}&chave_config=eq.${chave}&select=chave_config`);
-        
-        if (exist && exist.length > 0) {
-          const { ok } = await sb(`configuracoes?id_profissional=eq.${id_profissional}&chave_config=eq.${chave}`, 'PATCH', { valor }, { 'Prefer': 'return=minimal' });
-          if (!ok) erros.push(chave);
-        } else {
-          const { ok } = await sb('configuracoes', 'POST', { id_profissional: parseInt(id_profissional), chave_config: chave, valor }, { 'Prefer': 'return=minimal' });
-          if (!ok) erros.push(chave);
+      
+      if (method === 'GET' && id_profissional) {
+        const { ok, data } = await sb(`configuracoes?id_profissional=eq.${id_profissional}&select=chave_config,valor`);
+        const cfg = { ...DEFAULTS }; 
+        if (ok && data) { 
+          data.forEach(r => { cfg[r.chave_config] = r.valor; }); 
         }
+        return res.status(200).json({ sucesso: true, config: cfg });
       }
-      return res.status(200).json({ sucesso: erros.length === 0 });
+
+      if (method === 'PUT' && id_profissional) {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const chaves = Object.keys(DEFAULTS);
+        const erros = [];
+
+        for (const chave of chaves) {
+          if (!(chave in body)) continue;
+          const valor = String(body[chave] || '').trim();
+          const { data: exist } = await sb(`configuracoes?id_profissional=eq.${id_profissional}&chave_config=eq.${chave}&select=chave_config`);
+          
+          if (exist && exist.length > 0) {
+            const { ok } = await sb(`configuracoes?id_profissional=eq.${id_profissional}&chave_config=eq.${chave}`, 'PATCH', { valor });
+            if (!ok) erros.push(chave);
+          } else {
+            const { ok } = await sb('configuracoes', 'POST', { id_profissional: parseInt(id_profissional), chave_config: chave, valor });
+            if (!ok) erros.push(chave);
+          }
+        }
+        return res.status(200).json({ sucesso: erros.length === 0 });
+      }
     }
 
-    return res.status(405).json({ erro: 'Método não permitido.' });
+    // Fallback caso não entre em nenhuma condição
+    return res.status(405).json({ erro: 'Ação ou Método não permitido' });
 
   } catch (error) {
     console.error('configuracoes.js error:', error);
