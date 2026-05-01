@@ -221,7 +221,9 @@
         (h.anexos || []).forEach(a => H.addAttachmentRow(a));
 
         $('#modalHospitalTitulo').innerHTML = `<i class="bi bi-pencil-square me-2"></i> Editar: ${h.nome}`;
-        bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
+        
+        // AJUSTE: focus: false permite que o SweetAlert receba digitação
+        bootstrap.Modal.getOrCreateInstance($('#modalHospital'), { focus: false }).show();
     };
 
     H.addContactRow = function(c = {}) {
@@ -254,9 +256,15 @@
                         </div>
                     </div>
                     <div class="btn-group shadow-sm">
+                        <!-- AJUSTE: Adicionado Botão Visualizar (Olho) -->
+                        <button type="button" class="btn btn-sm btn-light border" onclick="window.open('${a.url}', '_blank')" title="Visualizar"><i class="bi bi-eye text-primary"></i></button>
+                        
                         <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.editarTituloAnexo(${a.id}, '${escapeHtml(a.titulo_item)}')" title="Editar Nome"><i class="bi bi-pencil text-primary"></i></button>
+                        
                         <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.baixarAnexo('${a.url}', '${a.nome}')" title="Baixar"><i class="bi bi-download text-primary"></i></button>
+                        
                         <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.compartilharAnexo('${a.url}')" title="Compartilhar"><i class="bi bi-share text-primary"></i></button>
+                        
                         <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.excluirAnexo(${a.id}, this)" title="Remover"><i class="bi bi-trash text-danger"></i></button>
                     </div>
                 </div>`;
@@ -279,14 +287,20 @@
         container.appendChild(div);
     };
 
-    // --- NOVAS FUNÇÕES DOS BOTÕES DE ANEXO ---
-
-    H.baixarAnexo = (url, nome) => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = nome;
-        link.target = "_blank";
-        link.click();
+    // AJUSTE: Função de download forçado via Blob
+    H.baixarAnexo = async (url, nome) => {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = nome;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (e) {
+            window.open(url, '_blank');
+        }
     };
 
     H.compartilharAnexo = async (url) => {
@@ -336,7 +350,6 @@
             cancelButtonText: 'Cancelar'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                // Aqui garantimos que o DELETE seja enviado corretamente
                 const res = await fetch(`/api/configuracoes?action=excluir_anexo&id=${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     btn.closest('.attachment-card').remove();
@@ -418,7 +431,7 @@
         $('#h_contacts').innerHTML = '';
         $('#h_attachment_items').innerHTML = '';
         $('#modalHospitalTitulo').innerHTML = '<i class="bi bi-plus-lg me-2"></i> Novo Hospital';
-        bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
+        bootstrap.Modal.getOrCreateInstance($('#modalHospital'), { focus: false }).show();
     };
 
     document.getElementById('h_add_contact_btn').onclick = () => H.addContactRow();
