@@ -121,81 +121,63 @@ export default async function handler(req, res) {
     // SEÇÃO: UPLOAD DE ARQUIVO (ACTION: upload_anexo)
     // ---------------------------------------------------------
 
-    if (action === 'upload_anexo') {
+if (action === 'upload_anexo') {
       if (method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
 
-      const body = (typeof req.body === 'string') ? JSON.parse(req.body) : req.body;
-      const { hospital_id, titulo_item, nome_arquivo, tipo_arquivo, tamanho, arquivo_base64 } = body;
-
-      if (!hospital_id || !arquivo_base64) {
-        return res.status(400).json({ sucesso: false, erro: 'Dados incompletos para upload' });
-      }
-
-      // Converte Base64 para binário (Buffer)
-      const buffer = Buffer.from(arquivo_base64, 'base64');
-      const timestamp = Date.now();
-      const storagePath = `${hospital_id}/${timestamp}_${nome_arquivo}`;
-
-      // Monta a URL garantindo que não haja barras duplas
-      // 3. Executa o fetch manual para o Storage
-      const baseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-      if (!baseUrl) {
-          console.error("ERRO: Variável SUPABASE_URL não configurada no Vercel!");
-          return res.status(500).json({ sucesso: false, erro: "Erro de configuração no servidor (URL ausente)." });
-      }
-
-      const storageUrl = `${baseUrl}/storage/v1/object/hospitais/${storagePath}`;
-
-      let response;
       try {
-          response = await fetch(storageUrl, {
-            method: 'POST',
-            body: buffer,
-            headers: {
-              'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
-              'Content-Type': tipo_arquivo || 'application/octet-stream',
-              'x-user-email': req.headers['x-user-email'] || ''
-            }
-          });
+        const body = (typeof req.body === 'string') ? JSON.parse(req.body) : req.body;
+        const { hospital_id, nome_arquivo, tipo_arquivo, arquivo_base64 } = body;
+
+        // LOG DE ENTRADA
+        console.log("Iniciando upload para Hospital ID:", hospital_id);
+
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+          console.error("ERRO: Variáveis de ambiente faltando na Vercel!");
+          return res.status(500).json({ sucesso: false, erro: "Servidor não configurado corretamente (URL/Key)." });
+        }
+
+        const buffer = Buffer.from(arquivo_base64, 'base64');
+        const storagePath = `${hospital_id}/${Date.now()}_${nome_arquivo}`;
+        const baseUrl = process.env.SUPABASE_URL.replace(/\/$/, '');
+        const storageUrl = `${baseUrl}/storage/v1/object/hospitais/${storagePath}`;
+
+        const response = await fetch(storageUrl, {
+          method: 'POST',
+          body: buffer,
+          headers: {
+            'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
+            'Content-Type': tipo_arquivo || 'application/octet-stream'
+          }
+        });
+
+        if (!response.ok) {
+          const textoErro = await response.text();
+          console.error("Erro no Supabase Storage:", response.status, textoErro);
+          return res.status(response.status).json({ sucesso: false, erro: `Supabase: ${textoErro}` });
+        }
+
+        const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
+        
+        // Registrar no banco
+        const metadata = {
+          hospital_id: parseInt(hospital_id),
+          titulo_item: nome_arquivo,
+          nome: nome_arquivo,
+          url: publicUrl,
+          content_type: tipo_arquivo,
+          size: buffer.length
+        };
+
+        const { ok: dbOk, error: dbError } = await sb('hospitais_attachments', 'POST', metadata);
+        if (!dbOk) throw new Error("Erro ao salvar metadados: " + dbError);
+
+        return res.status(200).json({ sucesso: true, url: publicUrl });
+
       } catch (err) {
-          console.error("ERRO AO DISPARAR FETCH:", err.message);
-          return res.status(500).json({ sucesso: false, erro: "Falha ao conectar com o Storage: " + err.message });
+        console.error("CRITICAL ERROR UPLOAD:", err.message);
+        return res.status(500).json({ sucesso: false, erro: err.message });
       }
-
-      const uploadOk = response.ok;
-      const uploadStatus = response.status;
-      
-      if (!uploadOk) {
-        const uploadErr = await response.text();
-        // LOG CRÍTICO: Isso vai aparecer no seu painel da Vercel em tempo real
-        console.error("ERRO STORAGE SUPABASE:", uploadStatus, uploadErr);
-        return res.status(uploadStatus || 500).json({ sucesso: false, erro: `Storage Erro (${uploadStatus}): ${uploadErr}` });
-      }
-
-      // 4. URL pública para salvar no banco
-      const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
-
-      // 5. Salva na tabela de metadados
-      const metadata = {
-        hospital_id: parseInt(hospital_id),
-        titulo_item: titulo_item || nome_arquivo.split('.').shift(),
-        nome: nome_arquivo,
-        url: publicUrl,
-        content_type: tipo_arquivo || '',
-        size: tamanho || 0
-      };
-
-      const { ok: dbOk, error: dbError } = await sb('hospitais_attachments', 'POST', metadata);
-      
-      if (!dbOk) {
-        console.error("ERRO BANCO METADADOS:", dbError);
-        return res.status(500).json({ sucesso: false, erro: 'Arquivo subiu, mas falhou ao registrar no banco.' });
-      }
-
-      return res.status(200).json({ sucesso: true, url: publicUrl });
     }
-
-
 
 
     
