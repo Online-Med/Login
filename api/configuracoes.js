@@ -123,115 +123,68 @@ export default async function handler(req, res) {
 
 if (action === 'upload_anexo') {
       if (method !== 'POST') return res.status(405).json({ erro: 'Método não permitido' });
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const { hospital_id, nome_arquivo, tipo_arquivo, arquivo_base64, titulo_item } = body;
 
-      try {
-        const body = (typeof req.body === 'string') ? JSON.parse(req.body) : req.body;
-        const { hospital_id, nome_arquivo, tipo_arquivo, arquivo_base64, titulo_item, tamanho } = body;
+      const buffer = Buffer.from(arquivo_base64, 'base64');
+      const storagePath = `${hospital_id}/${Date.now()}_${nome_arquivo}`;
+      
+      // Upload para Storage
+      const storageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${storagePath}`;
+      const up = await fetch(storageUrl, {
+        method: 'POST',
+        body: buffer,
+        headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}`, 'Content-Type': tipo_arquivo }
+      });
 
-        // Validação Manual das Variáveis (Impede o erro 500 silencioso)
-        const s_url = process.env.SUPABASE_URL;
-        const s_key = process.env.SUPABASE_KEY;
+      if (!up.ok) return res.status(up.status).json({ sucesso: false, erro: 'Erro no Storage' });
 
-        if (!s_url || !s_key) {
-          console.error("ERRO CRÍTICO: Variáveis de ambiente não encontradas no processo!");
-          return res.status(500).json({ 
-            sucesso: false, 
-            erro: `Configuração incompleta. URL: ${!!s_url}, KEY: ${!!s_key}` 
-          });
-        }
+      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/hospitais/${storagePath}`;
 
-        const buffer = Buffer.from(arquivo_base64, 'base64');
-        const storagePath = `${hospital_id}/${Date.now()}_${nome_arquivo}`;
-        const baseUrl = s_url.replace(/\/$/, '');
-        const storageUrl = `${baseUrl}/storage/v1/object/hospitais/${storagePath}`;
+      // Grava no Banco
+      const { ok, error } = await sb('hospitais_attachments', 'POST', {
+        hospital_id: parseInt(hospital_id),
+        titulo_item: titulo_item || nome_arquivo,
+        nome: nome_arquivo,
+        url: publicUrl,
+        content_type: tipo_arquivo,
+        size: buffer.length
+      });
 
-        console.log("Iniciando fetch para Storage...");
+      return res.status(200).json({ sucesso: ok, erro: error });
+    }
 
-        const response = await fetch(storageUrl, {
-          method: 'POST',
-          body: buffer,
-          headers: {
-            'Authorization': `Bearer ${s_key}`,
-            'Content-Type': tipo_arquivo || 'application/octet-stream',
-            'x-user-email': req.headers['x-user-email'] || ''
-          }
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Supabase Storage recusou:", response.status, errorText);
-          return res.status(response.status).json({ sucesso: false, erro: "Supabase: " + errorText });
-        }
-
-        const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
-
-
-       // ---------------------------------------------------------
-        // --- EXCLUIR ANEXO ---
-        // ---------------------------------------------------------
-
-
+    // --- NOVA AÇÃO: EXCLUIR ANEXO ---
     if (action === 'excluir_anexo') {
       if (method !== 'DELETE') return res.status(405).json({ erro: 'Método não permitido' });
       const { id } = query;
-      if (!id) return res.status(400).json({ erro: 'ID do anexo obrigatório' });
-
-      // 1. Busca os dados do anexo para saber o caminho no Storage
+      
       const { data: anexo } = await sb(`hospitais_attachments?id=eq.${id}&select=url`);
-      if (anexo && anexo[0]) {
-        try {
-          // Extrai o caminho do arquivo da URL pública
-          const urlParts = anexo[0].url.split('/public/hospitais/');
-          const storagePath = urlParts[1];
-
-          // 2. Deleta do Supabase Storage
-          await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${storagePath}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}` }
-          });
-        } catch (err) { console.error("Erro ao apagar arquivo físico:", err); }
+      if (anexo?.[0]) {
+        const path = anexo[0].url.split('/public/hospitais/')[1];
+        await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${path}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}` }
+        });
       }
-
-      // 3. Deleta do Banco de Dados
       const { ok } = await sb(`hospitais_attachments?id=eq.${id}`, 'DELETE');
       return res.status(200).json({ sucesso: ok });
     }
-        
 
-        // ---------------------------------------------------------
-        // 5. Registro no banco (Agora incluindo o campo titulo_item)
-        // ---------------------------------------------------------
-
-
-        const metadata = {
-          hospital_id: parseInt(hospital_id),
-          titulo_item: titulo_item || nome_arquivo.split('.').shift(), // Usa o título do form ou o nome do arquivo
-          nome: nome_arquivo,
-          url: publicUrl,
-          content_type: tipo_arquivo || '',
-          size: tamanho ? parseInt(tamanho) : buffer.length
-        };
-
-        console.log("Registrando anexo com título:", metadata.titulo_item);
-
-        const dbResponse = await sb('hospitais_attachments', 'POST', metadata);
-        
-        if (!dbResponse || (dbResponse.error && dbResponse.error !== null)) {
-          console.error("Erro ao salvar no banco:", dbResponse?.error);
-          return res.status(500).json({ 
-            sucesso: false, 
-            erro: "Falha ao registrar metadados.",
-            detalhe: dbResponse?.error 
-          });
-        }
-
-        return res.status(200).json({ sucesso: true, url: publicUrl });
-
-      } catch (err) {
-        console.error("Falha total no upload:", err.message);
-        return res.status(500).json({ sucesso: false, erro: "Exceção no servidor: " + err.message });
-      }
+    // --- NOVA AÇÃO: EDITAR TÍTULO DO ANEXO ---
+    if (action === 'editar_anexo') {
+      if (method !== 'PATCH') return res.status(405).json({ erro: 'Método não permitido' });
+      const { id } = query;
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const { ok } = await sb(`hospitais_attachments?id=eq.${id}`, 'PATCH', { titulo_item: body.titulo_item });
+      return res.status(200).json({ sucesso: ok });
     }
+
+    return res.status(405).json({ erro: 'Ação não permitida' });
+  } catch (err) {
+    return res.status(500).json({ sucesso: false, erro: err.message });
+  }
+}
 
     
 
