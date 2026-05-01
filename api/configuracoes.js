@@ -164,27 +164,30 @@ if (action === 'upload_anexo') {
         }
 
         const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
-        
-// Registro no banco
+
+        // ---------------------------------------------------------
+        // 5. Registro no banco (Agora incluindo o campo titulo_item)
+        // ---------------------------------------------------------
+
+
         const metadata = {
           hospital_id: parseInt(hospital_id),
-          titulo_item: titulo_item || nome_arquivo,
+          titulo_item: titulo_item || nome_arquivo.split('.').shift(), // Usa o título do form ou o nome do arquivo
           nome: nome_arquivo,
           url: publicUrl,
           content_type: tipo_arquivo || '',
           size: tamanho ? parseInt(tamanho) : buffer.length
         };
 
-        console.log("Tentando registrar no banco:", metadata);
+        console.log("Registrando anexo com título:", metadata.titulo_item);
 
-        // Ajuste na chamada para garantir que pegamos o erro real
         const dbResponse = await sb('hospitais_attachments', 'POST', metadata);
         
         if (!dbResponse || (dbResponse.error && dbResponse.error !== null)) {
-          console.error("Erro detalhado do banco:", dbResponse?.error);
+          console.error("Erro ao salvar no banco:", dbResponse?.error);
           return res.status(500).json({ 
             sucesso: false, 
-            erro: "Arquivo subiu, mas falhou registro no banco.",
+            erro: "Falha ao registrar metadados.",
             detalhe: dbResponse?.error 
           });
         }
