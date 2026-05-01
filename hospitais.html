@@ -249,12 +249,14 @@
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-success text-white btn-circle shadow-sm"><i class="bi bi-file-earmark-check"></i></div>
                         <div>
-                            <div class="fw-bold small text-dark">${escapeHtml(a.titulo_item || 'Anexo')}</div>
+                            <div class="fw-bold small text-dark" id="tit_anexo_${a.id}">${escapeHtml(a.titulo_item || 'Anexo')}</div>
                             <div class="text-muted" style="font-size: 0.7rem;">${escapeHtml(a.nome)}</div>
                         </div>
                     </div>
                     <div class="btn-group shadow-sm">
-                        <a href="${a.url}" target="_blank" class="btn btn-sm btn-light border" title="Visualizar"><i class="bi bi-eye text-primary"></i></a>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.editarTituloAnexo(${a.id}, '${escapeHtml(a.titulo_item)}')" title="Editar Nome"><i class="bi bi-pencil text-primary"></i></button>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.baixarAnexo('${a.url}', '${a.nome}')" title="Baixar"><i class="bi bi-download text-primary"></i></button>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.compartilharAnexo('${a.url}')" title="Compartilhar"><i class="bi bi-share text-primary"></i></button>
                         <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.excluirAnexo(${a.id}, this)" title="Remover"><i class="bi bi-trash text-danger"></i></button>
                     </div>
                 </div>`;
@@ -277,20 +279,70 @@
         container.appendChild(div);
     };
 
+    // --- NOVAS FUNÇÕES DOS BOTÕES DE ANEXO ---
+
+    H.baixarAnexo = (url, nome) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nome;
+        link.target = "_blank";
+        link.click();
+    };
+
+    H.compartilharAnexo = async (url) => {
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'Documento Hospital', url: url });
+            } catch (e) { console.log('Compartilhamento cancelado'); }
+        } else {
+            navigator.clipboard.writeText(url);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Link copiado!', showConfirmButton: false, timer: 2000 });
+        }
+    };
+
+    H.editarTituloAnexo = async (id, tituloAtual) => {
+        const { value: novoTitulo } = await Swal.fire({
+            title: 'Editar título do anexo',
+            input: 'text',
+            inputLabel: 'Novo nome para identificação',
+            inputValue: tituloAtual,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (novoTitulo && novoTitulo !== tituloAtual) {
+            const res = await fetch(`/api/configuracoes?action=editar_anexo&id=${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titulo_item: novoTitulo })
+            }).then(r => r.json());
+
+            if (res.sucesso) {
+                document.getElementById(`tit_anexo_${id}`).textContent = novoTitulo;
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Título atualizado!', showConfirmButton: false, timer: 2000 });
+            }
+        }
+    };
+
     H.excluirAnexo = function(id, btn) {
         Swal.fire({
             title: 'Excluir arquivo?',
-            text: "O anexo será removido permanentemente do servidor.",
+            text: "O anexo será removido permanentemente.",
             icon: 'warning',
             showCancelButton: true,
+            confirmButtonColor: '#d33',
             confirmButtonText: 'Sim, excluir',
             cancelButtonText: 'Cancelar'
         }).then(async (result) => {
             if (result.isConfirmed) {
+                // Aqui garantimos que o DELETE seja enviado corretamente
                 const res = await fetch(`/api/configuracoes?action=excluir_anexo&id=${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     btn.closest('.attachment-card').remove();
-                    Swal.fire('Removido!', '', 'success');
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Removido!', showConfirmButton: false, timer: 2000 });
+                } else {
+                    Swal.fire('Erro', 'Não foi possível excluir o arquivo.', 'error');
                 }
             }
         });
@@ -340,7 +392,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             hospital_id: hospId,
-                            titulo_item: item.querySelector('.attachment-title').value,
+                            titulo_item: item.querySelector('.attachment-title').value || file.name,
                             nome_arquivo: file.name,
                             tipo_arquivo: file.type,
                             arquivo_base64: base64
@@ -349,7 +401,7 @@
                 }
             }
 
-            Swal.fire('Pronto!', 'Hospital atualizado com sucesso.', 'success');
+            Swal.fire('Pronto!', 'Dados salvos com sucesso.', 'success');
             bootstrap.Modal.getInstance($('#modalHospital')).hide();
             H.carregarHospitais();
         } catch (e) {
