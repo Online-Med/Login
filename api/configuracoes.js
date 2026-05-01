@@ -165,6 +165,39 @@ if (action === 'upload_anexo') {
 
         const publicUrl = `${baseUrl}/storage/v1/object/public/hospitais/${storagePath}`;
 
+
+       // ---------------------------------------------------------
+        // --- EXCLUIR ANEXO ---
+        // ---------------------------------------------------------
+
+
+    if (action === 'excluir_anexo') {
+      if (method !== 'DELETE') return res.status(405).json({ erro: 'Método não permitido' });
+      const { id } = query;
+      if (!id) return res.status(400).json({ erro: 'ID do anexo obrigatório' });
+
+      // 1. Busca os dados do anexo para saber o caminho no Storage
+      const { data: anexo } = await sb(`hospitais_attachments?id=eq.${id}&select=url`);
+      if (anexo && anexo[0]) {
+        try {
+          // Extrai o caminho do arquivo da URL pública
+          const urlParts = anexo[0].url.split('/public/hospitais/');
+          const storagePath = urlParts[1];
+
+          // 2. Deleta do Supabase Storage
+          await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/hospitais/${storagePath}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${process.env.SUPABASE_KEY}` }
+          });
+        } catch (err) { console.error("Erro ao apagar arquivo físico:", err); }
+      }
+
+      // 3. Deleta do Banco de Dados
+      const { ok } = await sb(`hospitais_attachments?id=eq.${id}`, 'DELETE');
+      return res.status(200).json({ sucesso: ok });
+    }
+        
+
         // ---------------------------------------------------------
         // 5. Registro no banco (Agora incluindo o campo titulo_item)
         // ---------------------------------------------------------
