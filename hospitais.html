@@ -1,156 +1,214 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <nav aria-label="breadcrumb">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><i class="bi bi-house"></i> INÍCIO</li>
-      <li class="breadcrumb-item">Configurações</li>
-      <li class="breadcrumb-item active fw-bold">HOSPITAIS</li>
-    </ol>
-  </nav>
-  <div>
-    <button class="btn btn-outline-secondary btn-sm me-2" onclick="HOSP.carregarHospitais()">
-      <i class="bi bi-arrow-clockwise"></i>
-    </button>
-    <button class="btn btn-info text-white btn-sm" onclick="HOSP.novoHospital()">
-      <i class="bi bi-plus-lg"></i> Novo Hospital
-    </button>
-  </div>
-</div>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Hospitais - OnlineMed</title>
+    <!-- Bootstrap 5 e Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- SweetAlert2 para Alertas Profissionais -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --primary-gradient: linear-gradient(135deg, #0d6efd, #4361ee); }
+        .breadcrumb-item i { font-size: 0.8rem; margin-right: 5px; }
+        
+        /* Estilização dos Cards de Anexo */
+        .attachment-card {
+            border: 1px solid #e0e6ed;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            background: #f8f9fa;
+            border-left: 4px solid #dee2e6;
+        }
+        .attachment-card:hover { 
+            border-color: #0d6efd; 
+            background: #fff; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .attachment-card.new-item { border-left-color: #0dcaf0; }
+        .attachment-card.saved-item { border-left-color: #198754; }
+        
+        .btn-circle { 
+            width: 35px; height: 35px; 
+            border-radius: 50%; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        
+        .modal-header-custom {
+            background: var(--primary-gradient);
+            color: white;
+            border-bottom: none;
+        }
 
-<div class="card shadow-sm mb-3">
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0" style="font-size:.9rem">
-      <thead class="table-light">
-        <tr>
-          <th style="width:120px">Ações</th>
-          <th>Nome</th>
-          <th>Telefones</th>
-          <th>Endereço</th>
-          <th>Contatos</th>
-          <th class="text-center">Itens de Anexo</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaHospitais">
-        <tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-info"></div> Carregando...</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            color: #444;
+        }
+    </style>
+</head>
+<body class="bg-light">
 
-<div class="modal fade" id="modalHospital" tabindex="-1">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header py-2" style="background:linear-gradient(135deg,#0d6efd,#4361ee);color:#fff;">
-        <h6 class="modal-title mb-0" id="modalHospitalTitulo"><i class="bi bi-hospital"></i> Novo Hospital</h6>
-        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-        <form id="formHospital">
-          <input type="hidden" id="h_id">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label small fw-bold">Nome do Hospital <span class="text-danger">*</span></label>
-              <input type="text" id="h_nome" class="form-control form-control-sm" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small fw-bold">Telefones (visível)</label>
-              <input type="text" id="h_telefones" class="form-control form-control-sm" placeholder="(11) 2222-3333">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label small fw-bold">Endereço</label>
-              <input type="text" id="h_endereco" class="form-control form-control-sm" placeholder="Rua, Bairro, Cidade - UF">
-            </div>
-          </div>
-
-          <hr>
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <h6 class="mb-0">Contatos (local — nome — telefone)</h6>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_contact_btn"><i class="bi bi-plus"></i> Adicionar contato</button>
-            </div>
-            <div id="h_contacts" class="mt-2"></div>
-          </div>
-
-          <hr>
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <h6 class="mb-0">Itens de Anexo (ex.: "termo de cesaria")</h6>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="h_add_attachment_item_btn"><i class="bi bi-plus"></i> Novo item</button>
-            </div>
-            <div id="h_attachment_items" class="mt-2"></div>
-          </div>
-        </form>
-      </div>
-
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-info text-white btn-sm" id="h_btnSalvar" onclick="HOSP.salvarHospital()">
-          <i class="bi bi-save"></i> Salvar
-        </button>
-      </div>
+<div class="container-fluid py-4">
+    <!-- Header e Breadcrumb -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item text-uppercase small"><i class="bi bi-house"></i> Início</li>
+                <li class="breadcrumb-item text-uppercase small">Configurações</li>
+                <li class="breadcrumb-item active text-uppercase small fw-bold">Hospitais</li>
+            </ol>
+        </nav>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm shadow-sm me-2" onclick="HOSP.carregarHospitais()">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar
+            </button>
+            <button class="btn btn-primary btn-sm shadow-sm fw-bold" onclick="HOSP.novoHospital()">
+                <i class="bi bi-plus-lg"></i> NOVO HOSPITAL
+            </button>
+        </div>
     </div>
-  </div>
+
+    <!-- Tabela de Hospitais -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.9rem">
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th class="ps-4" style="width:120px">AÇÕES</th>
+                            <th>NOME DO HOSPITAL</th>
+                            <th>CONTATOS</th>
+                            <th>ENDEREÇO</th>
+                            <th class="text-center">ANEXOS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaHospitais">
+                        <tr><td colspan="5" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Modal de Edição/Cadastro -->
+<div class="modal fade" id="modalHospital" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header modal-header-custom py-3">
+                <h5 class="modal-title" id="modalHospitalTitulo"><i class="bi bi-hospital me-2"></i> Editar Hospital</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <form id="formHospital">
+                    <input type="hidden" id="h_id">
+                    
+                    <!-- Dados Básicos -->
+                    <div class="section-header"><i class="bi bi-info-circle"></i> Informações Gerais</div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Nome do Hospital *</label>
+                            <input type="text" id="h_nome" class="form-control" required placeholder="Ex: Hospital Santa Joana">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-secondary">Telefones (Geral)</label>
+                            <input type="text" id="h_telefones" class="form-control" placeholder="(11) 0000-0000">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-secondary">Endereço Curto</label>
+                            <input type="text" id="h_endereco" class="form-control" placeholder="Rua, Cidade - UF">
+                        </div>
+                    </div>
+
+                    <!-- Contatos Internos -->
+                    <div class="section-header">
+                        <i class="bi bi-person-badge"></i> Contatos (Ramais/Nomes)
+                        <button type="button" class="btn btn-xs btn-outline-primary ms-auto" id="h_add_contact_btn" style="font-size: 0.75rem;">
+                            <i class="bi bi-plus"></i> Adicionar
+                        </button>
+                    </div>
+                    <div id="h_contacts" class="row g-2 mb-4"></div>
+
+                    <!-- Gestão de Anexos -->
+                    <div class="section-header">
+                        <i class="bi bi-paperclip"></i> Gestão de Anexos e Documentos
+                        <button type="button" class="btn btn-xs btn-primary ms-auto" id="h_add_attachment_item_btn" style="font-size: 0.75rem;">
+                            <i class="bi bi-cloud-upload"></i> Novo Anexo
+                        </button>
+                    </div>
+                    <div id="h_attachment_items" class="mt-2"></div>
+                </form>
+            </div>
+
+            <div class="modal-footer bg-light py-3">
+                <button type="button" class="btn btn-link text-secondary text-decoration-none" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-4 fw-bold" id="h_btnSalvar" onclick="HOSP.salvarHospital()">
+                    <i class="bi bi-check-lg me-1"></i> SALVAR ALTERAÇÕES
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 (function () {
-  'use strict';
+    'use strict';
 
-  function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function $(sel, ctx) { return (ctx||document).querySelector(sel); }
-  function $all(sel, ctx) { return Array.from((ctx||document).querySelectorAll(sel)); }
+    const $ = (s) => document.querySelector(s);
+    const $all = (s) => Array.from(document.querySelectorAll(s));
+    const escapeHtml = (s) => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
 
-  function getApiHeaders(isJson) {
-    var headers = {};
-    if (isJson) headers['Content-Type'] = 'application/json';
-    var ue = (window.__USER_EMAIL || window.USER_EMAIL || '').trim();
-    if (ue) headers['x-user-email'] = ue;
-    return headers;
-  }
+    window.HOSP = window.HOSP || {};
+    const H = window.HOSP;
 
-  // Define o objeto global IMEDIATAMENTE
-  window.HOSP = window.HOSP || {};
-  var H = window.HOSP;
+    H.carregarHospitais = async function() {
+        const tbody = $('#tabelaHospitais');
+        try {
+            const res = await fetch('/api/configuracoes?action=hospitais', { 
+                headers: { 'x-user-email': window.USER_EMAIL || '' } 
+            });
+            const json = await res.json();
+            const lista = json.dados || [];
+            
+            tbody.innerHTML = lista.map(h => `
+                <tr>
+                    <td class="ps-4">
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-sm btn-white border" onclick="HOSP.editarHospital(${h.id})" title="Editar"><i class="bi bi-pencil-square text-primary"></i></button>
+                            <button class="btn btn-sm btn-white border" onclick="HOSP.excluirHospital(${h.id})" title="Excluir"><i class="bi bi-trash text-danger"></i></button>
+                        </div>
+                    </td>
+                    <td class="fw-bold text-dark">${escapeHtml(h.nome)}</td>
+                    <td class="text-muted small">${escapeHtml(h.telefones || '-')}</td>
+                    <td class="text-muted small">${escapeHtml(h.endereco || '-')}</td>
+                    <td class="text-center">
+                        <span class="badge ${h.anexos?.length > 0 ? 'bg-success' : 'bg-light text-muted'} rounded-pill">
+                            ${h.anexos?.length || 0} arq
+                        </span>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center p-4 text-muted">Nenhum hospital cadastrado.</td></tr>';
+        } catch (e) { console.error(e); }
+    };
 
-  H._lista = [];
-  H._files = {}; 
-  H._nextItemId = 1;
+    H.editarHospital = async function(id) {
+        const res = await fetch(`/api/configuracoes?action=hospitais&id=${id}`);
+        const json = await res.json();
+        const h = json.dados[0];
 
-  H.carregarHospitais = function () {
-    var tbody = $('#tabelaHospitais');
-    if (!tbody) return;
-    fetch('/api/configuracoes?action=hospitais', { headers: getApiHeaders(true) })
-      .then(r => r.json())
-      .then(json => {
-        H._lista = json.dados || [];
-        H._renderTabela();
-      });
-  };
-
-  H._renderTabela = function () {
-    var tbody = $('#tabelaHospitais');
-    tbody.innerHTML = H._lista.map(h => `
-      <tr>
-        <td class="ps-3">
-          <div class="btn-group">
-            <button class="btn btn-sm btn-outline-primary" onclick="HOSP.editarHospital(${h.id})"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-outline-danger" onclick="HOSP.excluirHospital(${h.id}, '${encodeURIComponent(h.nome)}')"><i class="bi bi-trash"></i></button>
-          </div>
-        </td>
-        <td>${escapeHtml(h.nome)}</td>
-        <td>${escapeHtml(h.telefones)}</td>
-        <td>${escapeHtml(h.endereco)}</td>
-        <td>${h.contatos ? h.contatos.length : 0}</td>
-        <td class="text-center">${h.anexos ? h.anexos.length : 0}</td>
-      </tr>
-    `).join('');
-  };
-
-  H.editarHospital = function(id) {
-    fetch('/api/configuracoes?action=hospitais&id=' + id, { headers: getApiHeaders(true) })
-      .then(r => r.json())
-      .then(json => {
-        var h = json.dados[0];
         $('#h_id').value = h.id;
         $('#h_nome').value = h.nome || '';
         $('#h_telefones').value = h.telefones || '';
@@ -160,140 +218,161 @@
         (h.contatos || []).forEach(c => H.addContactRow(c));
         
         $('#h_attachment_items').innerHTML = '';
-        (h.anexos || []).forEach(a => H.addAttachmentRow({title: a.titulo_item, nome: a.nome, url: a.url}));
+        (h.anexos || []).forEach(a => H.addAttachmentRow(a));
 
-        document.getElementById('modalHospitalTitulo').textContent = 'Editar Hospital';
+        $('#modalHospitalTitulo').innerHTML = `<i class="bi bi-pencil-square me-2"></i> Editar: ${h.nome}`;
         bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
-      });
-  };
-
-H.salvarHospital = async function () {
-  const btn = $('#h_btnSalvar');
-  btn.disabled = true;
-
-  try {
-    const id = $('#h_id').value;
-    const payload = {
-      nome: $('#h_nome').value.trim(),
-      telefones: $('#h_telefones').value.trim(),
-      endereco: $('#h_endereco').value.trim(),
-      contatos: $all('#h_contacts .contact-row').map(r => ({
-        local: r.querySelector('.contact-local').value,
-        nome: r.querySelector('.contact-name').value,
-        telefone: r.querySelector('.contact-phone').value
-      }))
     };
 
-    // 1. Salva ou atualiza os dados básicos do hospital
-    const res = await fetch('/api/configuracoes?action=hospitais' + (id ? '&id=' + id : ''), {
-      method: id ? 'PATCH' : 'POST',
-      headers: getApiHeaders(true),
-      body: JSON.stringify(payload)
-    }).then(r => r.json());
+    H.addContactRow = function(c = {}) {
+        const div = document.createElement('div');
+        div.className = 'col-md-6 contact-row';
+        div.innerHTML = `
+            <div class="input-group input-group-sm mb-1 shadow-sm">
+                <input class="form-control contact-local" value="${c.local||''}" placeholder="Local (ex: UTI)">
+                <input class="form-control contact-name" value="${c.nome||''}" placeholder="Nome">
+                <input class="form-control contact-phone" value="${c.telefone||''}" placeholder="Tel">
+                <button class="btn btn-outline-danger" type="button" onclick="this.closest('.contact-row').remove()"><i class="bi bi-trash"></i></button>
+            </div>`;
+        $('#h_contacts').appendChild(div);
+    };
 
-    if (!res.sucesso) throw new Error(res.erro);
-
-    const hospitalId = id || res.id;
-
-    // 2. Processa os anexos (se houver arquivos selecionados)
-    const items = $all('#h_attachment_items .card');
-    
-    for (const item of items) {
-      const fileInput = item.querySelector('input[type="file"]');
-      const titulo = item.querySelector('.attachment-title').value;
-
-      if (fileInput.files.length > 0) {
-        const arquivo = fileInput.files[0];
+    H.addAttachmentRow = function(a = {}) {
+        const container = $('#h_attachment_items');
+        const isSaved = !!a.url;
+        const div = document.createElement('div');
+        div.className = `attachment-card p-3 mb-2 ${isSaved ? 'saved-item' : 'new-item'}`;
         
-        // Transformamos o arquivo em Base64 para enviar via JSON
-        const base64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result.split(',')[1]);
-          reader.readAsDataURL(arquivo);
+        if (isSaved) {
+            div.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-success text-white btn-circle shadow-sm"><i class="bi bi-file-earmark-check"></i></div>
+                        <div>
+                            <div class="fw-bold small text-dark">${escapeHtml(a.titulo_item || 'Anexo')}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">${escapeHtml(a.nome)}</div>
+                        </div>
+                    </div>
+                    <div class="btn-group shadow-sm">
+                        <a href="${a.url}" target="_blank" class="btn btn-sm btn-light border" title="Visualizar"><i class="bi bi-eye text-primary"></i></a>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="HOSP.excluirAnexo(${a.id}, this)" title="Remover"><i class="bi bi-trash text-danger"></i></button>
+                    </div>
+                </div>`;
+        } else {
+            div.innerHTML = `
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <label class="small fw-bold text-primary" style="font-size:0.65rem">TÍTULO DO DOCUMENTO</label>
+                        <input class="form-control form-control-sm attachment-title" placeholder="Ex: Termo de Consentimento">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small fw-bold text-primary" style="font-size:0.65rem">SELECIONAR ARQUIVO (PDF/JPG)</label>
+                        <input type="file" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-1 text-end pt-3">
+                        <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('.attachment-card').remove()"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                    </div>
+                </div>`;
+        }
+        container.appendChild(div);
+    };
+
+    H.excluirAnexo = function(id, btn) {
+        Swal.fire({
+            title: 'Excluir arquivo?',
+            text: "O anexo será removido permanentemente do servidor.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, excluir',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const res = await fetch(`/api/configuracoes?action=excluir_anexo&id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    btn.closest('.attachment-card').remove();
+                    Swal.fire('Removido!', '', 'success');
+                }
+            }
         });
+    };
 
-        const uploadPayload = {
-          hospital_id: hospitalId,
-          titulo_item: titulo,
-          nome_arquivo: arquivo.name,
-          tipo_arquivo: arquivo.type,
-          tamanho: arquivo.size,
-          arquivo_base64: base64
-        };
+    H.salvarHospital = async function () {
+        const btn = $('#h_btnSalvar');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
 
-        // Enviamos para a API processar o upload no Supabase
-        await fetch('/api/configuracoes?action=upload_anexo', {
-          method: 'POST',
-          headers: getApiHeaders(true), // Usamos JSON aqui
-          body: JSON.stringify(uploadPayload)
-        });
-      }
-    }
+        try {
+            const id = $('#h_id').value;
+            const payload = {
+                nome: $('#h_nome').value.trim(),
+                telefones: $('#h_telefones').value.trim(),
+                endereco: $('#h_endereco').value.trim(),
+                contatos: $all('#h_contacts .contact-row').map(r => ({
+                    local: r.querySelector('.contact-local').value,
+                    nome: r.querySelector('.contact-name').value,
+                    telefone: r.querySelector('.contact-phone').value
+                }))
+            };
 
-    Swal.fire('Sucesso!', 'Hospital e anexos salvos com sucesso.', 'success');
-    bootstrap.Modal.getInstance($('#modalHospital')).hide();
+            const res = await fetch('/api/configuracoes?action=hospitais' + (id ? '&id=' + id : ''), {
+                method: id ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json());
+
+            if (!res.sucesso) throw new Error(res.erro);
+            const hospId = id || res.id;
+
+            // Processamento de Novos Anexos
+            const newAttachments = $all('#h_attachment_items .new-item');
+            for (const item of newAttachments) {
+                const fileInput = item.querySelector('input[type="file"]');
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    const base64 = await new Promise(r => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => r(reader.result.split(',')[1]);
+                        reader.readAsDataURL(file);
+                    });
+
+                    await fetch('/api/configuracoes?action=upload_anexo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            hospital_id: hospId,
+                            titulo_item: item.querySelector('.attachment-title').value,
+                            nome_arquivo: file.name,
+                            tipo_arquivo: file.type,
+                            arquivo_base64: base64
+                        })
+                    });
+                }
+            }
+
+            Swal.fire('Pronto!', 'Hospital atualizado com sucesso.', 'success');
+            bootstrap.Modal.getInstance($('#modalHospital')).hide();
+            H.carregarHospitais();
+        } catch (e) {
+            Swal.fire('Erro', e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> SALVAR ALTERAÇÕES';
+        }
+    };
+
+    H.novoHospital = function() {
+        $('#h_id').value = '';
+        $('#formHospital').reset();
+        $('#h_contacts').innerHTML = '';
+        $('#h_attachment_items').innerHTML = '';
+        $('#modalHospitalTitulo').innerHTML = '<i class="bi bi-plus-lg me-2"></i> Novo Hospital';
+        bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
+    };
+
+    document.getElementById('h_add_contact_btn').onclick = () => H.addContactRow();
+    document.getElementById('h_add_attachment_item_btn').onclick = () => H.addAttachmentRow();
     H.carregarHospitais();
-
-  } catch (e) {
-    console.error("Erro no salvamento:", e);
-    Swal.fire('Erro', e.message, 'error');
-  } finally {
-    btn.disabled = false;
-  }
-};
-
-
-
-  H.addContactRow = function(c = {}) {
-    const div = document.createElement('div');
-    div.className = 'row g-2 mb-2 contact-row';
-    div.innerHTML = `
-      <div class="col-4"><input class="form-control form-control-sm contact-local" value="${c.local||''}" placeholder="Local"></div>
-      <div class="col-4"><input class="form-control form-control-sm contact-name" value="${c.nome||''}" placeholder="Nome"></div>
-      <div class="col-3"><input class="form-control form-control-sm contact-phone" value="${c.telefone||''}" placeholder="Tel"></div>
-      <div class="col-1"><button class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="bi bi-x"></i></button></div>`;
-    $('#h_contacts').appendChild(div);
-  };
-
-  H.addAttachmentRow = function(a = {}) {
-    const div = document.createElement('div');
-    div.className = 'card mb-2';
-    div.innerHTML = `
-      <div class="card-body py-2">
-        <div class="d-flex gap-2">
-          <input class="form-control form-control-sm attachment-title" value="${a.title||''}" placeholder="Título">
-          <input type="file" class="form-control form-control-sm">
-          <button class="btn btn-sm btn-outline-danger" onclick="this.closest('.card').remove()"><i class="bi bi-trash"></i></button>
-        </div>
-        ${a.url ? `<small><a href="${a.url}" target="_blank">${a.nome}</a></small>` : ''}
-      </div>`;
-    $('#h_attachment_items').appendChild(div);
-  };
-
-  H.novoHospital = function() {
-    $('#h_id').value = '';
-    $('#formHospital').reset();
-    $('#h_contacts').innerHTML = '';
-    $('#h_attachment_items').innerHTML = '';
-    bootstrap.Modal.getOrCreateInstance($('#modalHospital')).show();
-  };
-
-  // Inicializa
-  document.getElementById('h_add_contact_btn').onclick = () => H.addContactRow();
-  document.getElementById('h_add_attachment_item_btn').onclick = () => H.addAttachmentRow();
-  H.carregarHospitais();
-
-
-
-// Nova função auxiliar para converter arquivo em Base64
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result); // Isso retorna algo como "data:image/png;base64,..."
-    reader.onerror = error => reject(error);
-  });
-}
-  
 })();
 </script>
+</body>
+</html>
