@@ -450,10 +450,11 @@
             <label class="form-label small fw-bold"><i class="bi bi-calendar3 text-primary"></i> Data</label>
             <input type="date" class="form-control form-control-sm" id="agEditData" onchange="agEditAtualizarHoras()">
           </div>
-          <div class="col-md-6">
-            <label class="form-label small fw-bold"><i class="bi bi-clock text-primary"></i> Horário</label>
-            <select class="form-select form-select-sm" id="agEditHora"></select>
-          </div>
+<div class="col-md-6">
+  <label class="form-label small fw-bold"><i class="bi bi-clock text-primary"></i> Horário</label>
+  <select class="form-select form-select-sm" id="agEditHora"></select>
+  <div id="agEditHoraMsg" style="font-size:.75rem; margin-top:4px; color:#6c757d;"></div>
+</div>
           <!-- Paciente -->
           <div class="col-12">
             <label class="form-label small fw-bold">Paciente <span class="text-danger">*</span></label>
@@ -1109,28 +1110,86 @@ AG.abrirEditar = function(event, id) {
   var modO = document.getElementById('agEditModO');
   if(ag.modalidade==='ONLINE') modO.checked=true; else modP.checked=true;
 
-  // Popula horários disponíveis para a data atual
-  _agEditPopularHoras(ag.data_agenda||document.getElementById('agData').value, ag.hora_agenda);
+  // Popula horários disponíveis para a data atual COM VERIFICAÇÃO
+  _agEditPopularHoras(ag.data_agenda||document.getElementById('agData').value, ag.hora_agenda, ag.id);
 
   if(typeof abrirModal === 'function') abrirModal('agModalEditar');
   else bootstrap.Modal.getOrCreateInstance(document.getElementById('agModalEditar')).show();
 };
 window.agEditAtualizarHoras = function() {
   var data = document.getElementById('agEditData').value;
-  _agEditPopularHoras(data, null);
+  var agId = document.getElementById('agEditId').value;
+  _agEditPopularHoras(data, null, agId);
 };
 
-function _agEditPopularHoras(data, horaAtual) {
+
+async function _agEditPopularHoras(data, horaAtual, agendamentoIdAtual) {
   var sel = document.getElementById('agEditHora');
   sel.innerHTML='';
+  
+  // Busca agendamentos do dia selecionado
+  var id = document.getElementById('agProfissional').value;
+  var agendamentosDodia = [];
+  
+  if(id && data) {
+    try {
+      agendamentosDodia = await api({action:'dia', id_profissional:id, data:data}) || [];
+    } catch(e) {
+      console.error('Erro ao buscar agendamentos:', e);
+    }
+  }
+
   var cfgIni=pm(AG.cfg.inicio), cfgFim=pm(AG.cfg.fim), inv=AG.cfg.intervalo;
+  
   for(var m=cfgIni; m<=cfgFim; m+=inv) {
     var h=fh(m);
     var opt=document.createElement('option');
-    opt.value=h; opt.textContent=h;
+    opt.value=h;
+    
+    // Verifica se este horário está ocupado (excluindo o agendamento atual)
+    var ocupado = agendamentosDodia.find(function(ag){
+      return ag.hora_agenda === h && 
+             ag.id != agendamentoIdAtual && 
+             !ag.is_bloqueado &&
+             ['AGENDADO','AGUARDANDO','EM_ATENDIMENTO'].indexOf(ag.status) !== -1;
+    });
+    
+    // Verifica se está bloqueado
+    var bloqueado = agendamentosDodia.find(function(ag){
+      return ag.hora_agenda === h && ag.is_bloqueado;
+    });
+
+    // Monta o texto do option com indicadores
+    if(bloqueado) {
+      opt.textContent = h + ' — 🔒 Bloqueado';
+      opt.disabled = true;
+      opt.style.opacity = '0.5';
+    } else if(ocupado) {
+      opt.textContent = h + ' — ⚠️ ' + esc(ocupado.paciente_nome||'(sem nome)');
+      opt.disabled = true;
+      opt.style.opacity = '0.6';
+    } else {
+      opt.textContent = h + ' — ✓ Disponível';
+      opt.style.color = '#28a745';
+    }
+    
     if(h===horaAtual) opt.selected=true;
     sel.appendChild(opt);
   }
+  
+  // Feedback visual com contagem de horários livres
+  var msgDiv = document.getElementById('agEditHoraMsg');
+  if(!msgDiv) {
+    msgDiv = document.createElement('div');
+    msgDiv.id = 'agEditHoraMsg';
+    msgDiv.style.fontSize = '.75rem';
+    msgDiv.style.marginTop = '4px';
+    msgDiv.style.color = '#6c757d';
+    sel.parentElement.appendChild(msgDiv);
+  }
+  
+  var totalLivres = Array.from(sel.options).filter(function(o){ return !o.disabled; }).length;
+  msgDiv.textContent = totalLivres + ' horário(s) disponível(is) neste dia';
 }
 
 async function agConfirmarEditar() {
