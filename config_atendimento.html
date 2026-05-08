@@ -799,6 +799,10 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
 
 <!-- ═══ SCRIPT ════════════════════════════════════════════════════ -->
 <script>
+
+window.CFG = window.CFG || { meds: [], exames: [] };
+window.HOSP = window.HOSP || {};
+  
 (function () {
 'use strict';
 
