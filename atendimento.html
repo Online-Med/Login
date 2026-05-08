@@ -562,6 +562,9 @@ function _htmlBloco(bloco) {
   if(fixos.length) {
     fixosHtml = '<div class="vitais-grid mb-2">'
       + fixos.map(function(c) {
+          if(c.tipo_componente === 'FORMULA') {
+            return _htmlCompFormula(bn, c, false);
+          }
           var ph = (c.valor_default||'') + (c.unidade?' '+c.unidade:'');
           return '<div class="vital-item">'
             + '<label><i class="bi ' + esc(c.icone||'bi-circle') + '"></i> ' + esc(c.nome)
@@ -624,6 +627,183 @@ function _restaurarBlocoData() {
     _renderCompAdicionais(n);
   });
 }
+
+/* ══ Componentes de Fórmula ═══════════════════════════════════ */
+
+/*  Gera HTML do campo de entrada + resultado calculado ao lado.
+    Exemplos visuais:
+
+    DPP:
+    [ 📅 Data Provável do Parto          ]
+    DUM: [____/____/____]  DPP: 15/01/2026
+
+    IMC:
+    [ ⚖️ IMC                              ]
+    Peso: [___kg]  Altura: [___m]  IMC: 22.9 kg/m² — Normal
+*/
+function _htmlCompFormula(bn, c, isAdicional) {
+  var fc     = c.formula_config || {};
+  var tipo   = c.formula_tipo   || '';
+  var cid    = c.id;
+  var badge  = isAdicional
+    ? ' <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:.55rem">⨉ fórmula</span>'
+    : ' <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:.55rem">⨉ fórmula</span>';
+
+  var labelHtml = '<label style="font-size:.72rem">'
+    + '<i class="bi ' + esc(c.icone||'bi-calculator') + '"></i> '
+    + esc(c.nome) + badge
+    + '</label>';
+
+  var innerHtml = '';
+
+  if(tipo === 'DPP' || tipo === 'SEMANAS_GESTACAO') {
+    var labelEntrada = esc(fc.campo_entrada || 'dum').toUpperCase();
+    innerHtml = '<div class="d-flex align-items-center gap-2 flex-wrap">'
+      + '<div style="min-width:130px">'
+        + '<small class="text-muted" style="font-size:.68rem">' + labelEntrada + '</small>'
+        + '<input type="date" class="form-control form-control-sm" '
+          + 'id="comp_b'+bn+'_c'+cid+'_in" '
+          + 'oninput="atFormulaCalc('+bn+','+cid+')" '
+          + 'style="font-size:.78rem">'
+      + '</div>'
+      + '<div class="flex-grow-1">'
+        + '<small class="text-muted" style="font-size:.68rem">' + esc(c.nome) + '</small>'
+        + '<div class="form-control form-control-sm bg-light" id="comp_b'+bn+'_c'+cid+'_res" '
+          + 'style="font-size:.78rem;min-height:31px;color:#0d6efd;font-weight:500">'
+          + '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+  else if(tipo === 'IDADE') {
+    var labelEntrada = esc(fc.campo_entrada || 'data_nascimento').toUpperCase().replace(/_/g,' ');
+    innerHtml = '<div class="d-flex align-items-center gap-2 flex-wrap">'
+      + '<div style="min-width:130px">'
+        + '<small class="text-muted" style="font-size:.68rem">' + labelEntrada + '</small>'
+        + '<input type="date" class="form-control form-control-sm" '
+          + 'id="comp_b'+bn+'_c'+cid+'_in" '
+          + 'oninput="atFormulaCalc('+bn+','+cid+')" '
+          + 'style="font-size:.78rem">'
+      + '</div>'
+      + '<div>'
+        + '<small class="text-muted" style="font-size:.68rem">' + esc(c.nome) + '</small>'
+        + '<div class="form-control form-control-sm bg-light" id="comp_b'+bn+'_c'+cid+'_res" '
+          + 'style="font-size:.78rem;min-height:31px;color:#0d6efd;font-weight:500">'
+          + '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+  else if(tipo === 'IMC') {
+    innerHtml = '<div class="d-flex align-items-center gap-2 flex-wrap">'
+      + '<div style="min-width:90px">'
+        + '<small class="text-muted" style="font-size:.68rem">PESO (kg)</small>'
+        + '<input type="number" class="form-control form-control-sm" step="0.1" '
+          + 'id="comp_b'+bn+'_c'+cid+'_peso" placeholder="kg" '
+          + 'oninput="atFormulaCalc('+bn+','+cid+')" style="font-size:.78rem">'
+      + '</div>'
+      + '<div style="min-width:90px">'
+        + '<small class="text-muted" style="font-size:.68rem">ALTURA (m)</small>'
+        + '<input type="number" class="form-control form-control-sm" step="0.01" '
+          + 'id="comp_b'+bn+'_c'+cid+'_alt" placeholder="m" '
+          + 'oninput="atFormulaCalc('+bn+','+cid+')" style="font-size:.78rem">'
+      + '</div>'
+      + '<div class="flex-grow-1">'
+        + '<small class="text-muted" style="font-size:.68rem">' + esc(c.nome) + '</small>'
+        + '<div class="form-control form-control-sm bg-light" id="comp_b'+bn+'_c'+cid+'_res" '
+          + 'style="font-size:.78rem;min-height:31px;color:#0d6efd;font-weight:500">'
+          + '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+  else if(tipo === 'BSA') {
+    innerHtml = '<div class="d-flex align-items-center gap-2 flex-wrap">'
+      + '<div style="min-width:90px">'
+        + '<small class="text-muted" style="font-size:.68rem">PESO (kg)</small>'
+        + '<input type="number" class="form-control form-control-sm" step="0.1" '
+          + 'id="comp_b'+bn+'_c'+cid+'_peso" placeholder="kg" '
+          + 'oninput="atFormulaCalc('+bn+','+cid+')" style="font-size:.78rem">'
+      + '</div>'
+      + '<div style="min-width:90px">'
+        + '<small class="text-muted" style="font-size:.68rem">ALTURA (cm)</small>'
+        + '<input type="number" class="form-control form-control-sm" step="1" '
+          + 'id="comp_b'+bn+'_c'+cid+'_alt" placeholder="cm" '
+          + 'oninput="atFormulaCalc('+bn+','+cid+')" style="font-size:.78rem">'
+      + '</div>'
+      + '<div class="flex-grow-1">'
+        + '<small class="text-muted" style="font-size:.68rem">' + esc(c.nome) + '</small>'
+        + '<div class="form-control form-control-sm bg-light" id="comp_b'+bn+'_c'+cid+'_res" '
+          + 'style="font-size:.78rem;min-height:31px;color:#0d6efd;font-weight:500">'
+          + '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+  else {
+    // fallback: texto livre
+    innerHtml = '<input type="text" class="form-control form-control-sm" '
+      + 'id="comp_b'+bn+'_c'+cid+'" placeholder="—" '
+      + 'oninput="atSetBlocoComp('+bn+','+cid+',this.value)">';
+  }
+
+  return '<div class="vital-item" style="background:#fffbeb;border-radius:6px;padding:6px 8px">'
+    + labelHtml
+    + innerHtml
+    + '</div>';
+}
+
+/* Chamado pelo oninput dos campos de fórmula */
+window.atFormulaCalc = function(bn, cid) {
+  // Encontra o componente na config
+  var comp = null;
+  Object.keys(AT.componentesPorTipo).forEach(function(tc) {
+    var info = AT.componentesPorTipo[tc];
+    var found = (info.fixo||[]).concat(info.adicional||[]).find(function(c){ return c.id == cid; });
+    if(found) comp = found;
+  });
+  if(!comp || comp.tipo_componente !== 'FORMULA') return;
+
+  var fc   = comp.formula_config || {};
+  var tipo = comp.formula_tipo;
+  var vals = {};
+  var resEl = document.getElementById('comp_b'+bn+'_c'+cid+'_res');
+  if(!resEl) return;
+
+  // Monta o objeto de valores a partir dos inputs gerados
+  if(tipo === 'DPP' || tipo === 'SEMANAS_GESTACAO' || tipo === 'IDADE') {
+    var inEl = document.getElementById('comp_b'+bn+'_c'+cid+'_in');
+    if(!inEl || !inEl.value) { resEl.innerHTML = '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'; return; }
+    var campo = fc.campo_entrada || (tipo === 'IDADE' ? 'data_nascimento' : 'dum');
+    vals[campo] = inEl.value;
+  } else if(tipo === 'IMC') {
+    var pEl = document.getElementById('comp_b'+bn+'_c'+cid+'_peso');
+    var aEl = document.getElementById('comp_b'+bn+'_c'+cid+'_alt');
+    if(!pEl || !aEl || !pEl.value || !aEl.value) { resEl.innerHTML = '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'; return; }
+    vals[fc.campo_peso||'peso']   = pEl.value;
+    vals[fc.campo_altura||'altura'] = aEl.value;
+  } else if(tipo === 'BSA') {
+    var pEl = document.getElementById('comp_b'+bn+'_c'+cid+'_peso');
+    var aEl = document.getElementById('comp_b'+bn+'_c'+cid+'_alt');
+    if(!pEl || !aEl || !pEl.value || !aEl.value) { resEl.innerHTML = '<span class="text-muted" style="font-size:.7rem">aguardando...</span>'; return; }
+    vals[fc.campo_peso||'peso']      = pEl.value;
+    vals[fc.campo_altura||'altura_cm'] = aEl.value;
+  }
+
+  // Usa o engine de fórmulas (definido no config_atendimento.html ou importado)
+  var resultado = window.FORMULA_ENGINE
+    ? window.FORMULA_ENGINE.calcular(tipo, fc, vals)
+    : null;
+
+  if(resultado) {
+    resEl.innerHTML = '<strong>' + esc(resultado) + '</strong>';
+    // Salva o resultado como valor do componente
+    if(!AT.blocoData[bn]) AT.blocoData[bn] = { texto:'', comp:{} };
+    AT.blocoData[bn].comp['c'+cid] = resultado;
+  } else {
+    resEl.innerHTML = '<span class="text-muted" style="font-size:.7rem">valor inválido</span>';
+  }
+};
 
 /* ══ Componentes ADICIONAIS (busca e gerenciamento por bloco) ════ */
 window.atBuscarCompAdc = function(v, bn) {
@@ -691,6 +871,17 @@ function _renderCompAdicionais(bn) {
   tcInfo.adicional.forEach(function(c) {
     var key = 'c'+c.id;
     if(!(key in comp)) return; // só mostra se adicionado
+    if(c.tipo_componente === 'FORMULA') {
+      html += '<div class="d-flex align-items-center gap-2 mb-1">'
+        + '<div class="flex-grow-1">'
+          + _htmlCompFormula(bn, c, true)
+        + '</div>'
+        + '<button class="btn btn-sm btn-outline-danger border-0 py-0 px-1" '
+          + 'onclick="atDelCompAdc('+bn+','+c.id+')" title="Remover">'
+          + '<i class="bi bi-x"></i></button>'
+        + '</div>';
+      return;
+    }
     var ph = (c.valor_default||'') + (c.unidade?' '+c.unidade:'');
     html += '<div class="d-flex align-items-center gap-2 mb-1 py-1 px-1 rounded" style="background:#f0f9ff">'
       + '<div class="flex-grow-1 vital-item mb-0">'
