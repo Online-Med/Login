@@ -457,7 +457,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
 
 
 
-<!-- Modal: Componente -->
+<!-- Modal: Componente COM ABAS DE TIPO -->
 <div class="modal fade" id="cfgModalComp" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -639,6 +639,11 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
     </div>
   </div>
 </div>
+
+
+
+
+
 
 
 <!-- Modal: Medicamento -->
@@ -1746,6 +1751,52 @@ window.cfgMostrarSQL = function () {
   abrirModal('cfgModalSQL');
 };
 
+
+
+  
+/* ════════════════════════════════════════════════════════════════
+   COMPONENTES COM FÓRMULA
+════════════════════════════════════════════════════════════════ */
+
+window.cfgMostrarConfigFormula = function() {
+  var tipo = document.getElementById('cfgCompTipoFormula').value;
+  document.getElementById('cfgCompConfigDPP').classList.toggle('d-none', tipo !== 'DPP');
+  document.getElementById('cfgCompConfigIdade').classList.toggle('d-none', tipo !== 'IDADE');
+  document.getElementById('cfgCompConfigCustom').classList.toggle('d-none', tipo !== 'CUSTOM');
+};
+
+window.cfgAtualizarIcoPreviewFormula = function() {
+  var ico = (document.getElementById('cfgCompIconeFormula').value || 'bi-calculator').trim();
+  var prev = document.getElementById('cfgCompIcoPreviewFormula');
+  if (prev) prev.className = 'bi ' + ico + ' fs-5';
+};
+
+window.cfgAbrirIconePickerFormula = function() {
+  document.getElementById('cfgIconeBuscaFormula').value = '';
+  cfgRenderIconeGridFormula('');
+  // Temp store que tipo de ícone está sendo editado
+  window._iconPickerMode = 'FORMULA';
+  abrirModal('cfgModalIconeFormula');
+};
+
+// ─ Icon picker para fórmula (modal separado ou reutilizar?)
+// Para simplificar, vou reutilizar o mesmo modal com uma pequena adaptação:
+
+window.cfgSelecionarIconeFormula = function(ico) {
+  document.getElementById('cfgCompIconeFormula').value = ico;
+  cfgAtualizarIcoPreviewFormula();
+  var modalIcone = document.getElementById('cfgModalIcone');
+  function reabrirComp() {
+    modalIcone.removeEventListener('hidden.bs.modal', reabrirComp);
+    abrirModal('cfgModalComp');
+  }
+  modalIcone.addEventListener('hidden.bs.modal', reabrirComp);
+  fecharModal('cfgModalIcone');
+};
+
+  
+
+  
 /* ════════════════════════════════════════════════════════════════
    INIT
 ════════════════════════════════════════════════════════════════ */
