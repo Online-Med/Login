@@ -175,6 +175,7 @@
               <th style="width:55px">Ordem</th>
               <th style="width:44px">Ícone</th>
               <th>Nome</th>
+              <th style="width:80px">Tipo</th>
               <th>Valor padrão</th>
               <th style="width:90px">Unidade</th>
               <th style="width:90px">Ações</th>
@@ -1058,10 +1059,15 @@ function cfgRenderComponentes() {
   }
 
   tbody.innerHTML = lista.map(function (c) {
+    var isFormula = (c.tipo_componente === 'FORMULA');
+    var badgeTipo = isFormula
+      ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:.6rem"><i class="bi bi-calculator"></i> Fórmula</span>'
+      : '<span class="badge bg-secondary-subtle text-secondary border" style="font-size:.6rem"><i class="bi bi-fonts"></i> Texto</span>';
     return '<tr>'
       + '<td class="text-center text-muted">' + (c.ordem || 0) + '</td>'
       + '<td class="text-center"><i class="bi ' + esc(c.icone || 'bi-circle') + ' fs-5"></i></td>'
       + '<td><strong>' + esc(c.nome) + '</strong></td>'
+      + '<td>' + badgeTipo + '</td>'
       + '<td class="text-muted">' + esc(c.valor_default || '—') + '</td>'
       + '<td class="text-muted">' + esc(c.unidade || '—') + '</td>'
       + '<td>'
@@ -1079,20 +1085,64 @@ function cfgRenderComponentes() {
 window.cfgAbrirModalComp = function (id) {
   var lista = CFG.componentes[CFG.secaoAtual] || [];
   var c = id ? lista.find(function (x) { return x.id == id; }) : null;
+  var isFormula = c && c.tipo_componente === 'FORMULA';
+
   document.getElementById('cfgCompId').value      = c ? c.id : '';
   document.getElementById('cfgCompSecao').value   = CFG.secaoAtual;
-  document.getElementById('cfgCompNome').value    = c ? c.nome : '';
-  document.getElementById('cfgCompIcone').value   = c ? (c.icone || 'bi-circle') : 'bi-circle';
-  document.getElementById('cfgCompDefault').value = c ? (c.valor_default || '') : '';
-  document.getElementById('cfgCompUnidade').value = c ? (c.unidade || '') : '';
-  document.getElementById('cfgCompOrdem').value   = c ? c.ordem : (lista.length + 1);
 
-  // Mostra qual tipo está sendo editado
+  // Popula campos Texto Livre
+  document.getElementById('cfgCompNome').value    = (!isFormula && c) ? c.nome : '';
+  document.getElementById('cfgCompIcone').value   = (!isFormula && c) ? (c.icone || 'bi-circle') : 'bi-circle';
+  document.getElementById('cfgCompDefault').value = (!isFormula && c) ? (c.valor_default || '') : '';
+  document.getElementById('cfgCompUnidade').value = (!isFormula && c) ? (c.unidade || '') : '';
+  document.getElementById('cfgCompOrdem').value   = (!isFormula && c) ? c.ordem : (lista.length + 1);
+
+  // Popula campos Fórmula
+  document.getElementById('cfgCompNomeFormula').value    = (isFormula && c) ? c.nome : '';
+  document.getElementById('cfgCompIconeFormula').value   = (isFormula && c) ? (c.icone || 'bi-calculator') : 'bi-calculator';
+  document.getElementById('cfgCompUnidadeFormula').value = (isFormula && c) ? (c.unidade || '') : '';
+  document.getElementById('cfgCompOrdemFormula').value   = (isFormula && c) ? c.ordem : (lista.length + 1);
+  if (isFormula && c && c.formula_tipo) {
+    document.getElementById('cfgCompTipoFormula').value = c.formula_tipo;
+    cfgMostrarConfigFormula();
+    if (c.formula_tipo === 'DPP' && c.formula_config) {
+      document.getElementById('cfgCompDppInput').value = c.formula_config.campo_entrada || 'dum';
+    } else if (c.formula_tipo === 'IDADE' && c.formula_config) {
+      document.getElementById('cfgCompIdadeInput').value = c.formula_config.campo_entrada || 'data_nascimento';
+    } else if (c.formula_tipo === 'CUSTOM' && c.formula_config) {
+      document.getElementById('cfgCompCustomJson').value = JSON.stringify(c.formula_config);
+    }
+  } else {
+    document.getElementById('cfgCompTipoFormula').value = '';
+    cfgMostrarConfigFormula();
+  }
+
+  // Ativa a aba correta
+  var tabTextId = 'cfgCompTipo-TEXTO_LIVRE-tab';
+  var tabFormulaId = 'cfgCompTipo-FORMULA-tab';
+  var tabText    = document.getElementById(tabTextId);
+  var tabFormula = document.getElementById(tabFormulaId);
+  if (tabText && tabFormula) {
+    if (isFormula) {
+      tabText.classList.remove('active');
+      tabFormula.classList.add('active');
+      document.getElementById('cfgCompTipo-TEXTO_LIVRE').classList.remove('show','active');
+      document.getElementById('cfgCompTipo-FORMULA').classList.add('show','active');
+    } else {
+      tabFormula.classList.remove('active');
+      tabText.classList.add('active');
+      document.getElementById('cfgCompTipo-FORMULA').classList.remove('show','active');
+      document.getElementById('cfgCompTipo-TEXTO_LIVRE').classList.add('show','active');
+    }
+  }
+
+  // Mostra qual tipo de conteúdo está sendo editado
   var meta = TIPOS_CONTEUDO_LABELS[CFG.secaoAtual] || { label: CFG.secaoAtual };
   document.getElementById('cfgCompTitulo').textContent =
     (c ? 'Editar' : 'Novo') + ' Componente — ' + meta.label;
 
   cfgAtualizarIcoPreview();
+  cfgAtualizarIcoPreviewFormula();
   abrirModal('cfgModalComp');
 };
 
@@ -1103,21 +1153,63 @@ window.cfgAtualizarIcoPreview = function () {
 };
 
 window.cfgSalvarComp = async function () {
-  var nome = document.getElementById('cfgCompNome').value.trim();
-  if (!nome) {
-    Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#198754' });
-    return;
-  }
+  // Detecta qual aba está ativa
+  var tabFormulaPane = document.getElementById('cfgCompTipo-FORMULA');
+  var isFormula = tabFormulaPane
+    && tabFormulaPane.classList.contains('show')
+    && tabFormulaPane.classList.contains('active');
+
   var id    = document.getElementById('cfgCompId').value;
   var secao = document.getElementById('cfgCompSecao').value;
-  var body  = {
-    nome: nome,
-    secao: secao,
-    icone: document.getElementById('cfgCompIcone').value.trim() || 'bi-circle',
-    valor_default: document.getElementById('cfgCompDefault').value.trim() || null,
-    unidade: document.getElementById('cfgCompUnidade').value.trim() || null,
-    ordem: parseInt(document.getElementById('cfgCompOrdem').value) || 1,
-  };
+  var body;
+
+  if (isFormula) {
+    var nome = document.getElementById('cfgCompNomeFormula').value.trim();
+    if (!nome) {
+      Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#198754' });
+      return;
+    }
+    var tipoFormula = document.getElementById('cfgCompTipoFormula').value;
+    if (!tipoFormula) {
+      Swal.fire({ icon: 'warning', title: 'Selecione o Tipo de Fórmula', confirmButtonColor: '#198754' });
+      return;
+    }
+    var formulaConfig = null;
+    if (tipoFormula === 'DPP') {
+      formulaConfig = { campo_entrada: document.getElementById('cfgCompDppInput').value.trim() || 'dum' };
+    } else if (tipoFormula === 'IDADE') {
+      formulaConfig = { campo_entrada: document.getElementById('cfgCompIdadeInput').value.trim() || 'data_nascimento' };
+    } else if (tipoFormula === 'CUSTOM') {
+      try { formulaConfig = JSON.parse(document.getElementById('cfgCompCustomJson').value); }
+      catch(e) { Swal.fire({ icon:'warning', title:'JSON inválido', text:'Verifique o JSON da fórmula.', confirmButtonColor:'#198754' }); return; }
+    }
+    body = {
+      nome: nome,
+      secao: secao,
+      icone: document.getElementById('cfgCompIconeFormula').value.trim() || 'bi-calculator',
+      unidade: document.getElementById('cfgCompUnidadeFormula').value.trim() || null,
+      ordem: parseInt(document.getElementById('cfgCompOrdemFormula').value) || 1,
+      tipo_componente: 'FORMULA',
+      formula_tipo: tipoFormula,
+      formula_config: formulaConfig,
+    };
+  } else {
+    var nome = document.getElementById('cfgCompNome').value.trim();
+    if (!nome) {
+      Swal.fire({ icon: 'warning', title: 'Nome obrigatório', confirmButtonColor: '#198754' });
+      return;
+    }
+    body = {
+      nome: nome,
+      secao: secao,
+      icone: document.getElementById('cfgCompIcone').value.trim() || 'bi-circle',
+      valor_default: document.getElementById('cfgCompDefault').value.trim() || null,
+      unidade: document.getElementById('cfgCompUnidade').value.trim() || null,
+      ordem: parseInt(document.getElementById('cfgCompOrdem').value) || 1,
+      tipo_componente: 'TEXTO_LIVRE',
+    };
+  }
+
   var r = id
     ? await cfgApi({ action: 'componente', id: id }, 'PATCH', body)
     : await cfgApi({ action: 'componente' }, 'POST', body);
@@ -1734,15 +1826,13 @@ function cfgRenderIconeGrid(filtro) {
 window.cfgFiltrarIcones = function (v) { cfgRenderIconeGrid(v); };
 
 window.cfgSelecionarIcone = function (ico) {
-  document.getElementById('cfgCompIcone').value = ico;
-  cfgAtualizarIcoPreview();
-  // Usa evento hidden.bs.modal para só abrir cfgModalComp após animação de fechamento
-  var modalIcone = document.getElementById('cfgModalIcone');
-  function reabrirComp() {
-    modalIcone.removeEventListener('hidden.bs.modal', reabrirComp);
-    abrirModal('cfgModalComp');
+  if (window._iconPickerMode === 'FORMULA') {
+    document.getElementById('cfgCompIconeFormula').value = ico;
+    cfgAtualizarIcoPreviewFormula();
+  } else {
+    document.getElementById('cfgCompIcone').value = ico;
+    cfgAtualizarIcoPreview();
   }
-  modalIcone.addEventListener('hidden.bs.modal', reabrirComp);
   fecharModal('cfgModalIcone');
 };
 
@@ -1776,26 +1866,19 @@ window.cfgAtualizarIcoPreviewFormula = function() {
 };
 
 window.cfgAbrirIconePickerFormula = function() {
-  document.getElementById('cfgIconeBuscaFormula').value = '';
-  cfgRenderIconeGridFormula('');
-  // Temp store que tipo de ícone está sendo editado
+  // Reutiliza o mesmo modal de ícones, apenas marca o modo
   window._iconPickerMode = 'FORMULA';
-  abrirModal('cfgModalIconeFormula');
-};
-
-// ─ Icon picker para fórmula (modal separado ou reutilizar?)
-// Para simplificar, vou reutilizar o mesmo modal com uma pequena adaptação:
-
-window.cfgSelecionarIconeFormula = function(ico) {
-  document.getElementById('cfgCompIconeFormula').value = ico;
-  cfgAtualizarIcoPreviewFormula();
+  document.getElementById('cfgIconeBusca').value = '';
+  cfgRenderIconeGrid('');
   var modalIcone = document.getElementById('cfgModalIcone');
+  // Ao fechar, reabre o modal de componente
   function reabrirComp() {
     modalIcone.removeEventListener('hidden.bs.modal', reabrirComp);
+    window._iconPickerMode = null;
     abrirModal('cfgModalComp');
   }
   modalIcone.addEventListener('hidden.bs.modal', reabrirComp);
-  fecharModal('cfgModalIcone');
+  abrirModal('cfgModalIcone');
 };
 
   
