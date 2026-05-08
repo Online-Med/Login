@@ -1,3 +1,4 @@
+
 // api/config_atendimento.js  — versão 3 (blocos independentes + todos os tipos)
 import { sb, validarSessao } from './_seguranca.js';
 
@@ -60,10 +61,9 @@ export default async function handler(req, res) {
       }
 
       if (action === 'tipo_componentes' && tipo_id) {
-        const filtroSecao = secao ? `&secao=eq.${encodeURIComponent(secao)}` : '';
         const { ok, data } = await sb(
           `config_tipo_componentes?tipo_id=eq.${tipo_id}&order=ordem.asc` +
-          `&select=id,tipo_id,componente_id,ativo,ordem,tipo_vinculo,componente:config_componentes(id,nome,secao,icone,valor_default,unidade,ordem)` +
+          `&select=id,tipo_id,componente_id,ativo,ordem,tipo_vinculo,componente:config_componentes(id,nome,secao,icone,valor_default,unidade,ordem,tipo_componente,formula_tipo,formula_config)` +
           (secao ? `&componente.secao=eq.${encodeURIComponent(secao)}` : '')
         );
         let result = ok ? data || [] : [];
@@ -178,7 +178,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ sucesso: true, resultados });
       }
 
-      // POST NORMAL (Outras ações)
+      // POST NORMAL
       const table = TABLE[action];
       if (!table) return res.status(400).json({ erro: 'action inválido' });
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
