@@ -456,6 +456,7 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
 </div>
 
 
+
 <!-- Modal: Componente -->
 <div class="modal fade" id="cfgModalComp" tabindex="-1">
   <div class="modal-dialog">
@@ -466,48 +467,169 @@ CREATE INDEX IF NOT EXISTS idx_exames_nome      ON config_exames(nome);</templat
         </h6>
         <button class="btn-close btn-close-white" onclick="fecharModal('cfgModalComp')"></button>
       </div>
-      <div class="modal-body">
-        <input type="hidden" id="cfgCompId">
-        <input type="hidden" id="cfgCompSecao">
-        <div class="mb-3">
-          <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
-          <input type="text" class="form-control form-control-sm" id="cfgCompNome"
-                 placeholder="ex: Pressão Arterial, Frequência Cardíaca…">
-        </div>
-        <div class="mb-3">
-          <label class="form-label small fw-bold">Ícone Bootstrap Icons</label>
-          <div class="input-group input-group-sm">
-            <span class="input-group-text" style="min-width:38px; justify-content:center">
-              <i id="cfgCompIcoPreview" class="bi bi-circle fs-5"></i>
-            </span>
-            <input type="text" class="form-control" id="cfgCompIcone"
-                   value="bi-circle" placeholder="bi-heart-pulse"
-                   oninput="cfgAtualizarIcoPreview()">
-            <button class="btn btn-outline-secondary" type="button" onclick="cfgAbrirIconePicker()"
-                    title="Escolher ícone">
-              <i class="bi bi-grid-fill"></i>
-            </button>
+      
+      <!-- ABAS DE TIPO DE COMPONENTE -->
+      <ul class="nav nav-tabs px-3 pt-2" id="cfgCompTiposTab" role="tablist" style="border-bottom:1px solid #dee2e6">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="cfgCompTipo-TEXTO_LIVRE-tab" data-bs-toggle="tab" 
+                  data-bs-target="#cfgCompTipo-TEXTO_LIVRE" type="button" role="tab">
+            <i class="bi bi-fonts"></i> Texto Livre
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="cfgCompTipo-FORMULA-tab" data-bs-toggle="tab" 
+                  data-bs-target="#cfgCompTipo-FORMULA" type="button" role="tab">
+            <i class="bi bi-calculator"></i> Fórmula
+          </button>
+        </li>
+      </ul>
+      
+      <div class="tab-content">
+        <!-- TAB: TEXTO LIVRE (Padrão) -->
+        <div class="tab-pane fade show active" id="cfgCompTipo-TEXTO_LIVRE" role="tabpanel">
+          <div class="modal-body">
+            <input type="hidden" id="cfgCompId">
+            <input type="hidden" id="cfgCompSecao">
+            <input type="hidden" id="cfgCompTipo" value="TEXTO_LIVRE">
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" id="cfgCompNome"
+                     placeholder="ex: Pressão Arterial, Frequência Cardíaca…">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Ícone Bootstrap Icons</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text" style="min-width:38px; justify-content:center">
+                  <i id="cfgCompIcoPreview" class="bi bi-circle fs-5"></i>
+                </span>
+                <input type="text" class="form-control" id="cfgCompIcone"
+                       value="bi-circle" placeholder="bi-heart-pulse"
+                       oninput="cfgAtualizarIcoPreview()">
+                <button class="btn btn-outline-secondary" type="button" onclick="cfgAbrirIconePicker()"
+                        title="Escolher ícone">
+                  <i class="bi bi-grid-fill"></i>
+                </button>
+              </div>
+              <small class="text-muted">Digite o nome da classe Bootstrap Icons ou use o seletor.</small>
+            </div>
+            <div class="row mb-3">
+              <div class="col-7">
+                <label class="form-label small fw-bold">Valor padrão</label>
+                <input type="text" class="form-control form-control-sm" id="cfgCompDefault"
+                       placeholder="ex: 120/80">
+              </div>
+              <div class="col-5">
+                <label class="form-label small fw-bold">Unidade</label>
+                <input type="text" class="form-control form-control-sm" id="cfgCompUnidade"
+                       placeholder="ex: mmHg">
+              </div>
+            </div>
+            <div class="mb-1">
+              <label class="form-label small fw-bold">Ordem</label>
+              <input type="number" class="form-control form-control-sm" id="cfgCompOrdem"
+                     value="1" min="1" style="width:90px">
+            </div>
           </div>
-          <small class="text-muted">Digite o nome da classe Bootstrap Icons ou use o seletor.</small>
         </div>
-        <div class="row mb-3">
-          <div class="col-7">
-            <label class="form-label small fw-bold">Valor padrão</label>
-            <input type="text" class="form-control form-control-sm" id="cfgCompDefault"
-                   placeholder="ex: 120/80">
+        
+        <!-- TAB: FÓRMULA -->
+        <div class="tab-pane fade" id="cfgCompTipo-FORMULA" role="tabpanel">
+          <div class="modal-body">
+            <div class="alert alert-info py-2 small mb-3">
+              <i class="bi bi-info-circle"></i>
+              Crie componentes com fórmulas automáticas. Ex: Data da Última Menstruação → Data Provável do Parto.
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Nome <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" id="cfgCompNomeFormula"
+                     placeholder="ex: Data Provável do Parto">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Ícone Bootstrap Icons</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text" style="min-width:38px; justify-content:center">
+                  <i id="cfgCompIcoPreviewFormula" class="bi bi-calculator fs-5"></i>
+                </span>
+                <input type="text" class="form-control" id="cfgCompIconeFormula"
+                       value="bi-calculator" placeholder="bi-heart-pulse"
+                       oninput="cfgAtualizarIcoPreviewFormula()">
+                <button class="btn btn-outline-secondary" type="button" onclick="cfgAbrirIconePickerFormula()"
+                        title="Escolher ícone">
+                  <i class="bi bi-grid-fill"></i>
+                </button>
+              </div>
+              <small class="text-muted">Digite o nome da classe Bootstrap Icons ou use o seletor.</small>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Tipo de Fórmula <span class="text-danger">*</span></label>
+              <select class="form-select form-select-sm" id="cfgCompTipoFormula" onchange="cfgMostrarConfigFormula()">
+                <option value="">Selecione um tipo...</option>
+                <option value="DPP">📅 Data Provável do Parto (DUM → DPP)</option>
+                <option value="IDADE">🎂 Calcular Idade (Data Nasc → Idade)</option>
+                <option value="CUSTOM">⚙️ Customizada (JSON)</option>
+              </select>
+            </div>
+            
+            <!-- Config DPP -->
+            <div id="cfgCompConfigDPP" class="d-none">
+              <div class="alert alert-light py-2 small">
+                <strong>Data da Última Menstruação (DUM)</strong> → <strong>Data Provável do Parto (DPP)</strong>
+                <br><small class="text-muted">A fórmula adiciona 280 dias (40 semanas) à DUM.</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Campo de entrada (nome do campo)</label>
+                <input type="text" class="form-control form-control-sm" id="cfgCompDppInput"
+                       value="dum" placeholder="ex: dum, data_dum, ultima_menstruacao">
+              </div>
+              <p class="text-muted small"><i class="bi bi-check-circle text-success"></i> A fórmula funcionará automaticamente quando o campo de entrada for preenchido.</p>
+            </div>
+            
+            <!-- Config Idade -->
+            <div id="cfgCompConfigIdade" class="d-none">
+              <div class="alert alert-light py-2 small">
+                <strong>Data de Nascimento</strong> → <strong>Idade em anos</strong>
+                <br><small class="text-muted">Calcula a idade atual com base na data de nascimento.</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Campo de entrada (nome do campo)</label>
+                <input type="text" class="form-control form-control-sm" id="cfgCompIdadeInput"
+                       value="data_nascimento" placeholder="ex: data_nasc, nascimento">
+              </div>
+              <p class="text-muted small"><i class="bi bi-check-circle text-success"></i> A fórmula funcionará automaticamente quando o campo de entrada for preenchido.</p>
+            </div>
+            
+            <!-- Config Custom -->
+            <div id="cfgCompConfigCustom" class="d-none">
+              <div class="mb-3">
+                <label class="form-label small fw-bold">JSON da Fórmula <span class="text-danger">*</span></label>
+                <textarea class="form-control form-control-sm" id="cfgCompCustomJson" rows="3"
+                          placeholder='{"tipo":"ADICIONAR","campos":["valor1","valor2"],"operandos":["+"]}'></textarea>
+                <small class="text-muted d-block mt-1">
+                  Defina a fórmula em JSON. Operações suportadas: ADICIONAR, SUBTRAIR, MULTIPLICAR, DIVIDIR.
+                </small>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-7">
+                <label class="form-label small fw-bold">Unidade (rótulo do resultado)</label>
+                <input type="text" class="form-control form-control-sm" id="cfgCompUnidadeFormula"
+                       placeholder="ex: dias, semanas, anos">
+              </div>
+              <div class="col-5">
+                <label class="form-label small fw-bold">Ordem</label>
+                <input type="number" class="form-control form-control-sm" id="cfgCompOrdemFormula"
+                       value="1" min="1">
+              </div>
+            </div>
           </div>
-          <div class="col-5">
-            <label class="form-label small fw-bold">Unidade</label>
-            <input type="text" class="form-control form-control-sm" id="cfgCompUnidade"
-                   placeholder="ex: mmHg">
-          </div>
-        </div>
-        <div class="mb-1">
-          <label class="form-label small fw-bold">Ordem</label>
-          <input type="number" class="form-control form-control-sm" id="cfgCompOrdem"
-                 value="1" min="1" style="width:90px">
         </div>
       </div>
+      
       <div class="modal-footer py-2">
         <button class="btn btn-secondary btn-sm" onclick="fecharModal('cfgModalComp')">Cancelar</button>
         <button class="btn btn-success btn-sm" onclick="cfgSalvarComp()">
